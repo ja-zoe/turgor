@@ -1,0 +1,176 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+/* ─── Forest Floor design tokens → shadcn CSS variable layer ─── */
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  /* Status palette */
+  --color-on-track: var(--on-track);
+  --color-on-track-bg: var(--on-track-bg);
+  --color-at-risk: var(--at-risk);
+  --color-at-risk-bg: var(--at-risk-bg);
+  --color-behind: var(--behind);
+  --color-behind-bg: var(--behind-bg);
+
+  /* Font stacks */
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-jetbrains-mono);
+  --font-display: var(--font-instrument-serif);
+
+  /* Radius */
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+}
+
+:root {
+  /* Canvas */
+  --background: #F4F1EA;
+  --foreground: #2B2B26;
+
+  /* Surfaces */
+  --card: #FFFFFF;
+  --card-foreground: #2B2B26;
+  --popover: #FFFFFF;
+  --popover-foreground: #2B2B26;
+
+  /* Primary — Forest green */
+  --primary: #2E4034;
+  --primary-foreground: #F9F8F5;
+
+  /* Secondary — warm off-white */
+  --secondary: #F9F8F5;
+  --secondary-foreground: #2B2B26;
+
+  /* Muted */
+  --muted: #F4F1EA;
+  --muted-foreground: #787774;
+
+  /* Accent — sage */
+  --accent: #EDF3EC;
+  --accent-foreground: #2E4034;
+
+  /* Destructive */
+  --destructive: #A4503C;
+
+  /* Structure */
+  --border: #E2E0D9;
+  --input: #E2E0D9;
+  --ring: #2E4034;
+  --radius: 0.5rem;
+
+  /* Recharts chart series: moss → forest → sage → clay → bark */
+  --chart-1: #588157;
+  --chart-2: #2E4034;
+  --chart-3: #A3B18A;
+  --chart-4: #B07156;
+  --chart-5: #6F4E37;
+
+  /* Status — natural palette */
+  --on-track: #588157;
+  --on-track-bg: #EDF3EC;
+  --at-risk: #C99846;
+  --at-risk-bg: #FBF3DB;
+  --behind: #A4503C;
+  --behind-bg: #FDEBEC;
+
+  /* Sidebar */
+  --sidebar: #F4F1EA;
+  --sidebar-foreground: #2B2B26;
+  --sidebar-primary: #2E4034;
+  --sidebar-primary-foreground: #F9F8F5;
+  --sidebar-accent: #EDF3EC;
+  --sidebar-accent-foreground: #2E4034;
+  --sidebar-border: #E2E0D9;
+  --sidebar-ring: #2E4034;
+}
+
+/* Paper-grain texture on body — imperceptible but present */
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  html {
+    @apply font-sans;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)' opacity='0.025'/%3E%3C/svg%3E");
+  }
+
+  /* Display headings use Instrument Serif */
+  h1, h2 {
+    font-family: var(--font-display), Georgia, serif;
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+  }
+
+  /* Monospace labels / timestamps */
+  time, kbd, code, .mono {
+    font-family: var(--font-mono), monospace;
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+}
+
+/* ─── Status badge utilities ─────────────────────────────────── */
+@layer utilities {
+  .status-on-track {
+    color: var(--on-track);
+    background-color: var(--on-track-bg);
+  }
+  .status-at-risk {
+    color: var(--at-risk);
+    background-color: var(--at-risk-bg);
+  }
+  .status-behind {
+    color: var(--behind);
+    background-color: var(--behind-bg);
+  }
+
+  /* Editorial card hover — no elevation jank */
+  .card-hover {
+    transition: box-shadow 200ms ease;
+  }
+  .card-hover:hover {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  }
+}
