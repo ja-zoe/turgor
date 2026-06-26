@@ -22,13 +22,13 @@ import { CHART_COLORS } from "@/lib/format";
  * aggregated data computed on the server.
  */
 
-const AXIS = { stroke: "var(--text-faint)", fontSize: 12 };
-const GRID = "rgba(20,23,27,0.10)";
+const AXIS = { stroke: "var(--text-on-dark-soft)", fontSize: 12 };
+const GRID = "rgba(163,176,135,0.12)";
 
 function ChartTooltip({ active, payload, label, suffix }: any) {
   if (!active || !payload?.length) return null;
   return (
-    <div style={{ borderRadius: 14, padding: "8px 12px", fontSize: 12, background: "var(--surface)", color: "var(--text-on-dark)", border: "1px solid var(--border-on-dark)", boxShadow: "var(--shadow-dark)" }}>
+    <div style={{ borderRadius: 14, padding: "8px 12px", fontSize: 12, background: "var(--sidebar)", color: "var(--text-on-dark)", border: "1px solid var(--border-on-dark)", boxShadow: "var(--shadow-dark)" }}>
       <p style={{ fontWeight: 500, marginBottom: 2, color: "var(--text-on-dark)" }}>{label}</p>
       {payload.map((p: any, i: number) => (
         <p key={i} style={{ color: p.color ?? "var(--text-on-dark-soft)" }}>
@@ -50,7 +50,7 @@ export function GoalCompletionChart({ data }: { data: { week: string; pct: numbe
         <XAxis dataKey="week" {...AXIS} tickLine={false} axisLine={false} />
         <YAxis domain={[0, 100]} {...AXIS} tickLine={false} axisLine={false} tickFormatter={(v) => `${v}%`} />
         <Tooltip content={<ChartTooltip suffix="%" />} />
-        <Line type="monotone" dataKey="pct" name="Goals met" stroke="#5f8a4e" strokeWidth={2.5} dot={{ r: 3, fill: "#a1b887" }} />
+        <Line type="monotone" dataKey="pct" name="Goals met" stroke="#4ca876" strokeWidth={2.5} dot={{ r: 3, fill: "#9ab087" }} />
       </LineChart>
     </ResponsiveContainer>
   );
@@ -65,7 +65,7 @@ export function BlockerFrequencyChart({ data }: { data: { blocker: string; count
         <CartesianGrid stroke={GRID} horizontal={false} />
         <XAxis type="number" {...AXIS} tickLine={false} axisLine={false} allowDecimals={false} />
         <YAxis type="category" dataKey="blocker" width={140} {...AXIS} tickLine={false} axisLine={false} />
-        <Tooltip content={<ChartTooltip />} cursor={{ fill: "rgba(88,129,87,0.08)" }} />
+        <Tooltip content={<ChartTooltip />} cursor={{ fill: "rgba(76,168,118,0.08)" }} />
         <Bar dataKey="count" name="Occurrences" radius={[0, 6, 6, 0]}>
           {data.map((_, i) => (
             <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
@@ -89,7 +89,7 @@ export function CategoryBarChart({
         <CartesianGrid stroke={GRID} vertical={false} />
         <XAxis dataKey="label" {...AXIS} tickLine={false} axisLine={false} />
         <YAxis {...AXIS} tickLine={false} axisLine={false} allowDecimals={false} />
-        <Tooltip content={<ChartTooltip />} cursor={{ fill: "rgba(88,129,87,0.08)" }} />
+        <Tooltip content={<ChartTooltip />} cursor={{ fill: "rgba(76,168,118,0.08)" }} />
         <Bar dataKey="value" name="Count" radius={[6, 6, 0, 0]}>
           {data.map((d, i) => (
             <Cell key={i} fill={d.color ?? CHART_COLORS[i % CHART_COLORS.length]} />
@@ -102,7 +102,7 @@ export function CategoryBarChart({
 
 function Empty({ label }: { label: string }) {
   return (
-    <div className="muted" style={{ height: 180, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14 }}>
+    <div style={{ height: 180, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, color: "var(--text-on-dark-soft)" }}>
       {label}
     </div>
   );

@@ -60,9 +60,9 @@ export function AppShell({
     href === "/dashboard" ? pathname === href : pathname.startsWith(href);
 
   const sidebar = (
-    <nav className="panel" style={{ width: 264, height: "100%", borderRadius: 0, padding: "20px 16px", display: "flex", flexDirection: "column", boxShadow: "none" }} aria-label="Main">
+    <nav style={{ width: 264, height: "100%", borderRadius: 0, padding: "20px 16px", display: "flex", flexDirection: "column", background: "var(--sidebar)", color: "var(--text-on-dark)" }} aria-label="Main">
       <Link href="/dashboard" onClick={() => setOpen(false)} style={{ display: "flex", alignItems: "center", gap: 10, padding: "4px 8px 18px" }}>
-        <span style={{ display: "inline-flex", width: 34, height: 34, borderRadius: 12, background: "var(--primary)", color: "#14171b", alignItems: "center", justifyContent: "center" }}>
+        <span style={{ display: "inline-flex", width: 34, height: 34, borderRadius: 12, background: "var(--primary)", color: "#fff", alignItems: "center", justifyContent: "center" }}>
           <Sprout size={19} />
         </span>
         <span style={{ fontFamily: "var(--font-display)", fontSize: 19, color: "var(--text-on-dark)" }}>SEED Tracker</span>
@@ -112,14 +112,14 @@ export function AppShell({
   return (
     <div style={{ display: "flex", minHeight: "100vh" }}>
       <aside className="hidden md:block" style={{ position: "sticky", top: 0, height: "100vh", padding: 12 }}>
-        <div className="panel" style={{ height: "100%", padding: 0, overflow: "hidden", borderRadius: 28 }}>{sidebar}</div>
+        <div style={{ height: "100%", overflow: "hidden", borderRadius: 28, background: "var(--sidebar)", border: "1px solid var(--border-on-dark)", boxShadow: "var(--shadow-dark)" }}>{sidebar}</div>
       </aside>
 
       {/* Mobile drawer */}
       {open && (
         <div className="md:hidden" style={{ position: "fixed", inset: 0, zIndex: 40 }}>
-          <div onClick={() => setOpen(false)} style={{ position: "absolute", inset: 0, background: "rgba(20,23,27,0.5)" }} />
-          <div style={{ position: "absolute", left: 0, top: 0, height: "100%" }}>{sidebar}</div>
+          <div onClick={() => setOpen(false)} style={{ position: "absolute", inset: 0, background: "rgba(17, 26, 19, 0.72)", backdropFilter: "blur(4px)" }} />
+          <div style={{ position: "absolute", left: 0, top: 0, height: "100%", borderRight: "1px solid var(--border-on-dark)" }}>{sidebar}</div>
         </div>
       )}
 

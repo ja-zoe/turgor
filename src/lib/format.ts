@@ -45,13 +45,13 @@ export const STATUS_BADGE_CLASS: Record<ProjectStatus, string> = {
 
 /** Status hex for charts (matches the status tokens in globals.css). */
 export const STATUS_CHART_COLOR: Record<ProjectStatus, string> = {
-  ON_TRACK: "#5f8a4e",
-  AT_RISK: "#c08a2b",
-  BEHIND: "#b1543c",
+  ON_TRACK: "#4ca876",
+  AT_RISK: "#d4953a",
+  BEHIND: "#d45a4a",
 };
 
-/** Eco-Tech series palette: sage / olive / earth. */
-export const CHART_COLORS = ["#5f8a4e", "#a1b887", "#b6cc9d", "#8c9680", "#c08a2b", "#b1543c"];
+/** Forest Floor series palette: woodland greens, sage, amber, clay. */
+export const CHART_COLORS = ["#4ca876", "#5a9a72", "#9ab087", "#d4953a", "#d45a4a", "#6b8f76"];
 
 // --- Semester-timeline status (deliverables + subtasks) ---------------------
 

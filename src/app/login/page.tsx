@@ -5,10 +5,6 @@ import { auth } from "@/auth";
 import { allowedDomains } from "@/lib/env";
 import { casMode } from "@/lib/cas";
 
-/**
- * Login screen — "Sign in with NetID" via Rutgers CAS. If already signed in,
- * bounce to the app.
- */
 export default async function LoginPage({
   searchParams,
 }: {
@@ -29,45 +25,98 @@ export default async function LoginPage({
         : null;
 
   return (
-    <main className="min-h-screen flex items-center justify-center p-6">
-      <div className="panel-light w-full max-w-md text-center" style={{ padding: 32 }}>
+    <main
+      style={{
+        minHeight: "100dvh",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: 24,
+      }}
+    >
+      {/* Parchment card floating on the forest floor */}
+      <div
+        className="panel-light reveal"
+        style={{
+          width: "100%",
+          maxWidth: 420,
+          padding: "40px 36px",
+          textAlign: "center",
+        }}
+      >
+        {/* Logo mark */}
         <div
           aria-hidden
-          className="mx-auto mb-5 flex items-center justify-center"
-          style={{ width: 56, height: 56, borderRadius: 18, background: "var(--primary)", color: "#14171b" }}
+          style={{
+            display: "inline-flex",
+            width: 60,
+            height: 60,
+            borderRadius: 20,
+            background: "var(--primary)",
+            color: "#fff",
+            alignItems: "center",
+            justifyContent: "center",
+            marginBottom: 20,
+            boxShadow: "0 8px 24px -6px rgba(61, 112, 85, 0.45)",
+          }}
         >
-          <Sprout size={28} />
+          <Sprout size={30} />
         </div>
-        <h1 className="display" style={{ fontSize: 30 }}>SEED Project Tracker</h1>
-        <p className="muted" style={{ marginTop: 8, lineHeight: 1.6 }}>
-          Weekly check-ins, milestones, and project health for the SEED club. Sign in with your
-          Rutgers NetID to continue.
+
+        <h1
+          className="display"
+          style={{ fontSize: 26, marginBottom: 8, color: "var(--text)" }}
+        >
+          SEED Project Tracker
+        </h1>
+        <p style={{ fontSize: 14, color: "var(--text-soft)", lineHeight: 1.65, marginBottom: 28 }}>
+          Weekly check-ins, milestones, and project health for the Rutgers SEED
+          club. Sign in with your NetID to continue.
         </p>
 
         {errorMessage && (
-          <div className="panel-light" style={{ borderColor: "var(--status-behind)", marginTop: 16, padding: 12 }}>
-            <span style={{ color: "var(--status-behind)", fontSize: 14 }}>{errorMessage}</span>
+          <div
+            style={{
+              background: "var(--behind-tint)",
+              border: "1px solid rgba(212, 90, 74, 0.35)",
+              borderRadius: 14,
+              padding: "10px 14px",
+              marginBottom: 20,
+              color: "var(--behind)",
+              fontSize: 13,
+            }}
+          >
+            {errorMessage}
           </div>
         )}
 
-        {/* A plain link → GET /api/cas/login → 302 to CAS (or the mock screen). */}
-        <Link href="/api/cas/login" prefetch={false} className="btn btn-brand btn-lg" style={{ width: "100%", marginTop: 24 }}>
+        <Link
+          href="/api/cas/login"
+          prefetch={false}
+          className="btn btn-primary btn-lg"
+          style={{ width: "100%" }}
+        >
           Sign in with NetID
         </Link>
 
-        {mock && (
-          <p className="muted" style={{ fontSize: 12, marginTop: 16 }}>
-            ⚠️ Running in <strong>mock CAS</strong> mode — real Rutgers CAS sign-in is pending registration.
-          </p>
+        {(mock || domains.length > 0) && (
+          <div style={{ marginTop: 20, display: "flex", flexDirection: "column", gap: 4 }}>
+            {mock && (
+              <p style={{ fontSize: 12, color: "var(--text-faint)" }}>
+                Running in <strong>mock CAS</strong> mode — real Rutgers CAS pending registration.
+              </p>
+            )}
+            {domains.length > 0 && (
+              <p style={{ fontSize: 12, color: "var(--text-faint)" }}>
+                Restricted to: {domains.join(", ")}
+              </p>
+            )}
+          </div>
         )}
-        {domains.length > 0 && (
-          <p className="muted" style={{ fontSize: 12, marginTop: mock ? 6 : 16 }}>
-            Restricted to: {domains.join(", ")}
-          </p>
-        )}
-        <p className="muted" style={{ fontSize: 12, marginTop: 8 }}>
-          New here? After signing in you&apos;ll be in a pending state until the Project Manager
-          adds you to a project.
+
+        <p style={{ fontSize: 12, color: "var(--text-faint)", marginTop: 16, lineHeight: 1.5 }}>
+          First time? After signing in you&apos;ll be pending until the Project
+          Manager adds you to a project.
         </p>
       </div>
     </main>

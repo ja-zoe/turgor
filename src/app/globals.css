@@ -1,12 +1,13 @@
 /* ==========================================================================
-   SEED Project Tracker — "Eco-Tech Dashboard" design system
-   (from claude/eco-tech-dashboard-DESIGN.md)
+   SEED Project Tracker — "Forest Floor" design system
 
-   Editorial eco-tech: a soft sage background, dark charcoal "bento" panels with
-   light text for metric emphasis, lighter panels for dense data, big Gloock
-   display serifs, JetBrains Mono technical labels, and Inter body copy.
-   Deliberate spacing, large radii, restrained hover-lift / reveal motion.
-   Single light-anchored theme (the source does not swap color modes).
+   Aesthetic: deep forest-green body, warm parchment panels floating on it.
+   Morning light filtering through the canopy: darkness of the forest with
+   warm illuminated surfaces for content. Status colors are vivid naturals
+   that pop against the dark.
+
+   Typography: Gloock display (naturalist journal), Inter body, JetBrains
+   Mono for data labels and technical metadata.
    ========================================================================== */
 
 @tailwind base;
@@ -14,52 +15,60 @@
 @tailwind utilities;
 
 :root {
-  /* Core palette */
-  --bg: #ced1c3;            /* sage background */
-  --bg-deep: #c2c6b6;       /* slightly deeper sage for ambient depth */
-  --surface: #191c21;       /* dark panel (bento focal surfaces) */
-  --surface-2: #21262d;     /* nested dark surface */
-  --card: #eceee4;          /* light panel (dense content, readability) */
-  --card-2: #f5f6ef;        /* lighter nested light panel */
-  --primary: #b6cc9d;       /* sage green */
-  --accent: #a1b887;        /* olive accent */
-  --cta: #14171b;           /* near-black CTA on light bg */
+  /* ── Background ─────────────────────────────────────────────────────── */
+  --bg: #1c2b20;               /* deep forest green */
+  --bg-deep: #162318;          /* slightly deeper for gradient depth */
 
-  /* Text */
-  --text: #111827;          /* primary on light */
-  --text-soft: #4b5563;     /* secondary on light */
-  --text-faint: #6b7280;
-  --text-on-dark: #ecefe4;  /* primary on dark surface */
-  --text-on-dark-soft: #a7b09c;
+  /* ── Dark surfaces ──────────────────────────────────────────────────── */
+  --surface: #243028;          /* elevated dark surface */
+  --surface-2: #1e2b22;        /* nested dark surface */
+  --sidebar: #111a14;          /* deepest — sidebar anchor */
 
-  /* Borders */
-  --border: #8c9680;
-  --border-soft: rgba(140, 150, 128, 0.34);
-  --border-on-dark: rgba(236, 239, 228, 0.12);
+  /* ── Parchment / content panels ────────────────────────────────────── */
+  --card: #f4f0e6;             /* warm parchment — primary content surface */
+  --card-2: #faf8f2;           /* lighter parchment — nested content */
 
-  /* Status — earthy, distinct, harmonized with the palette */
-  --on-track: #5f8a4e;
-  --at-risk: #c08a2b;
-  --behind: #b1543c;
-  --on-track-tint: rgba(95, 138, 78, 0.16);
-  --at-risk-tint: rgba(192, 138, 43, 0.16);
-  --behind-tint: rgba(177, 84, 60, 0.16);
+  /* ── Brand palette ──────────────────────────────────────────────────── */
+  --primary: #5a9a72;          /* woodland green */
+  --accent: #9ab087;           /* sage mist */
+  --cta: #3d7055;              /* deep forest CTA */
 
-  /* Fonts (wired to next/font variables in layout.tsx) */
+  /* ── Text ───────────────────────────────────────────────────────────── */
+  --text: #2b2b26;             /* warm charcoal — on parchment */
+  --text-soft: #5c6356;        /* muted earthy — secondary on parchment */
+  --text-faint: #8a9285;       /* faint — tertiary on parchment */
+  --text-on-dark: #dfe8d4;     /* sage white — on dark surfaces */
+  --text-on-dark-soft: #8fab84;/* sage mist — secondary on dark */
+  --text-on-dark-faint: #5e7a62;/* faint — tertiary on dark */
+
+  /* ── Borders ────────────────────────────────────────────────────────── */
+  --border: rgba(74, 107, 77, 0.30);
+  --border-soft: rgba(74, 107, 77, 0.18);
+  --border-on-dark: rgba(163, 176, 135, 0.18);
+
+  /* ── Status — vivid naturals that pop on dark ───────────────────────── */
+  --on-track: #4ca876;
+  --at-risk: #d4953a;
+  --behind: #d45a4a;
+  --on-track-tint: rgba(76, 168, 118, 0.18);
+  --at-risk-tint: rgba(212, 149, 58, 0.18);
+  --behind-tint: rgba(212, 90, 74, 0.18);
+
+  /* ── Fonts ──────────────────────────────────────────────────────────── */
   --font-display: var(--font-gloock), "Gloock", Georgia, serif;
   --font-body: var(--font-inter), system-ui, -apple-system, sans-serif;
   --font-mono: var(--font-mono-jb), "JetBrains Mono", ui-monospace, monospace;
 
-  /* Radius */
+  /* ── Radius ─────────────────────────────────────────────────────────── */
   --r-card: 32px;
   --r-control: 30px;
   --r-field: 18px;
   --r-pill: 9999px;
 
-  /* Elevation */
-  --shadow-sm: 0 1px 2px rgba(20, 23, 27, 0.06);
-  --shadow-md: 0 18px 40px -24px rgba(20, 23, 27, 0.45);
-  --shadow-dark: 0 24px 60px -28px rgba(0, 0, 0, 0.55);
+  /* ── Elevation ──────────────────────────────────────────────────────── */
+  --shadow-sm: 0 1px 3px rgba(17, 26, 19, 0.20);
+  --shadow-md: 0 8px 32px -8px rgba(17, 26, 19, 0.42);
+  --shadow-dark: 0 16px 48px -12px rgba(0, 0, 0, 0.55);
 }
 
 * { box-sizing: border-box; }
@@ -67,28 +76,37 @@ html, body { padding: 0; margin: 0; }
 
 body {
   font-family: var(--font-body);
-  color: var(--text);
+  color: var(--text-on-dark);
   background-color: var(--bg);
-  /* Ambient organic light — supporting layers behind the content, kept subtle. */
+  /*
+    Forest atmosphere: a subtle repeating topographic-contour texture sits
+    behind two soft ambient radial glows — the net effect reads as natural
+    depth without competing with the parchment content panels.
+  */
   background-image:
-    radial-gradient(1200px 760px at 8% -8%, rgba(182, 204, 157, 0.55), transparent 58%),
-    radial-gradient(1000px 680px at 108% 4%, rgba(161, 184, 135, 0.40), transparent 55%),
-    radial-gradient(760px 760px at 92% 110%, rgba(140, 150, 128, 0.30), transparent 60%);
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cellipse cx='80' cy='80' rx='68' ry='44' fill='none' stroke='rgba(163%2C176%2C135%2C0.07)' stroke-width='1'/%3E%3Cellipse cx='80' cy='80' rx='48' ry='30' fill='none' stroke='rgba(163%2C176%2C135%2C0.065)' stroke-width='1'/%3E%3Cellipse cx='80' cy='80' rx='28' ry='18' fill='none' stroke='rgba(163%2C176%2C135%2C0.055)' stroke-width='1'/%3E%3Cellipse cx='80' cy='80' rx='12' ry='8' fill='none' stroke='rgba(163%2C176%2C135%2C0.04)' stroke-width='1'/%3E%3C/svg%3E"),
+    radial-gradient(1400px 900px at 15% -15%, rgba(90, 154, 114, 0.14), transparent 55%),
+    radial-gradient(900px 700px at 85% 110%, rgba(61, 112, 85, 0.11), transparent 55%);
   background-attachment: fixed;
-  min-height: 100vh;
+  min-height: 100dvh;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
 }
 
 /* ---- Type scale -------------------------------------------------------- */
-h1, h2, h3, h4, h5, h6 { color: var(--text); margin: 0 0 0.4em; font-weight: 500; line-height: 1.1; }
+h1, h2, h3, h4, h5, h6 {
+  color: var(--text-on-dark);
+  margin: 0 0 0.4em;
+  font-weight: 500;
+  line-height: 1.1;
+}
 
 .display {
   font-family: var(--font-display);
-  font-weight: 500;
+  font-weight: 400;
   letter-spacing: -0.01em;
   line-height: 1.04;
-  color: var(--text);
+  color: var(--text-on-dark);
 }
 h1.display { font-size: clamp(34px, 5vw, 60px); }
 h2.display { font-size: clamp(26px, 3.4vw, 40px); }
@@ -101,22 +119,22 @@ h4 { font-size: 18px; }
 p { line-height: 1.6; }
 a { color: inherit; text-decoration: none; }
 
-/* Technical eyebrow / metadata label — JetBrains Mono, uppercase. */
+/* Technical eyebrow / metadata label */
 .eyebrow {
   font-family: var(--font-mono);
   font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--text-faint);
+  color: var(--text-on-dark-soft);
 }
 .mono { font-family: var(--font-mono); }
 
 /* ==========================================================================
-   Panels (bento surfaces)
+   Panels
    ========================================================================== */
 
-/* Dark focal panel — metric emphasis, hero, feature blocks. */
+/* Elevated dark surface — for metric panels, hero cards, tooltips. */
 .panel {
   position: relative;
   background: var(--surface);
@@ -129,33 +147,51 @@ a { color: inherit; text-decoration: none; }
 .panel h1, .panel h2, .panel h3, .panel h4 { color: var(--text-on-dark); }
 .panel .eyebrow { color: var(--accent); }
 .panel .muted { color: var(--text-on-dark-soft); }
+.panel .faint { color: var(--text-on-dark-faint); }
+.panel .divider { background: var(--border-on-dark); }
 
-/* Light panel — dense content, lists, tables, forms. */
+/* Parchment panel — warm content surfaces floating on the forest. */
 .panel-light {
   position: relative;
   background: var(--card);
   color: var(--text);
-  border: 1px solid var(--border-soft);
+  border: 1px solid var(--border);
   border-radius: var(--r-card);
   padding: 24px;
   box-shadow: var(--shadow-md);
 }
+.panel-light h1,
+.panel-light h2,
+.panel-light h3,
+.panel-light h4 { color: var(--text); }
+.panel-light .display { color: var(--text); }
+.panel-light .eyebrow { color: var(--text-soft); }
+.panel-light .muted { color: var(--text-soft); }
+.panel-light .faint { color: var(--text-faint); }
+.panel-light .divider { background: var(--border-soft); }
+.panel-light .heading-text { color: var(--text); }
+.panel-light .brand-text { color: var(--cta); }
 
-/* Nested inner surface inside a light panel */
+/* Nested inner surface — parchment context */
 .inset {
   background: var(--card-2);
   border: 1px solid var(--border-soft);
   border-radius: 20px;
 }
-/* Nested inner surface inside a dark panel */
 .panel .inset { background: var(--surface-2); border-color: var(--border-on-dark); }
 
-/* Hover lift for interactive panels/links */
-.lift { transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 220ms ease; }
-.lift:hover { transform: translateY(-3px); }
+/* Hover lift for interactive panels */
+.lift {
+  transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1),
+              box-shadow 220ms ease;
+}
+.lift:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-dark);
+}
 
 /* ==========================================================================
-   Buttons — pill/control radius, context-aware on dark panels
+   Buttons
    ========================================================================== */
 .btn {
   display: inline-flex;
@@ -170,76 +206,123 @@ a { color: inherit; text-decoration: none; }
   border-radius: var(--r-control);
   border: 1px solid transparent;
   cursor: pointer;
-  transition: transform 160ms ease, background-color 160ms ease, color 160ms ease, border-color 160ms ease, opacity 160ms ease;
+  transition: transform 160ms ease, background-color 160ms ease,
+              color 160ms ease, border-color 160ms ease, opacity 160ms ease;
   white-space: nowrap;
 }
 .btn:active { transform: translateY(1px); }
-.btn:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(95, 138, 78, 0.45); }
-.btn:disabled, .btn[aria-disabled="true"] { cursor: not-allowed; opacity: 0.5; }
+.btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(76, 168, 118, 0.40);
+}
+.btn:disabled,
+.btn[aria-disabled="true"] { cursor: not-allowed; opacity: 0.5; }
 .btn svg { width: 16px; height: 16px; }
 .btn-sm { padding: 8px 14px; font-size: 13px; }
 .btn-sm svg { width: 15px; height: 15px; }
 .btn-lg { padding: 14px 26px; font-size: 15px; }
 .btn-icon { padding: 8px; border-radius: var(--r-pill); }
 
-/* Primary CTA — dark pill on the light background */
-.btn-primary { background: var(--cta); color: #fff; }
-.btn-primary:hover { background: #000; }
+/* Default context: dark body background */
+.btn-primary { background: var(--primary); color: #fff; }
+.btn-primary:hover { background: var(--cta); }
 
-/* Accent — sage chip */
-.btn-accent { background: var(--primary); color: #14171b; }
-.btn-accent:hover { background: var(--accent); }
+.btn-accent { background: var(--accent); color: var(--sidebar); }
+.btn-accent:hover { background: var(--primary); color: #fff; }
 
-/* Secondary — outlined on light */
-.btn-secondary { background: transparent; color: var(--text); border-color: var(--border); }
-.btn-secondary:hover { background: rgba(20, 23, 27, 0.05); }
+.btn-secondary {
+  background: transparent;
+  color: var(--text-on-dark);
+  border-color: var(--border-on-dark);
+}
+.btn-secondary:hover { background: rgba(163, 176, 135, 0.10); }
 
-.btn-ghost { background: transparent; color: var(--text); }
-.btn-ghost:hover { background: rgba(20, 23, 27, 0.06); }
+.btn-ghost { background: transparent; color: var(--text-on-dark); }
+.btn-ghost:hover { background: rgba(163, 176, 135, 0.10); }
 
 .btn-danger { background: var(--behind); color: #fff; }
-.btn-danger:hover { filter: brightness(0.93); }
+.btn-danger:hover { filter: brightness(0.92); }
 .btn-success { background: var(--on-track); color: #fff; }
-.btn-success:hover { filter: brightness(0.93); }
+.btn-success:hover { filter: brightness(0.92); }
 
-/* Context inversion: on dark panels the primary action becomes the sage chip,
-   and secondary/ghost adopt light-on-dark treatments. */
-.panel .btn-primary { background: var(--primary); color: #14171b; }
-.panel .btn-primary:hover { background: var(--accent); }
-.panel .btn-secondary { color: var(--text-on-dark); border-color: var(--border-on-dark); }
-.panel .btn-secondary:hover { background: rgba(236, 239, 228, 0.08); }
+/* On parchment panels: invert to dark-on-light */
+.panel-light .btn-primary { background: var(--cta); color: #fff; }
+.panel-light .btn-primary:hover { background: #325e47; }
+.panel-light .btn-secondary {
+  color: var(--text);
+  border-color: var(--border);
+}
+.panel-light .btn-secondary:hover { background: rgba(74, 107, 77, 0.08); }
+.panel-light .btn-ghost { color: var(--text); }
+.panel-light .btn-ghost:hover { background: rgba(74, 107, 77, 0.08); }
+.panel-light .btn:focus-visible {
+  box-shadow: 0 0 0 3px rgba(76, 168, 118, 0.35);
+}
+
+/* On elevated dark panels */
+.panel .btn-secondary {
+  color: var(--text-on-dark);
+  border-color: var(--border-on-dark);
+}
+.panel .btn-secondary:hover { background: rgba(163, 176, 135, 0.10); }
 .panel .btn-ghost { color: var(--text-on-dark); }
-.panel .btn-ghost:hover { background: rgba(236, 239, 228, 0.08); }
+.panel .btn-ghost:hover { background: rgba(163, 176, 135, 0.10); }
 
 /* ==========================================================================
    Inputs
    ========================================================================== */
-.label { display: block; font-family: var(--font-mono); font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-soft); margin-bottom: 8px; }
+.label {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-on-dark-soft);
+  margin-bottom: 8px;
+}
 .input, .textarea, .select {
   display: block;
   width: 100%;
   font-family: var(--font-body);
   font-size: 14px;
-  color: var(--text);
+  color: var(--text-on-dark);
   padding: 11px 14px;
   border-radius: var(--r-field);
-  border: 1px solid var(--border);
-  background: var(--card-2);
+  border: 1px solid var(--border-on-dark);
+  background: var(--surface-2);
   transition: border-color 160ms ease, box-shadow 160ms ease;
 }
 .textarea { min-height: 104px; resize: vertical; line-height: 1.5; }
-.input::placeholder, .textarea::placeholder { color: var(--text-faint); }
-.input:focus, .textarea:focus, .select:focus { outline: none; border-color: var(--on-track); box-shadow: 0 0 0 3px rgba(95, 138, 78, 0.22); }
-.input:disabled, .textarea:disabled, .select:disabled { opacity: 0.6; cursor: not-allowed; }
+.input::placeholder, .textarea::placeholder {
+  color: var(--text-on-dark-soft);
+  opacity: 0.65;
+}
+.input:focus, .textarea:focus, .select:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(76, 168, 118, 0.22);
+}
+.input:disabled, .textarea:disabled, .select:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
 .input-error { border-color: var(--behind); }
 
-/* Inputs inside dark panels */
-.panel .label { color: var(--text-on-dark-soft); }
-.panel .input, .panel .textarea, .panel .select { background: var(--surface-2); color: var(--text-on-dark); border-color: var(--border-on-dark); }
-.panel .input::placeholder, .panel .textarea::placeholder { color: var(--text-on-dark-soft); }
+/* Inputs inside parchment panels */
+.panel-light .label { color: var(--text-soft); }
+.panel-light .input,
+.panel-light .textarea,
+.panel-light .select {
+  background: var(--card-2);
+  color: var(--text);
+  border-color: var(--border);
+}
+.panel-light .input::placeholder,
+.panel-light .textarea::placeholder { color: var(--text-faint); opacity: 1; }
 
 /* ==========================================================================
-   Badges (pill, mono)
+   Badges
    ========================================================================== */
 .badge {
   display: inline-flex;
@@ -258,20 +341,47 @@ a { color: inherit; text-decoration: none; }
 .badge svg { width: 12px; height: 12px; }
 .badge-dot { width: 7px; height: 7px; border-radius: 9999px; }
 
-.badge-on-track { background: var(--on-track-tint); color: var(--on-track); border-color: var(--on-track); }
+.badge-on-track {
+  background: var(--on-track-tint);
+  color: var(--on-track);
+  border-color: rgba(76, 168, 118, 0.35);
+}
 .badge-on-track .badge-dot { background: var(--on-track); }
-.badge-at-risk { background: var(--at-risk-tint); color: var(--at-risk); border-color: var(--at-risk); }
-.badge-at-risk .badge-dot { background: var(--at-risk); }
-.badge-behind { background: var(--behind-tint); color: var(--behind); border-color: var(--behind); }
-.badge-behind .badge-dot { background: var(--behind); }
-.badge-neutral { background: rgba(20,23,27,0.05); color: var(--text-soft); border-color: var(--border-soft); }
-.badge-late { background: var(--behind-tint); color: var(--behind); border-color: var(--behind); }
 
-/* On dark panels, badges read brighter */
-.panel .badge-neutral { background: rgba(236,239,228,0.08); color: var(--text-on-dark-soft); border-color: var(--border-on-dark); }
+.badge-at-risk {
+  background: var(--at-risk-tint);
+  color: var(--at-risk);
+  border-color: rgba(212, 149, 58, 0.35);
+}
+.badge-at-risk .badge-dot { background: var(--at-risk); }
+
+.badge-behind {
+  background: var(--behind-tint);
+  color: var(--behind);
+  border-color: rgba(212, 90, 74, 0.35);
+}
+.badge-behind .badge-dot { background: var(--behind); }
+
+.badge-neutral {
+  background: rgba(163, 176, 135, 0.12);
+  color: var(--text-on-dark-soft);
+  border-color: var(--border-on-dark);
+}
+.badge-late {
+  background: var(--behind-tint);
+  color: var(--behind);
+  border-color: rgba(212, 90, 74, 0.35);
+}
+
+/* Neutrals adapt on parchment panels */
+.panel-light .badge-neutral {
+  background: rgba(74, 107, 77, 0.08);
+  color: var(--text-soft);
+  border-color: var(--border-soft);
+}
 
 /* ==========================================================================
-   Sidebar navigation
+   Sidebar navigation (lives on --sidebar background)
    ========================================================================== */
 .nav-item {
   display: flex;
@@ -285,30 +395,64 @@ a { color: inherit; text-decoration: none; }
   transition: background-color 160ms ease, color 160ms ease;
 }
 .nav-item svg { width: 18px; height: 18px; flex-shrink: 0; }
-.nav-item:hover { background: rgba(236, 239, 228, 0.07); color: var(--text-on-dark); }
-.nav-item-active { background: var(--primary); color: #14171b; }
-.nav-item-active:hover { background: var(--primary); color: #14171b; }
+.nav-item:hover {
+  background: rgba(163, 176, 135, 0.10);
+  color: var(--text-on-dark);
+}
+.nav-item-active {
+  background: rgba(90, 154, 114, 0.22);
+  color: var(--primary);
+}
+.nav-item-active:hover {
+  background: rgba(90, 154, 114, 0.22);
+  color: var(--primary);
+}
 
 /* ==========================================================================
    Utilities
    ========================================================================== */
-.muted { color: var(--text-soft); }
-.faint { color: var(--text-faint); }
-.divider { height: 1px; background: var(--border-soft); border: 0; }
-.panel .divider { background: var(--border-on-dark); }
+/* Default context: dark body background */
+.muted { color: var(--text-on-dark-soft); }
+.faint { color: var(--text-on-dark-faint); }
+.divider { height: 1px; background: var(--border-on-dark); border: 0; }
 
 /* Big metric number */
-.metric { font-family: var(--font-display); font-weight: 500; line-height: 1; letter-spacing: -0.01em; }
+.metric {
+  font-family: var(--font-display);
+  font-weight: 400;
+  line-height: 1;
+  letter-spacing: -0.01em;
+}
 
 .spin { animation: spin 0.9s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-.skeleton { background: linear-gradient(90deg, var(--card), var(--card-2), var(--card)); background-size: 200% 100%; animation: shimmer 1.4s infinite; border-radius: 16px; }
-@keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+/* Skeleton shimmer (parchment surface) */
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--surface),
+    var(--surface-2),
+    var(--surface)
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.4s infinite;
+  border-radius: 16px;
+}
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
 
 /* Staggered entrance / masked reveal */
-@keyframes reveal-up { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
-.reveal { opacity: 0; animation: reveal-up 560ms cubic-bezier(0.22, 1, 0.36, 1) forwards; }
+@keyframes reveal-up {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.reveal {
+  opacity: 0;
+  animation: reveal-up 580ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
 .reveal-1 { animation-delay: 60ms; }
 .reveal-2 { animation-delay: 120ms; }
 .reveal-3 { animation-delay: 180ms; }
@@ -320,24 +464,27 @@ a { color: inherit; text-decoration: none; }
 }
 
 /* ==========================================================================
-   Back-compat aliases — map a few legacy token/class names used across the
-   pages onto the new Eco-Tech tokens, so older markup keeps the right look.
+   Back-compat aliases — keep legacy token/class names working.
    ========================================================================== */
 :root {
-  --glass-border: var(--border-soft);
+  --glass-border: var(--border-on-dark);
   --brand-soft: var(--on-track-tint);
   --status-on-track: var(--on-track);
   --status-at-risk: var(--at-risk);
   --status-behind: var(--behind);
 }
-.heading-text { color: var(--text); }
-.panel .heading-text { color: var(--text-on-dark); }
-.brand-text { color: var(--on-track); }
-.btn-brand { background: var(--cta); color: #fff; }
-.btn-brand:hover { background: #000; }
-.panel .btn-brand { background: var(--primary); color: #14171b; }
 
-/* Collapse two-column page grids on smaller screens. */
+/* heading-text / brand-text: default dark-bg, parchment override above */
+.heading-text { color: var(--text-on-dark); }
+.brand-text { color: var(--primary); }
+
+/* btn-brand → primary action */
+.btn-brand { background: var(--primary); color: #fff; }
+.btn-brand:hover { background: var(--cta); }
+.panel-light .btn-brand { background: var(--cta); color: #fff; }
+.panel-light .btn-brand:hover { background: #325e47; }
+
+/* Collapse two-column grids on smaller screens */
 @media (max-width: 900px) {
   .dashboard-grid, .detail-grid { grid-template-columns: 1fr !important; }
 }
