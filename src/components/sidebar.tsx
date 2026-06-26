@@ -5,12 +5,12 @@ import { usePathname } from "next/navigation";
 import {
   Plant,
   Folders,
-  ClipboardText,
   CheckSquare,
   Users,
   Gear,
   SignOut,
   ChartBar,
+  ListChecks,
 } from "@phosphor-icons/react";
 import { Permission } from "@/generated/prisma";
 
@@ -25,6 +25,7 @@ const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: Plant },
   { href: "/projects", label: "Projects", icon: Folders },
   { href: "/my-tasks", label: "My Tasks", icon: CheckSquare },
+  { href: "/action-items", label: "Action Items", icon: ListChecks },
 ];
 
 const pmItems = [
