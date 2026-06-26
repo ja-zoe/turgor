@@ -3,20 +3,25 @@ import { requireAuth, getUserPermissions, getProjectMembership } from "@/lib/per
 import { prisma } from "@/lib/prisma";
 import { Permission } from "@/generated/prisma";
 import { ProjectStatusBadge } from "@/components/status-badge";
+import { DeliverableProgress } from "@/components/charts/deliverable-progress";
+import { GoalCompletionChart } from "@/components/charts/goal-completion-chart";
 import {
   ArrowRight,
   ClipboardText,
   Folders,
   Plant,
   Warning,
+  ChartBar,
+  ListChecks,
+  CalendarBlank,
 } from "@phosphor-icons/react/dist/ssr";
 
 export default async function DashboardPage() {
   const user = await requireAuth();
   const permissions = await getUserPermissions(user.roleId);
   const canManageProjects = permissions.includes(Permission.MANAGE_PROJECTS);
+  const canMonthlyReview = permissions.includes(Permission.VIEW_MONTHLY_REVIEW);
 
-  // Projects the user is assigned to
   const assignments = await prisma.projectAssignment.findMany({
     where: { userId: user.id },
     include: {
@@ -41,25 +46,87 @@ export default async function DashboardPage() {
           name: true,
           semester: true,
           status: true,
-          _count: { select: { deliverables: true } },
+          correctiveActionPlan: true,
+          _count: { select: { deliverables: true, actionItems: { where: { status: "OPEN" } } } },
         },
-        orderBy: { updatedAt: "desc" },
-        take: 10,
+        orderBy: [{ status: "asc" }, { updatedAt: "desc" }],
       })
     : null;
 
   const myProjects = assignments.map((a) => a.project);
 
-  // Most recent status update per my project
-  const statusUpdateMap: Record<string, Date | null> = {};
+  // Most recent status update + chart data per my project
+  type ProjectChartData = {
+    lastSubmitted: Date | null;
+    goalData: { week: string; goalMet: boolean | null }[];
+    deliverableStats: {
+      id: string;
+      title: string;
+      completed: boolean;
+      subtasksTotal: number;
+      subtasksDone: number;
+    }[];
+  };
+  const projectData: Record<string, ProjectChartData> = {};
   for (const p of myProjects) {
-    const latest = await prisma.statusUpdate.findFirst({
-      where: { projectId: p.id, submittedById: user.id },
-      orderBy: { submittedAt: "desc" },
-      select: { submittedAt: true },
-    });
-    statusUpdateMap[p.id] = latest?.submittedAt ?? null;
+    const [latest, meetingRecords, deliverables] = await Promise.all([
+      prisma.statusUpdate.findFirst({
+        where: { projectId: p.id, submittedById: user.id },
+        orderBy: { submittedAt: "desc" },
+        select: { submittedAt: true },
+      }),
+      prisma.meetingRecord.findMany({
+        where: { projectId: p.id },
+        orderBy: { meetingDate: "asc" },
+        take: 12,
+        select: { meetingDate: true, goalMet: true },
+      }),
+      prisma.deliverable.findMany({
+        where: { projectId: p.id },
+        orderBy: { orderIndex: "asc" },
+        select: {
+          id: true,
+          title: true,
+          completed: true,
+          subtasks: { where: {}, select: { status: true } },
+        },
+      }),
+    ]);
+    projectData[p.id] = {
+      lastSubmitted: latest?.submittedAt ?? null,
+      goalData: meetingRecords.map((r) => ({
+        week: r.meetingDate.toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+        goalMet: r.goalMet,
+      })),
+      deliverableStats: deliverables.map((d) => ({
+        id: d.id,
+        title: d.title,
+        completed: d.completed,
+        subtasksTotal: d.subtasks.length,
+        subtasksDone: d.subtasks.filter((s) => s.status === "COMPLETE").length,
+      })),
+    };
   }
+
+  // PM stats
+  let pmStats: { total: number; behind: number; atRisk: number; openItems: number } | null = null;
+  if (canManageProjects && allProjects) {
+    const openItems = await prisma.actionItem.count({ where: { status: "OPEN" } });
+    pmStats = {
+      total: allProjects.length,
+      behind: allProjects.filter((p) => p.status === "BEHIND").length,
+      atRisk: allProjects.filter((p) => p.status === "AT_RISK").length,
+      openItems,
+    };
+  }
+
+  // My open action items
+  const myActionItems = await prisma.actionItem.findMany({
+    where: { ownerId: user.id, status: "OPEN" },
+    orderBy: [{ carriedOver: "desc" }, { deadline: "asc" }],
+    take: 5,
+    include: { project: { select: { id: true, name: true } } },
+  });
 
   const displayName = user.name ?? user.email;
 
@@ -85,80 +152,257 @@ export default async function DashboardPage() {
         </h1>
       </div>
 
-      {/* My Projects */}
-      {myProjects.length > 0 && (
-        <section>
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-sm font-semibold text-foreground">My Projects</h2>
+      {/* PM stats grid */}
+      {pmStats && (
+        <div className="grid grid-cols-4 gap-3">
+          <div className="p-4 bg-card border border-border rounded-xl">
+            <p
+              className="text-xs text-muted-foreground uppercase tracking-widest mb-2"
+              style={{ fontFamily: "var(--font-mono)" }}
+            >
+              Projects
+            </p>
+            <p
+              className="text-3xl text-foreground"
+              style={{ fontFamily: "var(--font-display)", lineHeight: 1 }}
+            >
+              {pmStats.total}
+            </p>
           </div>
-          <div className="grid gap-3">
-            {myProjects.map((project) => (
-              <Link
-                key={project.id}
-                href={`/projects/${project.id}`}
-                className="group flex items-center justify-between p-4 bg-card border border-border rounded-xl hover:border-primary/30 transition-colors"
+          <div
+            className={`p-4 rounded-xl border ${pmStats.behind > 0 ? "bg-[#FDEBEC] border-[#A4503C]/20" : "bg-card border-border"}`}
+          >
+            <p
+              className={`text-xs uppercase tracking-widest mb-2 ${pmStats.behind > 0 ? "text-[#A4503C]" : "text-muted-foreground"}`}
+              style={{ fontFamily: "var(--font-mono)" }}
+            >
+              Behind
+            </p>
+            <p
+              className={`text-3xl ${pmStats.behind > 0 ? "text-[#A4503C]" : "text-foreground"}`}
+              style={{ fontFamily: "var(--font-display)", lineHeight: 1 }}
+            >
+              {pmStats.behind}
+            </p>
+          </div>
+          <div
+            className={`p-4 rounded-xl border ${pmStats.atRisk > 0 ? "bg-[#FBF3DB]/60 border-[#C99846]/20" : "bg-card border-border"}`}
+          >
+            <p
+              className={`text-xs uppercase tracking-widest mb-2 ${pmStats.atRisk > 0 ? "text-[#C99846]" : "text-muted-foreground"}`}
+              style={{ fontFamily: "var(--font-mono)" }}
+            >
+              At Risk
+            </p>
+            <p
+              className={`text-3xl ${pmStats.atRisk > 0 ? "text-[#C99846]" : "text-foreground"}`}
+              style={{ fontFamily: "var(--font-display)", lineHeight: 1 }}
+            >
+              {pmStats.atRisk}
+            </p>
+          </div>
+          <div className="p-4 bg-card border border-border rounded-xl">
+            <p
+              className="text-xs text-muted-foreground uppercase tracking-widest mb-2"
+              style={{ fontFamily: "var(--font-mono)" }}
+            >
+              Open Actions
+            </p>
+            <p
+              className="text-3xl text-foreground"
+              style={{ fontFamily: "var(--font-display)", lineHeight: 1 }}
+            >
+              {pmStats.openItems}
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* PM shortcuts */}
+      {canManageProjects && (
+        <div className="flex items-center gap-3">
+          {canMonthlyReview && (
+            <Link
+              href="/pm/review"
+              className="inline-flex items-center gap-2 rounded-md bg-primary text-primary-foreground text-sm font-medium px-4 py-2.5 hover:bg-primary/80 transition-colors"
+            >
+              <ChartBar size={14} />
+              Monthly Review
+            </Link>
+          )}
+          <Link
+            href="/action-items"
+            className="inline-flex items-center gap-2 rounded-md border border-border bg-card text-sm font-medium px-4 py-2.5 hover:bg-muted transition-colors"
+          >
+            <ListChecks size={14} />
+            All Action Items
+          </Link>
+          <Link
+            href="/projects/new"
+            className="inline-flex items-center gap-2 rounded-md border border-border bg-card text-sm font-medium px-4 py-2.5 hover:bg-muted transition-colors"
+          >
+            <Folders size={14} />
+            New Project
+          </Link>
+        </div>
+      )}
+
+      {/* My open action items */}
+      {myActionItems.length > 0 && (
+        <section>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-sm font-semibold text-foreground flex items-center gap-2">
+              <ListChecks size={14} className="text-muted-foreground" />
+              My Action Items
+            </h2>
+            <Link
+              href="/action-items"
+              className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+              style={{ fontFamily: "var(--font-mono)" }}
+            >
+              View all
+            </Link>
+          </div>
+          <div className="space-y-1.5">
+            {myActionItems.map((item) => (
+              <div
+                key={item.id}
+                className="flex items-center gap-3 px-3 py-2.5 bg-card border border-border rounded-lg"
               >
-                <div className="flex items-center gap-3">
-                  <Plant size={16} className="text-primary" weight="fill" />
-                  <div>
-                    <p className="text-sm font-medium text-foreground group-hover:text-primary transition-colors">
-                      {project.name}
-                    </p>
-                    <p
-                      className="text-xs text-muted-foreground"
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-foreground truncate">{item.description}</p>
+                  <Link
+                    href={`/projects/${item.project.id}`}
+                    className="text-xs text-muted-foreground hover:text-primary transition-colors"
+                    style={{ fontFamily: "var(--font-mono)" }}
+                  >
+                    {item.project.name}
+                  </Link>
+                </div>
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  {item.carriedOver && (
+                    <span
+                      className="text-xs text-[#C99846] bg-[#FBF3DB] px-1.5 py-0.5 rounded"
                       style={{ fontFamily: "var(--font-mono)" }}
                     >
-                      {project.semester} &middot; {project._count.deliverables} deliverable
-                      {project._count.deliverables !== 1 ? "s" : ""}
-                    </p>
-                  </div>
+                      carried
+                    </span>
+                  )}
+                  {item.deadline && (
+                    <span
+                      className={`text-xs ${item.deadline < new Date() ? "text-[#A4503C]" : "text-muted-foreground"}`}
+                      style={{ fontFamily: "var(--font-mono)" }}
+                    >
+                      {item.deadline.toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                    </span>
+                  )}
                 </div>
-                <div className="flex items-center gap-3">
-                  <ProjectStatusBadge status={project.status} />
-                  <ArrowRight
-                    size={14}
-                    className="text-muted-foreground group-hover:text-foreground transition-colors"
-                  />
-                </div>
-              </Link>
+              </div>
             ))}
           </div>
+        </section>
+      )}
 
-          {/* Submit status update CTAs */}
-          <div className="mt-4 grid gap-2">
+      {/* My Projects with charts */}
+      {myProjects.length > 0 && (
+        <section>
+          <h2 className="text-sm font-semibold text-foreground mb-4">My Projects</h2>
+          <div className="space-y-4">
             {myProjects.map((project) => {
-              const lastSubmitted = statusUpdateMap[project.id];
+              const data = projectData[project.id];
               return (
                 <div
                   key={project.id}
-                  className="flex items-center justify-between px-4 py-3 bg-[#FBF3DB]/60 border border-[#C99846]/20 rounded-lg"
+                  className="bg-card border border-border rounded-xl overflow-hidden"
                 >
-                  <div className="flex items-center gap-2 text-sm">
-                    <ClipboardText size={14} className="text-[#C99846]" weight="fill" />
-                    <span className="text-foreground font-medium">{project.name}</span>
-                    {lastSubmitted ? (
-                      <span
-                        className="text-muted-foreground"
-                        style={{ fontFamily: "var(--font-mono)", fontSize: "0.7rem" }}
+                  {/* Project header */}
+                  <div className="flex items-center justify-between p-4 border-b border-border">
+                    <div className="flex items-center gap-3">
+                      <Plant size={15} className="text-primary" weight="fill" />
+                      <div>
+                        <Link
+                          href={`/projects/${project.id}`}
+                          className="text-sm font-medium text-foreground hover:text-primary transition-colors"
+                        >
+                          {project.name}
+                        </Link>
+                        <p
+                          className="text-xs text-muted-foreground"
+                          style={{ fontFamily: "var(--font-mono)" }}
+                        >
+                          {project.semester}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <ProjectStatusBadge status={project.status} />
+                      <Link
+                        href={`/projects/${project.id}/timeline`}
+                        className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                        style={{ fontFamily: "var(--font-mono)" }}
                       >
-                        last update {lastSubmitted.toLocaleDateString()}
-                      </span>
-                    ) : (
-                      <span
-                        className="text-[#C99846]"
-                        style={{ fontFamily: "var(--font-mono)", fontSize: "0.7rem" }}
+                        <CalendarBlank size={13} className="inline mr-1" />
+                        Timeline
+                      </Link>
+                      <Link
+                        href={`/projects/${project.id}`}
+                        className="text-muted-foreground hover:text-foreground transition-colors"
                       >
-                        no update yet
-                      </span>
-                    )}
+                        <ArrowRight size={14} />
+                      </Link>
+                    </div>
                   </div>
-                  <Link
-                    href={`/projects/${project.id}/status/new`}
-                    className="text-xs font-medium text-[#C99846] hover:text-[#A4503C] transition-colors"
-                    style={{ fontFamily: "var(--font-mono)" }}
-                  >
-                    Submit update
-                  </Link>
+
+                  {/* Charts + progress */}
+                  <div className="grid grid-cols-2 divide-x divide-border">
+                    <div className="p-4">
+                      <p
+                        className="text-xs text-muted-foreground mb-2"
+                        style={{ fontFamily: "var(--font-mono)" }}
+                      >
+                        Weekly Goals
+                      </p>
+                      <GoalCompletionChart data={data.goalData} />
+                    </div>
+                    <div className="p-4">
+                      <p
+                        className="text-xs text-muted-foreground mb-2"
+                        style={{ fontFamily: "var(--font-mono)" }}
+                      >
+                        Deliverable Progress
+                      </p>
+                      <DeliverableProgress deliverables={data.deliverableStats} />
+                    </div>
+                  </div>
+
+                  {/* Submit update CTA */}
+                  <div className="flex items-center justify-between px-4 py-2.5 border-t border-border bg-[#FBF3DB]/40">
+                    <div className="flex items-center gap-2 text-xs">
+                      <ClipboardText size={12} className="text-[#C99846]" weight="fill" />
+                      {data.lastSubmitted ? (
+                        <span
+                          className="text-muted-foreground"
+                          style={{ fontFamily: "var(--font-mono)" }}
+                        >
+                          Last update {data.lastSubmitted.toLocaleDateString()}
+                        </span>
+                      ) : (
+                        <span
+                          className="text-[#C99846]"
+                          style={{ fontFamily: "var(--font-mono)" }}
+                        >
+                          No update submitted yet
+                        </span>
+                      )}
+                    </div>
+                    <Link
+                      href={`/projects/${project.id}/status/new`}
+                      className="text-xs font-medium text-[#C99846] hover:text-[#A4503C] transition-colors"
+                      style={{ fontFamily: "var(--font-mono)" }}
+                    >
+                      Submit update →
+                    </Link>
+                  </div>
                 </div>
               );
             })}
@@ -166,17 +410,17 @@ export default async function DashboardPage() {
         </section>
       )}
 
-      {/* PM: All Projects */}
+      {/* PM: All Projects table */}
       {canManageProjects && allProjects && (
         <section>
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-sm font-semibold text-foreground">All Projects</h2>
             <Link
-              href="/projects/new"
-              className="text-xs font-medium text-primary hover:text-primary/70 transition-colors"
+              href="/projects"
+              className="text-xs text-muted-foreground hover:text-foreground transition-colors"
               style={{ fontFamily: "var(--font-mono)" }}
             >
-              + New project
+              View all →
             </Link>
           </div>
           {allProjects.length === 0 ? (
@@ -192,35 +436,50 @@ export default async function DashboardPage() {
               </Link>
             </div>
           ) : (
-            <div className="grid gap-3">
-              {allProjects.map((project) => (
-                <Link
+            <div className="border border-border rounded-xl overflow-hidden">
+              {allProjects.map((project, i) => (
+                <div
                   key={project.id}
-                  href={`/projects/${project.id}`}
-                  className="group flex items-center justify-between p-4 bg-card border border-border rounded-xl hover:border-primary/30 transition-colors"
+                  className={`flex items-center justify-between px-4 py-3 ${
+                    i !== allProjects.length - 1 ? "border-b border-border" : ""
+                  } hover:bg-muted/30 transition-colors`}
                 >
-                  <div>
-                    <p className="text-sm font-medium text-foreground group-hover:text-primary transition-colors">
-                      {project.name}
-                    </p>
-                    <p
-                      className="text-xs text-muted-foreground"
+                  <div className="flex items-center gap-3 min-w-0">
+                    {project.status === "BEHIND" && (
+                      <Warning size={13} className="text-[#A4503C] flex-shrink-0" weight="fill" />
+                    )}
+                    <div className="min-w-0">
+                      <Link
+                        href={`/projects/${project.id}`}
+                        className="text-sm font-medium text-foreground hover:text-primary transition-colors"
+                      >
+                        {project.name}
+                      </Link>
+                      <p
+                        className="text-xs text-muted-foreground"
+                        style={{ fontFamily: "var(--font-mono)" }}
+                      >
+                        {project.semester} &middot; {project._count.deliverables} deliverable
+                        {project._count.deliverables !== 1 ? "s" : ""}
+                        {project._count.actionItems > 0 && (
+                          <span className="text-[#C99846]">
+                            {" "}&middot; {project._count.actionItems} open action item{project._count.actionItems !== 1 ? "s" : ""}
+                          </span>
+                        )}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3 flex-shrink-0">
+                    <ProjectStatusBadge status={project.status} />
+                    <Link
+                      href={`/projects/${project.id}/timeline`}
+                      className="text-xs text-muted-foreground hover:text-foreground transition-colors"
                       style={{ fontFamily: "var(--font-mono)" }}
                     >
-                      {project.semester}
-                    </p>
+                      Timeline
+                    </Link>
                   </div>
-                  <div className="flex items-center gap-3">
-                    {project.status === "BEHIND" && (
-                      <Warning size={14} className="text-[#A4503C]" weight="fill" />
-                    )}
-                    <ProjectStatusBadge status={project.status} />
-                    <ArrowRight
-                      size={14}
-                      className="text-muted-foreground group-hover:text-foreground transition-colors"
-                    />
-                  </div>
-                </Link>
+                </div>
               ))}
             </div>
           )}

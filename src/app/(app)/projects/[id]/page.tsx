@@ -547,14 +547,21 @@ export default async function ProjectDetailPage({
         )}
       </section>
 
-      {/* Audit trail link */}
-      <div className="pt-2 border-t border-border">
+      {/* Footer links */}
+      <div className="pt-2 border-t border-border flex items-center gap-6">
+        <Link
+          href={`/projects/${id}/timeline`}
+          className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+          style={{ fontFamily: "var(--font-mono)" }}
+        >
+          View timeline →
+        </Link>
         <Link
           href={`/projects/${id}/history`}
           className="text-xs text-muted-foreground hover:text-foreground transition-colors"
           style={{ fontFamily: "var(--font-mono)" }}
         >
-          View full submission history →
+          Submission history →
         </Link>
       </div>
 
