@@ -11,11 +11,17 @@ Running log. Keep entries terse — one line per unit of work. Newest at top.
 - [x] Phase 0 — Scaffold (Next.js, shadcn, Prisma, fonts, palette, icons, GSAP)
 - [x] Phase 1 — Auth + RBAC (CAS mock, schema, seed, DB reset, middleware)
 - [x] Phase 2 — Core loop (projects, deliverables/subtasks, status form, post-meeting)
-- [ ] Phase 3 — Accountability (action items, red-flag detection, audit trail, My Tasks)
+- [x] Phase 3 — Accountability (action items, red-flag detection, audit trail, My Tasks)
 - [ ] Phase 4 — Visibility (dashboards, charts, monthly review, timeline + Excel export)
 - [ ] Phase 5 — Configurability & polish (role builder, notifications, cron, responsive, motion)
 
 ## Log
+- 2026-06-26 — Phase 3 complete. `feat/phase-3-accountability` merged to `develop`.
+  Action items (inline create, mark done, reopen, carry-over badge). Red-flag
+  auto-detection reads Settings singleton; sets project BEHIND on overdue
+  deliverables or N missed goals in a row; fires after every meeting record.
+  Audit trail at /projects/[id]/history (merged timeline). /action-items page
+  (PM sees all, others see assigned). My Tasks now shows action items + subtasks.
 - 2026-06-26 — Phase 2 complete. `feat/phase-2-core-loop` merged to `develop`.
   (app) route group with sidebar layout gated by permissions.
   Projects CRUD, Deliverables + Subtasks with Markdown write/preview (react-markdown + remark-gfm).
