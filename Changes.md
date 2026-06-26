@@ -9,13 +9,20 @@ Running log. Keep entries terse — one line per unit of work. Newest at top.
 
 ## Status by phase
 - [x] Phase 0 — Scaffold (Next.js, shadcn, Prisma, fonts, palette, icons, GSAP)
-- [ ] Phase 1 — Auth + RBAC (CAS mock, schema, seed, DB reset, middleware)
+- [x] Phase 1 — Auth + RBAC (CAS mock, schema, seed, DB reset, middleware)
 - [ ] Phase 2 — Core loop (projects, deliverables/subtasks, status form, post-meeting)
 - [ ] Phase 3 — Accountability (action items, red-flag detection, audit trail, My Tasks)
 - [ ] Phase 4 — Visibility (dashboards, charts, monthly review, timeline + Excel export)
 - [ ] Phase 5 — Configurability & polish (role builder, notifications, cron, responsive, motion)
 
 ## Log
+- 2026-06-26 — Phase 1 complete. `feat/phase-1-auth-rbac` merged to `develop`.
+  Auth.js v5 Credentials provider with HMAC handoff tokens (60s TTL).
+  CAS mock mode via /dev-login server action; real CAS callback skeleton in place.
+  Prisma v7 client uses @prisma/adapter-pg (WASM engine requires driver adapter).
+  Schema enum names aligned with existing DB (TimelineStatus, Channel, RecipientGroup).
+  3 built-in roles + Settings singleton seeded. PM auto-activates on first sign-in.
+  Edge-safe middleware: auth.config.ts (no Node) + full auth.ts.
 - 2026-06-26 — Phase 0 complete. `feat/phase-0-scaffold` merged to `develop`.
   Stack: Next.js 16.2 / React 19 / Tailwind v4 / shadcn (@base-ui) / Prisma v7.
   Fonts: Geist Sans + Instrument Serif + JetBrains Mono via next/font/google.
