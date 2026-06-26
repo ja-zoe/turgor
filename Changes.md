@@ -12,10 +12,17 @@ Running log. Keep entries terse — one line per unit of work. Newest at top.
 - [x] Phase 1 — Auth + RBAC (CAS mock, schema, seed, DB reset, middleware)
 - [x] Phase 2 — Core loop (projects, deliverables/subtasks, status form, post-meeting)
 - [x] Phase 3 — Accountability (action items, red-flag detection, audit trail, My Tasks)
-- [ ] Phase 4 — Visibility (dashboards, charts, monthly review, timeline + Excel export)
+- [x] Phase 4 — Visibility (dashboards, charts, monthly review, timeline + Excel export)
 - [ ] Phase 5 — Configurability & polish (role builder, notifications, cron, responsive, motion)
 
 ## Log
+- 2026-06-26 — Phase 4 complete. `feat/phase-4-visibility` merged to `develop`.
+  Recharts charts (goal completion bar, status history strip, deliverable
+  progress bars, blocker frequency). /projects/[id]/timeline with Gantt-style
+  bars + today marker. /pm/review monthly review (repeated misses, overdue
+  deliverables, blocker + gap frequency charts, health grid). Excel export at
+  /api/projects/[id]/export (3 sheets). Dashboard enhanced: PM stats grid,
+  shortcuts, per-project charts, open action items widget.
 - 2026-06-26 — Phase 3 complete. `feat/phase-3-accountability` merged to `develop`.
   Action items (inline create, mark done, reopen, carry-over badge). Red-flag
   auto-detection reads Settings singleton; sets project BEHIND on overdue
