@@ -13,9 +13,17 @@ Running log. Keep entries terse — one line per unit of work. Newest at top.
 - [x] Phase 2 — Core loop (projects, deliverables/subtasks, status form, post-meeting)
 - [x] Phase 3 — Accountability (action items, red-flag detection, audit trail, My Tasks)
 - [x] Phase 4 — Visibility (dashboards, charts, monthly review, timeline + Excel export)
-- [ ] Phase 5 — Configurability & polish (role builder, notifications, cron, responsive, motion)
+- [x] Phase 5 — Configurability & polish (role builder, notifications, cron, responsive, motion)
 
 ## Log
+- 2026-06-26 — Phase 5 complete. `feat/phase-5-polish` merged to `develop`.
+  /pm/users: approve/suspend/reactivate users, assign roles. Role builder:
+  edit permissions on all roles, create/delete custom roles. /pm/settings:
+  detection thresholds + notification rule CRUD. Notification engine fires
+  MISSING_SUBMISSION/PROJECT_BEHIND/ACTION_ITEM_DUE/GOAL_MISSED rules via
+  /api/cron/notifications (CRON_SECRET). In-app bell in sidebar footer with
+  unread badge + dropdown, auto-polls 60s. ScrollReveal GSAP wrapper with
+  prefers-reduced-motion guard. Mobile-responsive sidebar with hamburger drawer.
 - 2026-06-26 — Phase 4 complete. `feat/phase-4-visibility` merged to `develop`.
   Recharts charts (goal completion bar, status history strip, deliverable
   progress bars, blocker frequency). /projects/[id]/timeline with Gantt-style
