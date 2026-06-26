@@ -47,3 +47,5 @@ yarn-error.log*
 # The `claude/` folder holds the planning outline and the design-system skill
 # used to build this app; it is reference material, not shipped code.
 /claude
+
+/src/generated/prisma
