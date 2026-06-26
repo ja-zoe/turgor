@@ -10,12 +10,18 @@ Running log. Keep entries terse — one line per unit of work. Newest at top.
 ## Status by phase
 - [x] Phase 0 — Scaffold (Next.js, shadcn, Prisma, fonts, palette, icons, GSAP)
 - [x] Phase 1 — Auth + RBAC (CAS mock, schema, seed, DB reset, middleware)
-- [ ] Phase 2 — Core loop (projects, deliverables/subtasks, status form, post-meeting)
+- [x] Phase 2 — Core loop (projects, deliverables/subtasks, status form, post-meeting)
 - [ ] Phase 3 — Accountability (action items, red-flag detection, audit trail, My Tasks)
 - [ ] Phase 4 — Visibility (dashboards, charts, monthly review, timeline + Excel export)
 - [ ] Phase 5 — Configurability & polish (role builder, notifications, cron, responsive, motion)
 
 ## Log
+- 2026-06-26 — Phase 2 complete. `feat/phase-2-core-loop` merged to `develop`.
+  (app) route group with sidebar layout gated by permissions.
+  Projects CRUD, Deliverables + Subtasks with Markdown write/preview (react-markdown + remark-gfm).
+  Pre-meeting status form with late-marking (reads Settings.submissionDeadlineHours).
+  Post-meeting meeting record form; updates project.status unless statusOverride.
+  Member management (LEAD/SUBLEAD/MEMBER). My Tasks page for assigned subtasks.
 - 2026-06-26 — Phase 1 complete. `feat/phase-1-auth-rbac` merged to `develop`.
   Auth.js v5 Credentials provider with HMAC handoff tokens (60s TTL).
   CAS mock mode via /dev-login server action; real CAS callback skeleton in place.
