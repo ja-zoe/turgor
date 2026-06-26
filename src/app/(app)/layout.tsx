@@ -3,6 +3,7 @@ import { auth, signOut } from "@/auth";
 import { UserStatus } from "@/generated/prisma";
 import { getUserPermissions } from "@/lib/permissions";
 import { Sidebar } from "@/components/sidebar";
+import { ScrollReveal } from "@/components/scroll-reveal";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const session = await auth();
@@ -25,8 +26,12 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         permissions={permissions}
         signOutAction={signOutAction}
       />
-      <main className="flex-1 overflow-y-auto">
-        <div className="max-w-5xl mx-auto px-8 py-8">{children}</div>
+      <main className="flex-1 overflow-y-auto min-w-0">
+        {/* Top spacing on mobile to clear the hamburger button */}
+        <div className="lg:hidden h-14" />
+        <ScrollReveal>
+          <div className="max-w-5xl mx-auto px-4 sm:px-8 py-8">{children}</div>
+        </ScrollReveal>
       </main>
     </div>
   );
