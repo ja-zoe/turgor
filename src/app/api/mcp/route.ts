@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getUserPermissions } from "@/lib/permissions";
-import { Permission, TimelineStatus, ActionItemStatus } from "@/generated/prisma";
+import { Permission, TimelineStatus, ActionItemStatus, CalendarEventType } from "@/generated/prisma";
 
 type McpUser = { id: string; email: string; roleId: string | null };
 
@@ -218,6 +218,71 @@ const TOOLS = [
         deliverableId: { type: "string" },
       },
       required: ["deliverableId"],
+    },
+  },
+  // ── Calendar ──────────────────────────────────────────────────────────────
+  {
+    name: "list_calendar_events",
+    description: "List calendar events, optionally filtered by semester, date range, or type. Read-only, available to all active users.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        semester: { type: "string", description: "Filter by semester (e.g. 'Fall 2026')" },
+        from: { type: "string", description: "ISO date — only events on/after this date" },
+        to: { type: "string", description: "ISO date — only events on/before this date" },
+        type: { type: "string", enum: ["PROJECT_MEETING", "NON_PROJECT_EVENT"] },
+      },
+      required: [],
+    },
+  },
+  {
+    name: "create_calendar_event",
+    description: "Create a calendar event. Requires MANAGE_CALENDAR permission.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        title: { type: "string" },
+        semester: { type: "string" },
+        startsAt: { type: "string", description: "ISO datetime" },
+        type: { type: "string", enum: ["PROJECT_MEETING", "NON_PROJECT_EVENT"], description: "Default: PROJECT_MEETING" },
+        endsAt: { type: "string", description: "ISO datetime (optional)" },
+        allDay: { type: "boolean" },
+        location: { type: "string" },
+        description: { type: "string" },
+        projectId: { type: "string" },
+      },
+      required: ["title", "semester", "startsAt"],
+    },
+  },
+  {
+    name: "update_calendar_event",
+    description: "Update a calendar event. Requires MANAGE_CALENDAR permission.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        eventId: { type: "string" },
+        title: { type: "string" },
+        semester: { type: "string" },
+        startsAt: { type: "string", description: "ISO datetime" },
+        type: { type: "string", enum: ["PROJECT_MEETING", "NON_PROJECT_EVENT"] },
+        endsAt: { type: "string", description: "ISO datetime, or null to clear" },
+        allDay: { type: "boolean" },
+        location: { type: "string" },
+        description: { type: "string" },
+        projectId: { type: "string", description: "Project ID, or null to unlink" },
+      },
+      required: ["eventId"],
+    },
+  },
+  {
+    name: "delete_calendar_event",
+    description: "Delete a calendar event. Requires MANAGE_CALENDAR permission.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        eventId: { type: "string" },
+      },
+      required: ["eventId"],
     },
   },
   // ── Subtasks ──────────────────────────────────────────────────────────────
@@ -685,6 +750,108 @@ async function executeTool(
       return { deleted: { id: did, title: deliverable.title } };
     }
 
+    // ── list_calendar_events ─────────────────────────────────────────────────
+    case "list_calendar_events": {
+      const semester = args.semester as string | undefined;
+      const from = args.from ? new Date(args.from as string) : undefined;
+      const to = args.to ? new Date(args.to as string) : undefined;
+      const type = args.type as CalendarEventType | undefined;
+
+      const events = await prisma.calendarEvent.findMany({
+        where: {
+          ...(semester ? { semester } : {}),
+          ...(from || to ? { startsAt: { ...(from ? { gte: from } : {}), ...(to ? { lte: to } : {}) } } : {}),
+          ...(type ? { type } : {}),
+        },
+        include: { project: { select: { name: true } } },
+        orderBy: { startsAt: "asc" },
+        take: 100,
+      });
+      return {
+        events: events.map((e) => ({
+          id: e.id,
+          title: e.title,
+          type: e.type,
+          startsAt: e.startsAt,
+          endsAt: e.endsAt,
+          allDay: e.allDay,
+          location: e.location,
+          projectId: e.projectId,
+          project: e.project ? { name: e.project.name } : null,
+        })),
+      };
+    }
+
+    // ── create_calendar_event ────────────────────────────────────────────────
+    case "create_calendar_event": {
+      if (!permissions.includes(Permission.MANAGE_CALENDAR)) {
+        return { error: "Requires MANAGE_CALENDAR permission" };
+      }
+      const title = (args.title as string | undefined)?.trim();
+      const semester = (args.semester as string | undefined)?.trim();
+      const startsAtRaw = args.startsAt as string | undefined;
+      if (!title || !semester || !startsAtRaw) return { error: "title, semester, and startsAt are required" };
+
+      const startsAt = new Date(startsAtRaw);
+      const endsAt = args.endsAt ? new Date(args.endsAt as string) : null;
+      if (endsAt && endsAt < startsAt) return { error: "endsAt must be after startsAt" };
+
+      const event = await prisma.calendarEvent.create({
+        data: {
+          title,
+          semester,
+          type: (args.type as CalendarEventType | undefined) ?? CalendarEventType.PROJECT_MEETING,
+          startsAt,
+          endsAt,
+          allDay: (args.allDay as boolean | undefined) ?? false,
+          location: (args.location as string | undefined) ?? null,
+          description: (args.description as string | undefined) ?? null,
+          projectId: (args.projectId as string | undefined) ?? null,
+        },
+        select: { id: true, title: true, startsAt: true },
+      });
+      return { created: event };
+    }
+
+    // ── update_calendar_event ────────────────────────────────────────────────
+    case "update_calendar_event": {
+      if (!permissions.includes(Permission.MANAGE_CALENDAR)) {
+        return { error: "Requires MANAGE_CALENDAR permission" };
+      }
+      const eid = args.eventId as string;
+      const updateData: Record<string, unknown> = {};
+      if (args.title !== undefined) updateData.title = (args.title as string).trim();
+      if (args.semester !== undefined) updateData.semester = (args.semester as string).trim();
+      if (args.startsAt !== undefined) updateData.startsAt = new Date(args.startsAt as string);
+      if (args.type !== undefined) updateData.type = args.type as CalendarEventType;
+      if ("endsAt" in args) updateData.endsAt = args.endsAt ? new Date(args.endsAt as string) : null;
+      if (args.allDay !== undefined) updateData.allDay = args.allDay as boolean;
+      if (args.location !== undefined) updateData.location = args.location as string | null;
+      if (args.description !== undefined) updateData.description = args.description as string | null;
+      if ("projectId" in args) updateData.projectId = (args.projectId as string | null) ?? null;
+
+      if (Object.keys(updateData).length === 0) return { error: "No fields to update" };
+
+      const updated = await prisma.calendarEvent.update({
+        where: { id: eid },
+        data: updateData,
+        select: { id: true, title: true, startsAt: true },
+      });
+      return { updated };
+    }
+
+    // ── delete_calendar_event ────────────────────────────────────────────────
+    case "delete_calendar_event": {
+      if (!permissions.includes(Permission.MANAGE_CALENDAR)) {
+        return { error: "Requires MANAGE_CALENDAR permission" };
+      }
+      const eid = args.eventId as string;
+      const existing = await prisma.calendarEvent.findUnique({ where: { id: eid }, select: { id: true, title: true } });
+      if (!existing) return { error: "Calendar event not found" };
+      await prisma.calendarEvent.delete({ where: { id: eid } });
+      return { deleted: { id: eid, title: existing.title } };
+    }
+
     // ── create_subtask ───────────────────────────────────────────────────────
     case "create_subtask": {
       const delId = args.deliverableId as string;
@@ -791,7 +958,7 @@ export async function POST(req: NextRequest) {
       return ok({
         protocolVersion: "2024-11-05",
         capabilities: { tools: {} },
-        serverInfo: { name: "SEED Tracker", version: "2.1.0" },
+        serverInfo: { name: "SEED Tracker", version: "2.2.0" },
       });
 
     case "ping":
