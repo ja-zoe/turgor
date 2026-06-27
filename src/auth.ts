@@ -4,6 +4,7 @@ import { PrismaAdapter } from "@auth/prisma-adapter";
 import { prisma } from "@/lib/prisma";
 import { verifyHandoffToken } from "@/lib/handoff-token";
 import { UserStatus } from "@/generated/prisma";
+import { notifyNewSignup } from "@/lib/notifications";
 import authConfig from "./auth.config";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
@@ -54,6 +55,14 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             },
             select: { id: true, email: true, name: true, status: true, roleId: true },
           });
+
+          if (user.status === UserStatus.PENDING) {
+            try {
+              await notifyNewSignup({ id: user.id, name: user.name, email: user.email });
+            } catch (e) {
+              console.error("signup notify failed", e);
+            }
+          }
         } else if (
           user.status === UserStatus.PENDING &&
           email === process.env.PM_ADMIN_EMAIL
