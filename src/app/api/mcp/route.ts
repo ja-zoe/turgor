@@ -80,6 +80,41 @@ const TOOLS = [
       required: [],
     },
   },
+  // ── Projects ──────────────────────────────────────────────────────────────
+  {
+    name: "create_project",
+    description:
+      "Create a new project. Requires MANAGE_PROJECTS permission.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        name: { type: "string" },
+        semester: { type: "string", description: "e.g. 'Fall 2026'" },
+        description: { type: "string" },
+        startDate: { type: "string", description: "ISO date string (optional)" },
+        endDate: { type: "string", description: "ISO date string (optional)" },
+      },
+      required: ["name", "semester"],
+    },
+  },
+  {
+    name: "update_project",
+    description:
+      "Update a project's name, semester, description, dates, or corrective action plan. Requires MANAGE_PROJECTS permission.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        projectId: { type: "string" },
+        name: { type: "string" },
+        semester: { type: "string" },
+        description: { type: "string" },
+        startDate: { type: "string", description: "ISO date string, or null to clear" },
+        endDate: { type: "string", description: "ISO date string, or null to clear" },
+        correctiveActionPlan: { type: "string" },
+      },
+      required: ["projectId"],
+    },
+  },
   // ── Action items ──────────────────────────────────────────────────────────
   {
     name: "create_action_item",
@@ -285,7 +320,11 @@ async function executeTool(
       if (!membership && !permissions.includes(Permission.VIEW_ALL_PROJECTS)) {
         return { error: "No access to this project" };
       }
-      const [deliverables, actionItems] = await Promise.all([
+      const [project, deliverables, actionItems] = await Promise.all([
+        prisma.project.findUnique({
+          where: { id: pid },
+          select: { id: true, name: true, semester: true, status: true, startDate: true, endDate: true, description: true },
+        }),
         prisma.deliverable.findMany({
           where: { projectId: pid },
           select: {
@@ -307,7 +346,7 @@ async function executeTool(
           take: 20,
         }),
       ]);
-      return { deliverables, actionItems };
+      return { project, deliverables, actionItems };
     }
 
     // ── list_members ─────────────────────────────────────────────────────────
@@ -431,6 +470,62 @@ async function executeTool(
           projectName: s.deliverable.project.name,
         })),
       };
+    }
+
+    // ── create_project ───────────────────────────────────────────────────────
+    case "create_project": {
+      if (!permissions.includes(Permission.MANAGE_PROJECTS)) {
+        return { error: "Requires MANAGE_PROJECTS permission" };
+      }
+      const name = (args.name as string | undefined)?.trim();
+      const semester = (args.semester as string | undefined)?.trim();
+      if (!name || !semester) return { error: "name and semester are required" };
+
+      const startDate = args.startDate ? new Date(args.startDate as string) : null;
+      const endDate = args.endDate ? new Date(args.endDate as string) : null;
+      if (startDate && endDate && endDate < startDate) {
+        return { error: "endDate must be after startDate" };
+      }
+
+      const project = await prisma.project.create({
+        data: {
+          name,
+          semester,
+          description: (args.description as string | undefined) ?? null,
+          startDate,
+          endDate,
+        },
+        select: { id: true, name: true, semester: true },
+      });
+      return { created: project };
+    }
+
+    // ── update_project ───────────────────────────────────────────────────────
+    case "update_project": {
+      if (!permissions.includes(Permission.MANAGE_PROJECTS)) {
+        return { error: "Requires MANAGE_PROJECTS permission" };
+      }
+      const pid = args.projectId as string;
+      const updateFields: Record<string, unknown> = {};
+      if (args.name !== undefined) updateFields.name = (args.name as string).trim();
+      if (args.semester !== undefined) updateFields.semester = (args.semester as string).trim();
+      if (args.description !== undefined) updateFields.description = args.description as string;
+      if (args.correctiveActionPlan !== undefined) updateFields.correctiveActionPlan = args.correctiveActionPlan as string;
+      if ("startDate" in args) updateFields.startDate = args.startDate ? new Date(args.startDate as string) : null;
+      if ("endDate" in args) updateFields.endDate = args.endDate ? new Date(args.endDate as string) : null;
+
+      if (Object.keys(updateFields).length === 0) return { error: "No fields to update" };
+
+      if (updateFields.startDate && updateFields.endDate && (updateFields.endDate as Date) < (updateFields.startDate as Date)) {
+        return { error: "endDate must be after startDate" };
+      }
+
+      const updated = await prisma.project.update({
+        where: { id: pid },
+        data: updateFields,
+        select: { id: true, name: true, semester: true, startDate: true, endDate: true },
+      });
+      return { updated };
     }
 
     // ── create_action_item ───────────────────────────────────────────────────
@@ -696,7 +791,7 @@ export async function POST(req: NextRequest) {
       return ok({
         protocolVersion: "2024-11-05",
         capabilities: { tools: {} },
-        serverInfo: { name: "SEED Tracker", version: "2.0.0" },
+        serverInfo: { name: "SEED Tracker", version: "2.1.0" },
       });
 
     case "ping":

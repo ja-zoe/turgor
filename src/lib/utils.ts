@@ -13,3 +13,19 @@ export function getDisplayName(user: {
 }): string {
   return user.nickname ?? user.firstName ?? user.name ?? user.email.split("@")[0];
 }
+
+export function projectDuration(start: Date, end: Date | null): string {
+  const to = end ?? new Date();
+  const ms = to.getTime() - start.getTime();
+  if (ms <= 0) return "0 days";
+  const days = Math.floor(ms / (1000 * 60 * 60 * 24));
+  if (days < 14) return `${days} day${days !== 1 ? "s" : ""}`;
+  const weeks = Math.floor(days / 7);
+  if (weeks < 8) return `${weeks} wk`;
+  const months = Math.round(days / 30.44);
+  return `${months} mo`;
+}
+
+export function formatProjectDate(d: Date): string {
+  return d.toLocaleDateString("en-US", { month: "short", year: "numeric" });
+}
