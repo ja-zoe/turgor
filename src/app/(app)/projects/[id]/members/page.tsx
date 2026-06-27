@@ -5,6 +5,7 @@ import { Permission, ProjectMemberRole } from "@/generated/prisma";
 import { assignMember, removeMember } from "@/lib/actions/projects";
 import { ArrowLeft, Trash } from "@phosphor-icons/react/dist/ssr";
 import Link from "next/link";
+import { getDisplayName } from "@/lib/utils";
 
 export default async function MembersPage({
   params,
@@ -19,7 +20,7 @@ export default async function MembersPage({
     select: {
       name: true,
       assignments: {
-        include: { user: { select: { id: true, name: true, email: true } } },
+        include: { user: { select: { id: true, name: true, firstName: true, nickname: true, email: true } } },
       },
     },
   });
@@ -27,7 +28,7 @@ export default async function MembersPage({
 
   const allUsers = await prisma.user.findMany({
     where: { status: "ACTIVE" },
-    select: { id: true, name: true, email: true },
+    select: { id: true, name: true, firstName: true, nickname: true, email: true },
     orderBy: { name: "asc" },
   });
 
@@ -71,7 +72,7 @@ export default async function MembersPage({
               >
                 <div>
                   <p className="text-sm font-medium text-foreground">
-                    {a.user.name ?? a.user.email.split("@")[0]}
+                    {getDisplayName(a.user)}
                   </p>
                   <p
                     className="text-xs text-muted-foreground"
@@ -125,7 +126,7 @@ export default async function MembersPage({
                 <option value="">Select a user…</option>
                 {unassigned.map((u) => (
                   <option key={u.id} value={u.id}>
-                    {u.name ?? u.email.split("@")[0]} ({u.email})
+                    {getDisplayName(u)} ({u.email})
                   </option>
                 ))}
               </select>

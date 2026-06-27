@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { Permission } from "@/generated/prisma";
 import { Check, ListChecks, ArrowClockwise } from "@phosphor-icons/react/dist/ssr";
 import { closeActionItem, reopenActionItem } from "@/lib/actions/action-items";
+import { getDisplayName } from "@/lib/utils";
 
 export default async function AllActionItemsPage() {
   const user = await requireAuth();
@@ -27,7 +28,7 @@ export default async function AllActionItemsPage() {
         },
     orderBy: [{ status: "asc" }, { carriedOver: "desc" }, { createdAt: "desc" }],
     include: {
-      owner: { select: { id: true, name: true, email: true } },
+      owner: { select: { id: true, name: true, firstName: true, nickname: true, email: true } },
       project: { select: { id: true, name: true } },
     },
   });
@@ -90,7 +91,7 @@ export default async function AllActionItemsPage() {
                             className="text-xs text-muted-foreground"
                             style={{ fontFamily: "var(--font-mono)" }}
                           >
-                            {item.owner.name ?? item.owner.email.split("@")[0]}
+                            {getDisplayName(item.owner)}
                           </span>
                         )}
                         {item.deadline && (

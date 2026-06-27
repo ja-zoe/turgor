@@ -4,6 +4,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { getUserPermissions, getProjectMembership } from "@/lib/permissions";
 import { Permission } from "@/generated/prisma";
+import { getDisplayName } from "@/lib/utils";
 
 export async function GET(
   _req: NextRequest,
@@ -33,7 +34,7 @@ export async function GET(
           subtasks: {
             orderBy: { orderIndex: "asc" },
             include: {
-              assignee: { select: { name: true, email: true } },
+              assignee: { select: { name: true, firstName: true, nickname: true, email: true } },
             },
           },
         },
@@ -41,13 +42,13 @@ export async function GET(
       meetingRecords: {
         orderBy: { meetingDate: "asc" },
         include: {
-          recordedBy: { select: { name: true, email: true } },
+          recordedBy: { select: { name: true, firstName: true, nickname: true, email: true } },
         },
       },
       statusUpdates: {
         orderBy: { meetingDate: "asc" },
         include: {
-          submittedBy: { select: { name: true, email: true } },
+          submittedBy: { select: { name: true, firstName: true, nickname: true, email: true } },
         },
       },
     },
@@ -99,7 +100,7 @@ export async function GET(
         targetDate: s.dueDate ?? "",
         completed: s.status === "COMPLETE" ? "Yes" : "No",
         assignee: s.assignee
-          ? (s.assignee.name ?? s.assignee.email.split("@")[0])
+          ? getDisplayName(s.assignee)
           : "",
       });
     }
@@ -127,7 +128,7 @@ export async function GET(
   for (const u of project.statusUpdates) {
     suSheet.addRow({
       meetingDate: u.meetingDate,
-      submittedBy: u.submittedBy.name ?? u.submittedBy.email.split("@")[0],
+      submittedBy: getDisplayName(u.submittedBy),
       isLate: u.isLate ? "Yes" : "No",
       plannedWork: u.plannedWork,
       actualProgress: u.actualProgress,
@@ -157,7 +158,7 @@ export async function GET(
   for (const r of project.meetingRecords) {
     mrSheet.addRow({
       meetingDate: r.meetingDate,
-      recordedBy: r.recordedBy.name ?? r.recordedBy.email.split("@")[0],
+      recordedBy: getDisplayName(r.recordedBy),
       status: r.status,
       goalMet: r.goalMet === true ? "Yes" : r.goalMet === false ? "No" : "N/A",
       keyBlockers: r.keyBlockers ?? "",

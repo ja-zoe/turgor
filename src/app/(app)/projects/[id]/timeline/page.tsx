@@ -15,6 +15,7 @@ import {
   Warning,
   MinusCircle,
 } from "@phosphor-icons/react/dist/ssr";
+import { getDisplayName } from "@/lib/utils";
 
 function formatWeek(date: Date) {
   return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
@@ -41,7 +42,7 @@ export default async function ProjectTimelinePage({
           subtasks: {
             orderBy: { orderIndex: "asc" },
             include: {
-              assignee: { select: { name: true, email: true } },
+              assignee: { select: { name: true, firstName: true, nickname: true, email: true } },
             },
           },
         },
@@ -271,7 +272,7 @@ export default async function ProjectTimelinePage({
                         {s.dueDate
                           ? formatWeek(s.dueDate)
                           : s.assignee
-                            ? (s.assignee.name ?? s.assignee.email.split("@")[0])
+                            ? getDisplayName(s.assignee)
                             : ""}
                       </div>
                     </div>

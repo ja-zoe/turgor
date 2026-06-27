@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { Permission } from "@/generated/prisma";
 import { ProjectStatusBadge } from "@/components/status-badge";
 import { ArrowLeft, ClipboardText, CalendarCheck, Clock } from "@phosphor-icons/react/dist/ssr";
+import { getDisplayName } from "@/lib/utils";
 
 export default async function ProjectHistoryPage({
   params,
@@ -27,13 +28,13 @@ export default async function ProjectHistoryPage({
       statusUpdates: {
         orderBy: { meetingDate: "desc" },
         include: {
-          submittedBy: { select: { name: true, email: true } },
+          submittedBy: { select: { name: true, firstName: true, nickname: true, email: true } },
         },
       },
       meetingRecords: {
         orderBy: { meetingDate: "desc" },
         include: {
-          recordedBy: { select: { name: true, email: true } },
+          recordedBy: { select: { name: true, firstName: true, nickname: true, email: true } },
         },
       },
     },
@@ -138,7 +139,7 @@ export default async function ProjectHistoryPage({
                           style={{ fontFamily: "var(--font-mono)" }}
                         >
                           by{" "}
-                          {s.submittedBy.name ?? s.submittedBy.email.split("@")[0]}
+                          {getDisplayName(s.submittedBy)}
                         </span>
                         {s.isLate && (
                           <span
@@ -212,7 +213,7 @@ export default async function ProjectHistoryPage({
                         className="text-xs text-muted-foreground"
                         style={{ fontFamily: "var(--font-mono)" }}
                       >
-                        by {m.recordedBy.name ?? m.recordedBy.email.split("@")[0]}
+                        by {getDisplayName(m.recordedBy)}
                       </span>
                     </div>
 

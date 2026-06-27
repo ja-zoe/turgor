@@ -7,6 +7,7 @@ import { MarkdownEditor } from "@/components/markdown-editor";
 import { SubmitButton } from "@/components/submit-button";
 import { ArrowLeft } from "@phosphor-icons/react/dist/ssr";
 import Link from "next/link";
+import { getDisplayName } from "@/lib/utils";
 
 const STATUS_OPTIONS = [
   { value: "NOT_STARTED", label: "Not Started" },
@@ -43,7 +44,7 @@ export default async function EditSubtaskPage({
             select: {
               name: true,
               assignments: {
-                include: { user: { select: { id: true, name: true, email: true } } },
+                include: { user: { select: { id: true, name: true, firstName: true, nickname: true, email: true } } },
               },
             },
           },
@@ -143,7 +144,7 @@ export default async function EditSubtaskPage({
               <option value="">Unassigned</option>
               {members.map((m) => (
                 <option key={m.id} value={m.id}>
-                  {m.name ?? m.email.split("@")[0]}
+                  {getDisplayName(m)}
                 </option>
               ))}
             </select>
