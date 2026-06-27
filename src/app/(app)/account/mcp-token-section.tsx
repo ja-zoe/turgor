@@ -1,0 +1,195 @@
+"use client";
+
+import { useState } from "react";
+import { Robot, Copy, Check, ArrowClockwise, Trash } from "@phosphor-icons/react";
+import { generateMcpToken, revokeMcpToken } from "@/lib/actions/account";
+
+interface Props {
+  hasToken: boolean;
+  appUrl: string;
+}
+
+export function MpcTokenSection({ hasToken, appUrl }: Props) {
+  const [newToken, setNewToken] = useState<string | null>(null);
+  const [tokenExists, setTokenExists] = useState(hasToken);
+  const [copied, setCopied] = useState(false);
+  const [loading, setLoading] = useState<"generate" | "revoke" | null>(null);
+
+  const mcpUrl = `${appUrl}/api/mcp`;
+
+  const configJson = JSON.stringify(
+    {
+      mcpServers: {
+        "seed-tracker": {
+          url: mcpUrl,
+          headers: { Authorization: `Bearer ${newToken ?? "<your-token>"}` },
+        },
+      },
+    },
+    null,
+    2
+  );
+
+  async function handleGenerate() {
+    setLoading("generate");
+    try {
+      const { token } = await generateMcpToken();
+      setNewToken(token);
+      setTokenExists(true);
+    } finally {
+      setLoading(null);
+    }
+  }
+
+  async function handleRevoke() {
+    setLoading("revoke");
+    try {
+      await revokeMcpToken();
+      setNewToken(null);
+      setTokenExists(false);
+    } finally {
+      setLoading(null);
+    }
+  }
+
+  async function copyToken() {
+    if (!newToken) return;
+    await navigator.clipboard.writeText(newToken);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }
+
+  async function copyConfig() {
+    await navigator.clipboard.writeText(configJson);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }
+
+  return (
+    <section className="space-y-6">
+      <div className="flex items-center gap-2">
+        <Robot size={15} className="text-muted-foreground" />
+        <h2 className="text-sm font-semibold text-foreground">MCP Server</h2>
+      </div>
+
+      <div className="p-5 bg-card border border-border rounded-xl space-y-5">
+        <div>
+          <p className="text-sm text-foreground font-medium mb-1">Personal access token</p>
+          <p className="text-xs text-muted-foreground">
+            Generate a token and paste it into your MCP client (Claude Desktop, Cursor, etc.) to
+            give your AI assistant read and write access to your SEED projects under your role
+            permissions.
+          </p>
+        </div>
+
+        {/* Token status */}
+        <div className="flex items-center gap-3">
+          <span
+            className={`text-xs px-2 py-0.5 rounded ${
+              tokenExists
+                ? "bg-[#EDF3EC] text-[#588157]"
+                : "bg-muted text-muted-foreground"
+            }`}
+            style={{ fontFamily: "var(--font-mono)" }}
+          >
+            {tokenExists ? "Token active" : "No token"}
+          </span>
+
+          <button
+            type="button"
+            onClick={handleGenerate}
+            disabled={loading !== null}
+            className="flex items-center gap-1.5 text-xs font-medium text-foreground bg-[#2E4034] text-white rounded-md px-3 py-1.5 hover:bg-[#2E4034]/80 transition-colors disabled:opacity-50"
+          >
+            {loading === "generate" ? (
+              <span className="w-3 h-3 border border-white/40 border-t-white rounded-full animate-spin" />
+            ) : (
+              <ArrowClockwise size={13} />
+            )}
+            {tokenExists ? "Regenerate" : "Generate token"}
+          </button>
+
+          {tokenExists && (
+            <button
+              type="button"
+              onClick={handleRevoke}
+              disabled={loading !== null}
+              className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-[#A4503C] transition-colors disabled:opacity-50"
+            >
+              <Trash size={13} />
+              Revoke
+            </button>
+          )}
+        </div>
+
+        {/* Newly generated token — shown once */}
+        {newToken && (
+          <div className="space-y-2">
+            <p className="text-xs text-muted-foreground">
+              Copy this token now — it will not be shown again after you leave this page.
+            </p>
+            <div className="flex items-center gap-2 rounded-lg border border-[#588157]/40 bg-[#EDF3EC]/50 px-3 py-2">
+              <code
+                className="flex-1 text-xs text-foreground break-all"
+                style={{ fontFamily: "var(--font-mono)" }}
+              >
+                {newToken}
+              </code>
+              <button
+                type="button"
+                onClick={copyToken}
+                className="shrink-0 text-muted-foreground hover:text-foreground transition-colors"
+                title="Copy token"
+              >
+                {copied ? <Check size={14} className="text-[#588157]" /> : <Copy size={14} />}
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Client config */}
+      <div className="p-5 bg-card border border-border rounded-xl space-y-4">
+        <div>
+          <p className="text-sm text-foreground font-medium mb-1">Client configuration</p>
+          <p className="text-xs text-muted-foreground">
+            Paste this into your MCP client config. In Claude Desktop:{" "}
+            <code className="bg-muted px-1 py-0.5 rounded text-xs" style={{ fontFamily: "var(--font-mono)" }}>
+              claude_desktop_config.json
+            </code>
+            . In Cursor: MCP settings panel.
+          </p>
+        </div>
+
+        <div className="relative">
+          <pre
+            className="text-xs rounded-lg border border-border bg-muted/50 p-4 overflow-x-auto"
+            style={{ fontFamily: "var(--font-mono)" }}
+          >
+            {configJson}
+          </pre>
+          <button
+            type="button"
+            onClick={copyConfig}
+            className="absolute top-3 right-3 text-muted-foreground hover:text-foreground transition-colors"
+            title="Copy config"
+          >
+            {copied ? <Check size={14} className="text-[#588157]" /> : <Copy size={14} />}
+          </button>
+        </div>
+
+        <div className="space-y-1">
+          <p className="text-xs font-medium text-foreground" style={{ fontFamily: "var(--font-mono)" }}>
+            Available tools
+          </p>
+          <ul className="text-xs text-muted-foreground space-y-0.5" style={{ fontFamily: "var(--font-mono)" }}>
+            <li>• list_projects — all projects you have access to</li>
+            <li>• get_project_detail — deliverables + open action items</li>
+            <li>• create_action_item — assign tasks (LEAD/SUBLEAD or PM)</li>
+            <li>• create_status_update — post weekly update (LEAD/SUBLEAD or PM)</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+  );
+}

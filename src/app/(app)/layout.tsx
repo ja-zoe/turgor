@@ -6,7 +6,6 @@ import { Sidebar } from "@/components/sidebar";
 import { ScrollReveal } from "@/components/scroll-reveal";
 import { prisma } from "@/lib/prisma";
 import { getDisplayName } from "@/lib/utils";
-import { ChatWidget } from "@/components/chat-widget";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const session = await auth();
@@ -48,7 +47,6 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           <div className="max-w-5xl mx-auto px-4 sm:px-8 py-8">{children}</div>
         </ScrollReveal>
       </main>
-      <ChatWidget />
     </div>
   );
 }

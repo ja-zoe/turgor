@@ -145,6 +145,7 @@ model User {
   firstName     String?
   lastName      String?
   nickname      String?
+  mcpToken      String?    @unique
   status        UserStatus @default(PENDING)
   roleId        String?
 

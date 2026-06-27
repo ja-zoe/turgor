@@ -14,6 +14,7 @@ import {
   ListChecks,
   List,
   X,
+  UserCircle,
 } from "@phosphor-icons/react";
 import { Permission } from "@/generated/prisma";
 import { NotificationBell } from "@/components/notification-bell";
@@ -30,6 +31,7 @@ const navItems = [
   { href: "/projects", label: "Projects", icon: Folders },
   { href: "/my-tasks", label: "My Tasks", icon: CheckSquare },
   { href: "/action-items", label: "Action Items", icon: ListChecks },
+  { href: "/account", label: "Account", icon: UserCircle },
 ];
 
 const pmItems = [
