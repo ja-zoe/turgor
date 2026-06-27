@@ -4,6 +4,7 @@ import { UserStatus } from "@/generated/prisma";
 import { getUserPermissions } from "@/lib/permissions";
 import { Sidebar } from "@/components/sidebar";
 import { ScrollReveal } from "@/components/scroll-reveal";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { prisma } from "@/lib/prisma";
 import { getDisplayName } from "@/lib/utils";
 
@@ -34,6 +35,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   }
 
   return (
+    <TooltipProvider delay={200}>
     <div className="flex min-h-screen">
       <Sidebar
         userName={displayName}
@@ -48,5 +50,6 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         </ScrollReveal>
       </main>
     </div>
+    </TooltipProvider>
   );
 }
