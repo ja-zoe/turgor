@@ -216,6 +216,7 @@ export default async function ProjectDetailPage({
           canManage={canManageMilestones}
           canEdit={canManageMilestones || !!membership}
           userId={user.id}
+          members={project.assignments.map((a) => a.user)}
           deliverables={project.deliverables.map((d) => ({
             id: d.id,
             title: d.title,
