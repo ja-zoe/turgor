@@ -36,20 +36,30 @@ export function ChatProviderSetup({ connections, onConnect, onDisconnect }: Chat
   }
 
   async function handleConnect(provider: AiProvider) {
-    if (!apiKey.trim()) {
+    const key = apiKey.trim();
+    if (!key) {
       setError("API key is required");
       return;
     }
     setLoading(true);
     setError(null);
     try {
-      // Minimal validation: check key is non-empty and looks plausible
-      if (apiKey.trim().length < 10) throw new Error("API key seems too short");
-      onConnect(provider, apiKey.trim(), DEFAULT_MODELS[provider]);
+      const model = DEFAULT_MODELS[provider];
+      const res = await fetch("/api/ai/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ provider, apiKey: key, model }),
+      });
+      const data = await res.json() as { ok: boolean; error?: string };
+      if (!data.ok) {
+        setError(data.error ?? "Verification failed — check your API key.");
+        return;
+      }
+      onConnect(provider, key, model);
       setApiKey("");
       setExpanded(null);
-    } catch (e) {
-      setError((e as Error).message);
+    } catch {
+      setError("Network error — could not reach the verification endpoint.");
     } finally {
       setLoading(false);
     }
@@ -133,9 +143,12 @@ export function ChatProviderSetup({ connections, onConnect, onDisconnect }: Chat
                       type="button"
                       onClick={() => handleConnect(p.id)}
                       disabled={loading}
-                      className="w-full rounded-lg bg-[#2E4034] text-white text-xs font-medium py-2 hover:bg-[#2E4034]/80 transition-colors disabled:opacity-50"
+                      className="w-full rounded-lg bg-[#2E4034] text-white text-xs font-medium py-2 hover:bg-[#2E4034]/80 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
                     >
-                      {loading ? "Connecting…" : "Connect"}
+                      {loading && (
+                        <span className="w-3 h-3 border border-white/40 border-t-white rounded-full animate-spin" />
+                      )}
+                      {loading ? "Verifying…" : "Connect"}
                     </button>
                   </div>
                 )}
