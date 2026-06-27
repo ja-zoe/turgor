@@ -2,8 +2,8 @@
 
 import { useState, useTransition, useEffect, useRef } from "react";
 import Link from "next/link";
-import { Plus, SortAscending, ArrowsDownUp, XCircle } from "@phosphor-icons/react";
-import { deleteSubtask, updateSubtaskStatus } from "@/lib/actions/deliverables";
+import { Plus, SortAscending, ArrowsDownUp, XCircle, PencilSimple } from "@phosphor-icons/react";
+import { deleteSubtask, updateSubtaskStatus, updateSubtaskTitle } from "@/lib/actions/deliverables";
 import { getDisplayName } from "@/lib/utils";
 
 type TimelineStatus = "NOT_STARTED" | "IN_PROGRESS" | "BLOCKED" | "COMPLETE";
@@ -167,7 +167,26 @@ export function SortableDeliverables({
   const [sortByStatus, setSortByStatus] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState<string | null>(null);
   const [statusMenuFor, setStatusMenuFor] = useState<string | null>(null);
+  const [editingTitleFor, setEditingTitleFor] = useState<string | null>(null);
+  const [editingTitleValue, setEditingTitleValue] = useState("");
+  const [isPendingTitle, startTitleTransition] = useTransition();
   const dotRefs = useRef<Map<string, HTMLButtonElement | null>>(new Map());
+  const titleInputRef = useRef<HTMLInputElement | null>(null);
+
+  function startEditTitle(subtaskId: string, current: string) {
+    setEditingTitleFor(subtaskId);
+    setEditingTitleValue(current);
+    setTimeout(() => titleInputRef.current?.select(), 0);
+  }
+
+  function commitTitle(subtaskId: string) {
+    const val = editingTitleValue.trim();
+    if (!val) { setEditingTitleFor(null); return; }
+    startTitleTransition(async () => {
+      await updateSubtaskTitle(subtaskId, val);
+      setEditingTitleFor(null);
+    });
+  }
 
   const sorted = sortByStatus
     ? [...deliverables].sort(
@@ -335,7 +354,7 @@ export function SortableDeliverables({
                           {deliverable.subtasks.map((subtask) => (
                             <div
                               key={subtask.id}
-                              className="flex items-center justify-between px-4 py-2.5 bg-background/50"
+                              className="group/subtask flex items-center justify-between px-4 py-2.5 bg-background/50"
                             >
                               <div className="flex items-center gap-2">
                                 {/* Status dot — interactive when canEdit */}
@@ -360,7 +379,32 @@ export function SortableDeliverables({
                                     />
                                   )}
                                 </div>
-                                <span className="text-xs text-foreground">{subtask.title}</span>
+                                {canEdit && editingTitleFor === subtask.id ? (
+                                  <input
+                                    ref={titleInputRef}
+                                    className="text-xs text-foreground bg-transparent border-b border-primary outline-none w-40 max-w-[200px] disabled:opacity-50"
+                                    value={editingTitleValue}
+                                    disabled={isPendingTitle}
+                                    onChange={(e) => setEditingTitleValue(e.target.value)}
+                                    onKeyDown={(e) => {
+                                      if (e.key === "Enter") { e.preventDefault(); commitTitle(subtask.id); }
+                                      if (e.key === "Escape") { setEditingTitleFor(null); }
+                                    }}
+                                    onBlur={() => commitTitle(subtask.id)}
+                                  />
+                                ) : (
+                                  <span className="text-xs text-foreground">{subtask.title}</span>
+                                )}
+                                {canEdit && editingTitleFor !== subtask.id && (
+                                  <button
+                                    type="button"
+                                    onClick={() => startEditTitle(subtask.id, subtask.title)}
+                                    className="text-muted-foreground hover:text-foreground transition-colors opacity-0 group-hover/subtask:opacity-100"
+                                    title="Edit title"
+                                  >
+                                    <PencilSimple size={11} />
+                                  </button>
+                                )}
                                 {subtask.assignee && (
                                   <span
                                     className="text-xs text-muted-foreground"

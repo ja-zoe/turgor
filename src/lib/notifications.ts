@@ -35,7 +35,7 @@ async function sendEmail(payloads: NotificationPayload[]) {
 
   const { Resend } = await import("resend");
   const resend = new Resend(apiKey);
-  const from = process.env.RESEND_FROM ?? "SEED Tracker <noreply@example.com>";
+  const from = process.env.EMAIL_FROM ?? process.env.RESEND_FROM ?? "SEED Tracker <onboarding@resend.dev>";
 
   await Promise.allSettled(
     payloads.map(async (p) => {

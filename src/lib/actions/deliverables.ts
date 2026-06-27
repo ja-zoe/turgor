@@ -163,7 +163,7 @@ export async function updateSubtaskStatus(subtaskId: string, status: TimelineSta
 
   const subtask = await prisma.subtask.findUniqueOrThrow({
     where: { id: subtaskId },
-    include: { deliverable: { select: { projectId: true } } },
+    include: { deliverable: { select: { id: true, projectId: true } } },
   });
 
   const membership = await getProjectMembership(user.id, subtask.deliverable.projectId);
@@ -173,9 +173,57 @@ export async function updateSubtaskStatus(subtaskId: string, status: TimelineSta
     where: { id: subtaskId },
     data: {
       status,
-      completedAt:
-        status === TimelineStatus.COMPLETE ? new Date() : null,
+      completedAt: status === TimelineStatus.COMPLETE ? new Date() : null,
     },
+  });
+
+  // Derive the parent deliverable's status from all its subtasks after this update.
+  const siblings = await prisma.subtask.findMany({
+    where: { deliverableId: subtask.deliverable.id },
+    select: { status: true },
+  });
+
+  let derivedStatus: TimelineStatus;
+  if (siblings.every((s) => s.status === TimelineStatus.COMPLETE)) {
+    derivedStatus = TimelineStatus.COMPLETE;
+  } else if (siblings.some((s) => s.status === TimelineStatus.BLOCKED)) {
+    derivedStatus = TimelineStatus.BLOCKED;
+  } else if (siblings.some((s) => s.status === TimelineStatus.IN_PROGRESS || s.status === TimelineStatus.COMPLETE)) {
+    derivedStatus = TimelineStatus.IN_PROGRESS;
+  } else {
+    derivedStatus = TimelineStatus.NOT_STARTED;
+  }
+
+  const isNowComplete = derivedStatus === TimelineStatus.COMPLETE;
+  await prisma.deliverable.update({
+    where: { id: subtask.deliverable.id },
+    data: {
+      status: derivedStatus,
+      completed: isNowComplete,
+      completedDate: isNowComplete ? new Date() : null,
+    },
+  });
+
+  revalidatePath(`/projects/${subtask.deliverable.projectId}`);
+}
+
+export async function updateSubtaskTitle(subtaskId: string, title: string) {
+  const user = await requireAuth();
+
+  const subtask = await prisma.subtask.findUniqueOrThrow({
+    where: { id: subtaskId },
+    include: { deliverable: { select: { projectId: true } } },
+  });
+
+  const membership = await getProjectMembership(user.id, subtask.deliverable.projectId);
+  if (!membership) await requirePermission(Permission.MANAGE_MILESTONES);
+
+  const trimmed = title.trim();
+  if (!trimmed) throw new Error("Title cannot be empty");
+
+  await prisma.subtask.update({
+    where: { id: subtaskId },
+    data: { title: trimmed },
   });
 
   revalidatePath(`/projects/${subtask.deliverable.projectId}`);
