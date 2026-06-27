@@ -180,3 +180,19 @@ export async function updateSubtaskStatus(subtaskId: string, status: TimelineSta
 
   revalidatePath(`/projects/${subtask.deliverable.projectId}`);
 }
+
+export async function deleteSubtask(subtaskId: string) {
+  const user = await requireAuth();
+
+  const subtask = await prisma.subtask.findUniqueOrThrow({
+    where: { id: subtaskId },
+    include: { deliverable: { select: { projectId: true } } },
+  });
+
+  const membership = await getProjectMembership(user.id, subtask.deliverable.projectId);
+  if (!membership) await requirePermission(Permission.MANAGE_MILESTONES);
+
+  await prisma.subtask.delete({ where: { id: subtaskId } });
+
+  revalidatePath(`/projects/${subtask.deliverable.projectId}`);
+}

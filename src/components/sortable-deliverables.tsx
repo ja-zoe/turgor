@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Plus, SortAscending, ArrowsDownUp } from "@phosphor-icons/react";
+import { Plus, SortAscending, ArrowsDownUp, XCircle } from "@phosphor-icons/react";
+import { deleteSubtask } from "@/lib/actions/deliverables";
 
 type TimelineStatus = "NOT_STARTED" | "IN_PROGRESS" | "BLOCKED" | "COMPLETE";
 
@@ -65,6 +66,7 @@ export function SortableDeliverables({
   deleteDeliverableAction,
 }: SortableDeliverablesProps) {
   const [sortByStatus, setSortByStatus] = useState(false);
+  const [confirmingDelete, setConfirmingDelete] = useState<string | null>(null);
 
   const sorted = sortByStatus
     ? [...deliverables].sort(
@@ -249,7 +251,8 @@ export function SortableDeliverables({
                                   </span>
                                 )}
                               </div>
-                              <div className="flex items-center gap-3">
+                              <div className="flex items-center gap-3 relative">
+                                {/* Date (unchanged) */}
                                 {subtask.dueDate && (
                                   <span
                                     className="text-xs text-muted-foreground"
@@ -261,14 +264,63 @@ export function SortableDeliverables({
                                     })}
                                   </span>
                                 )}
+
+                                {/* Controls — slide animation */}
                                 {canManage && (
-                                  <Link
-                                    href={`/projects/${projectId}/deliverables/${deliverable.id}/subtasks/${subtask.id}/edit`}
-                                    className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-                                    style={{ fontFamily: "var(--font-mono)" }}
-                                  >
-                                    Edit
-                                  </Link>
+                                  <div className="relative flex items-center" style={{ minWidth: "60px" }}>
+                                    {/* Edit + X (hidden when confirming) */}
+                                    <div
+                                      className={`flex items-center gap-2 transition-all duration-200 ${
+                                        confirmingDelete === subtask.id
+                                          ? "opacity-0 pointer-events-none -translate-x-2"
+                                          : "opacity-100 translate-x-0"
+                                      }`}
+                                    >
+                                      <Link
+                                        href={`/projects/${projectId}/deliverables/${deliverable.id}/subtasks/${subtask.id}/edit`}
+                                        className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                                        style={{ fontFamily: "var(--font-mono)" }}
+                                      >
+                                        Edit
+                                      </Link>
+                                      <button
+                                        type="button"
+                                        onClick={() => setConfirmingDelete(subtask.id)}
+                                        className="text-muted-foreground hover:text-[#A4503C] transition-colors"
+                                      >
+                                        <XCircle size={13} weight="bold" />
+                                      </button>
+                                    </div>
+
+                                    {/* Yes / No (hidden when not confirming) */}
+                                    <div
+                                      className={`absolute right-0 flex items-center gap-2 transition-all duration-200 ${
+                                        confirmingDelete === subtask.id
+                                          ? "opacity-100 translate-x-0"
+                                          : "opacity-0 pointer-events-none translate-x-2"
+                                      }`}
+                                    >
+                                      <button
+                                        type="button"
+                                        onClick={async () => {
+                                          await deleteSubtask(subtask.id);
+                                          setConfirmingDelete(null);
+                                        }}
+                                        className="text-xs text-[#A4503C] hover:text-[#A4503C]/70 transition-colors"
+                                        style={{ fontFamily: "var(--font-mono)" }}
+                                      >
+                                        Yes
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => setConfirmingDelete(null)}
+                                        className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                                        style={{ fontFamily: "var(--font-mono)" }}
+                                      >
+                                        No
+                                      </button>
+                                    </div>
+                                  </div>
                                 )}
                               </div>
                             </div>
