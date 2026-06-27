@@ -14,6 +14,8 @@ import {
   updateSubtaskAssignee,
   updateSubtaskDueDate,
   updateDeliverableStatus,
+  updateDeliverableTitle,
+  updateDeliverableDates,
 } from "@/lib/actions/deliverables";
 import { getDisplayName } from "@/lib/utils";
 import {
@@ -104,6 +106,11 @@ function formatDate(iso: string) {
 
 function formatDateShort(iso: string) {
   return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
+function toDateInput(iso: string | null | undefined): string {
+  if (!iso) return "";
+  return iso.slice(0, 10);
 }
 
 // ─── Shared portal hook ───────────────────────────────────────────────────────
@@ -451,6 +458,50 @@ export function SortableDeliverables({
   // doesn't cancel the pending selection before ✓ is clicked
   const [assigneePickerOpen, setAssigneePickerOpen] = useState(false);
 
+  // Deliverable inline editing
+  const [deliverableEdit, setDeliverableEdit] = useState<{
+    id: string;
+    field: "title" | "dates";
+    title: string;
+    startDate: string;
+    targetDate: string;
+  } | null>(null);
+  const [isDelivEditPending, startDelivEditTransition] = useTransition();
+  const [delivEditError, setDelivEditError] = useState<string | null>(null);
+  const delivTitleInputRef = useRef<HTMLInputElement | null>(null);
+
+  function startDelivEdit(field: "title" | "dates", d: Deliverable) {
+    setDeliverableEdit({
+      id: d.id,
+      field,
+      title: d.title,
+      startDate: toDateInput(d.startDate),
+      targetDate: toDateInput(d.targetDate),
+    });
+    setDelivEditError(null);
+    if (field === "title") setTimeout(() => { delivTitleInputRef.current?.select(); }, 0);
+  }
+
+  function commitDelivEdit() {
+    if (!deliverableEdit || isDelivEditPending) return;
+    const { id, field, title, startDate, targetDate } = deliverableEdit;
+    if (field === "dates" && startDate && targetDate && startDate > targetDate) {
+      setDelivEditError("Start must be before target");
+      return;
+    }
+    setDeliverableEdit(null);
+    setDelivEditError(null);
+    startDelivEditTransition(async () => {
+      if (field === "title") await updateDeliverableTitle(id, title);
+      else await updateDeliverableDates(id, startDate || null, targetDate);
+    });
+  }
+
+  function cancelDelivEdit() {
+    setDeliverableEdit(null);
+    setDelivEditError(null);
+  }
+
   // Refs for portal anchor elements
   const deliverableDotRefs = useRef<Map<string, HTMLButtonElement | null>>(new Map());
   const personRefs = useRef<Map<string, HTMLButtonElement | null>>(new Map());
@@ -590,12 +641,52 @@ export function SortableDeliverables({
                   return (
                     <div key={deliverable.id} className="border border-border rounded-xl overflow-hidden">
                       {/* Deliverable header */}
-                      <div className="flex items-start justify-between gap-4 p-4 bg-card">
+                      {/* eslint-disable-next-line @typescript-eslint/no-unused-vars */}
+                      <div className="flex items-start justify-between gap-4 p-4 bg-card group/deliv">
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <span className="text-sm font-medium text-foreground">
-                              {deliverable.title}
-                            </span>
+                            {/* Inline title edit */}
+                            {deliverableEdit?.id === deliverable.id && deliverableEdit.field === "title" ? (
+                              <span className="inline-flex items-center gap-1 flex-1 min-w-0">
+                                <input
+                                  ref={delivTitleInputRef}
+                                  type="text"
+                                  value={deliverableEdit.title}
+                                  onChange={(e) =>
+                                    setDeliverableEdit({ ...deliverableEdit, title: e.target.value })
+                                  }
+                                  onKeyDown={(e) => {
+                                    if (e.key === "Enter") commitDelivEdit();
+                                    if (e.key === "Escape") cancelDelivEdit();
+                                  }}
+                                  className="text-sm font-medium bg-transparent border-b border-primary outline-none min-w-[120px] flex-1"
+                                  data-testid="deliv-title-input"
+                                />
+                                <InlineConfirm
+                                  show
+                                  onConfirm={commitDelivEdit}
+                                  onCancel={cancelDelivEdit}
+                                  disabled={isDelivEditPending}
+                                />
+                              </span>
+                            ) : (
+                              <>
+                                <span className="text-sm font-medium text-foreground">
+                                  {deliverable.title}
+                                </span>
+                                {canEdit && (
+                                  <button
+                                    type="button"
+                                    onClick={() => startDelivEdit("title", deliverable)}
+                                    className="opacity-0 group-hover/deliv:opacity-100 transition-opacity text-muted-foreground hover:text-foreground"
+                                    title="Edit title"
+                                    data-testid="deliv-title-pencil"
+                                  >
+                                    <PencilSimple size={12} />
+                                  </button>
+                                )}
+                              </>
+                            )}
 
                             {/* Deliverable status badge — 3 variants */}
                             {hasSubtasks ? (
@@ -651,14 +742,74 @@ export function SortableDeliverables({
                               </span>
                             )}
                           </div>
-                          <p
-                            className="text-xs text-muted-foreground mt-1"
-                            style={{ fontFamily: "var(--font-mono)" }}
-                          >
-                            Target: {formatDate(deliverable.targetDate)}
-                            {deliverable.startDate && <> &middot; Start: {formatDate(deliverable.startDate)}</>}
-                            {isOverdue && <span className="text-[#A4503C] ml-2">overdue</span>}
-                          </p>
+                          {/* Inline dates edit */}
+                          {deliverableEdit?.id === deliverable.id && deliverableEdit.field === "dates" ? (
+                            <div
+                              className="flex flex-wrap items-center gap-2 mt-1 text-xs"
+                              style={{ fontFamily: "var(--font-mono)" }}
+                            >
+                              <span className="text-muted-foreground">Start:</span>
+                              <input
+                                type="date"
+                                value={deliverableEdit.startDate}
+                                onChange={(e) =>
+                                  setDeliverableEdit({ ...deliverableEdit, startDate: e.target.value })
+                                }
+                                onKeyDown={(e) => {
+                                  if (e.key === "Escape") cancelDelivEdit();
+                                }}
+                                className="bg-transparent border-b border-primary outline-none text-foreground"
+                                data-testid="deliv-start-input"
+                              />
+                              <span className="text-muted-foreground">Target:</span>
+                              <input
+                                type="date"
+                                value={deliverableEdit.targetDate}
+                                onChange={(e) =>
+                                  setDeliverableEdit({ ...deliverableEdit, targetDate: e.target.value })
+                                }
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter") commitDelivEdit();
+                                  if (e.key === "Escape") cancelDelivEdit();
+                                }}
+                                className="bg-transparent border-b border-primary outline-none text-foreground"
+                                data-testid="deliv-target-input"
+                              />
+                              <InlineConfirm
+                                show
+                                onConfirm={commitDelivEdit}
+                                onCancel={cancelDelivEdit}
+                                disabled={isDelivEditPending}
+                              />
+                              {delivEditError && (
+                                <span className="text-[#A4503C]">{delivEditError}</span>
+                              )}
+                            </div>
+                          ) : (
+                            <div
+                              className="flex items-center gap-1 mt-1 group/deliv-dates"
+                            >
+                              <p
+                                className="text-xs text-muted-foreground"
+                                style={{ fontFamily: "var(--font-mono)" }}
+                              >
+                                Target: {formatDate(deliverable.targetDate)}
+                                {deliverable.startDate && <> &middot; Start: {formatDate(deliverable.startDate)}</>}
+                                {isOverdue && <span className="text-[#A4503C] ml-2">overdue</span>}
+                              </p>
+                              {canEdit && (
+                                <button
+                                  type="button"
+                                  onClick={() => startDelivEdit("dates", deliverable)}
+                                  className="opacity-0 group-hover/deliv-dates:opacity-100 transition-opacity text-muted-foreground hover:text-foreground ml-1"
+                                  title="Edit dates"
+                                  data-testid="deliv-dates-pencil"
+                                >
+                                  <PencilSimple size={10} />
+                                </button>
+                              )}
+                            </div>
+                          )}
                         </div>
                         {canManage && (
                           <div className="flex items-center gap-2 flex-shrink-0">
