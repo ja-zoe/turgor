@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { Plus, SortAscending, ArrowsDownUp, XCircle } from "@phosphor-icons/react";
 import { deleteSubtask } from "@/lib/actions/deliverables";
+import { getDisplayName } from "@/lib/utils";
 
 type TimelineStatus = "NOT_STARTED" | "IN_PROGRESS" | "BLOCKED" | "COMPLETE";
 
@@ -11,7 +12,7 @@ interface Subtask {
   id: string;
   title: string;
   status: TimelineStatus;
-  assignee: { id: string; name: string | null; email: string } | null;
+  assignee: { id: string; firstName: string | null; nickname: string | null; name: string | null; email: string } | null;
   dueDate: string | null;
 }
 
@@ -247,7 +248,7 @@ export function SortableDeliverables({
                                     className="text-xs text-muted-foreground"
                                     style={{ fontFamily: "var(--font-mono)" }}
                                   >
-                                    {subtask.assignee.name ?? subtask.assignee.email.split("@")[0]}
+                                    {getDisplayName(subtask.assignee)}
                                   </span>
                                 )}
                               </div>

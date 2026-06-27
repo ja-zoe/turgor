@@ -4,6 +4,7 @@ import { Permission } from "@/generated/prisma";
 import { approveUser, updateUserRole, suspendUser, reactivateUser } from "@/lib/actions/users";
 import { createRole, updateRole, deleteRole } from "@/lib/actions/roles";
 import { CheckCircle, XCircle, PauseCircle, UserCircle, ShieldCheck } from "@phosphor-icons/react/dist/ssr";
+import { getDisplayName } from "@/lib/utils";
 
 const ALL_PERMISSIONS: { value: Permission; label: string }[] = [
   { value: Permission.VIEW_ALL_PROJECTS, label: "View all projects" },
@@ -79,7 +80,7 @@ export default async function UsersPage() {
                 className="flex items-center gap-3 px-4 py-3 bg-[#FBF3DB]/40 border border-[#C99846]/20 rounded-xl"
               >
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-foreground">{u.name ?? u.email}</p>
+                  <p className="text-sm font-medium text-foreground">{getDisplayName(u)}</p>
                   <p
                     className="text-xs text-muted-foreground"
                     style={{ fontFamily: "var(--font-mono)" }}
@@ -154,7 +155,7 @@ export default async function UsersPage() {
                 } hover:bg-muted/20 transition-colors`}
               >
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-foreground">{u.name ?? u.email}</p>
+                  <p className="text-sm font-medium text-foreground">{getDisplayName(u)}</p>
                   <p
                     className="text-xs text-muted-foreground"
                     style={{ fontFamily: "var(--font-mono)" }}
@@ -228,7 +229,7 @@ export default async function UsersPage() {
                 }`}
               >
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm text-foreground">{u.name ?? u.email}</p>
+                  <p className="text-sm text-foreground">{getDisplayName(u)}</p>
                   <p
                     className="text-xs text-muted-foreground"
                     style={{ fontFamily: "var(--font-mono)" }}

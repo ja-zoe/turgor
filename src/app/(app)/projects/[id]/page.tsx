@@ -20,6 +20,7 @@ import {
 import { deleteDeliverable } from "@/lib/actions/deliverables";
 import { removeMember } from "@/lib/actions/projects";
 import { createActionItem, closeActionItem, reopenActionItem } from "@/lib/actions/action-items";
+import { getDisplayName } from "@/lib/utils";
 
 export default async function ProjectDetailPage({
   params,
@@ -40,7 +41,7 @@ export default async function ProjectDetailPage({
     include: {
       assignments: {
         include: {
-          user: { select: { id: true, name: true, email: true } },
+          user: { select: { id: true, firstName: true, nickname: true, name: true, email: true } },
         },
       },
       deliverables: {
@@ -49,7 +50,7 @@ export default async function ProjectDetailPage({
           subtasks: {
             orderBy: { orderIndex: "asc" },
             include: {
-              assignee: { select: { id: true, name: true, email: true } },
+              assignee: { select: { id: true, firstName: true, nickname: true, name: true, email: true } },
             },
           },
         },
@@ -58,20 +59,20 @@ export default async function ProjectDetailPage({
         orderBy: { submittedAt: "desc" },
         take: 5,
         include: {
-          submittedBy: { select: { name: true, email: true } },
+          submittedBy: { select: { firstName: true, nickname: true, name: true, email: true } },
         },
       },
       meetingRecords: {
         orderBy: { meetingDate: "desc" },
         take: 5,
         include: {
-          recordedBy: { select: { name: true, email: true } },
+          recordedBy: { select: { firstName: true, nickname: true, name: true, email: true } },
         },
       },
       actionItems: {
         orderBy: [{ status: "asc" }, { createdAt: "desc" }],
         include: {
-          owner: { select: { id: true, name: true, email: true } },
+          owner: { select: { id: true, firstName: true, nickname: true, name: true, email: true } },
         },
       },
     },
@@ -255,7 +256,7 @@ export default async function ProjectDetailPage({
               <option value="">No owner</option>
               {project.assignments.map((a) => (
                 <option key={a.userId} value={a.userId}>
-                  {a.user.name ?? a.user.email.split("@")[0]}
+                  {getDisplayName(a.user)}
                 </option>
               ))}
             </select>
@@ -291,7 +292,7 @@ export default async function ProjectDetailPage({
                         className="text-xs text-muted-foreground"
                         style={{ fontFamily: "var(--font-mono)" }}
                       >
-                        {item.owner.name ?? item.owner.email.split("@")[0]}
+                        {getDisplayName(item.owner)}
                       </span>
                     )}
                     {item.deadline && (
@@ -416,7 +417,7 @@ export default async function ProjectDetailPage({
                 <Users size={13} className="text-muted-foreground flex-shrink-0" />
                 <div className="min-w-0">
                   <p className="text-sm text-foreground truncate">
-                    {a.user.name ?? a.user.email.split("@")[0]}
+                    {getDisplayName(a.user)}
                   </p>
                   <p
                     className="text-xs text-muted-foreground"
@@ -466,7 +467,7 @@ export default async function ProjectDetailPage({
                       month: "short",
                       day: "numeric",
                     })}{" "}
-                    &middot; {update.submittedBy.name ?? update.submittedBy.email.split("@")[0]}
+                    &middot; {getDisplayName(update.submittedBy)}
                   </span>
                   {update.isLate && (
                     <span

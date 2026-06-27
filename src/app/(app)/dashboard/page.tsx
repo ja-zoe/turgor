@@ -2,6 +2,7 @@ import Link from "next/link";
 import { requireAuth, getUserPermissions, getProjectMembership } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { Permission } from "@/generated/prisma";
+import { getDisplayName } from "@/lib/utils";
 import { ProjectStatusBadge } from "@/components/status-badge";
 import { DeliverableProgress } from "@/components/charts/deliverable-progress";
 import { GoalCompletionChart } from "@/components/charts/goal-completion-chart";
@@ -128,7 +129,16 @@ export default async function DashboardPage() {
     include: { project: { select: { id: true, name: true } } },
   });
 
-  const displayName = user.name ?? user.email;
+  const dbUser = await prisma.user.findUnique({
+    where: { id: user.id },
+    select: { firstName: true, nickname: true, name: true },
+  });
+  const displayName = getDisplayName({
+    firstName: dbUser?.firstName ?? null,
+    nickname: dbUser?.nickname ?? null,
+    name: dbUser?.name ?? user.name ?? null,
+    email: user.email,
+  });
 
   return (
     <div className="space-y-10">
