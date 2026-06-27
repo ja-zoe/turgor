@@ -1,8 +1,8 @@
 import { redirect } from "next/navigation";
 import { AuthError } from "next-auth";
+import Image from "next/image";
 import { signIn } from "@/auth";
 import { mintHandoffToken } from "@/lib/handoff-token";
-import { Leaf } from "@phosphor-icons/react/dist/ssr";
 
 interface Props {
   searchParams: Promise<{ error?: string; service?: string }>;
@@ -45,7 +45,7 @@ export default async function DevLoginPage({ searchParams }: Props) {
       <div className="w-full max-w-sm">
         {/* Brand */}
         <div className="flex items-center gap-2 mb-10">
-          <Leaf size={20} weight="fill" className="text-primary" />
+          <Image src="/seed-logo-transparent.png" alt="SEED" width={24} height={24} unoptimized className="object-contain" />
           <span className="text-sm font-semibold tracking-tight text-foreground">
             SEED Project Tracker
           </span>

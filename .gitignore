@@ -43,6 +43,9 @@ yarn-error.log*
 .vercel
 *.tsbuildinfo
 
+# ---- Claude Code internal ----
+.claude/worktrees/
+
 # ---- Planning / source material (kept local, not part of the app) ----
 # The `claude/` folder holds the planning outline and the design-system skill
 # used to build this app; it is reference material, not shipped code.

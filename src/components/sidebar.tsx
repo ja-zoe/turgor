@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
@@ -35,17 +36,39 @@ const navItems = [
 ];
 
 const pmItems = [
-  { href: "/pm/users", label: "Users & Roles", icon: Users, perm: Permission.MANAGE_USERS },
-  { href: "/pm/review", label: "Monthly Review", icon: ChartBar, perm: Permission.VIEW_MONTHLY_REVIEW },
-  { href: "/pm/settings", label: "Settings", icon: Gear, perm: Permission.CONFIGURE_NOTIFICATIONS },
+  {
+    href: "/pm/users",
+    label: "Users & Roles",
+    icon: Users,
+    perm: Permission.MANAGE_USERS,
+  },
+  {
+    href: "/pm/review",
+    label: "Monthly Review",
+    icon: ChartBar,
+    perm: Permission.VIEW_MONTHLY_REVIEW,
+  },
+  {
+    href: "/pm/settings",
+    label: "Settings",
+    icon: Gear,
+    perm: Permission.CONFIGURE_NOTIFICATIONS,
+  },
 ];
 
-export function Sidebar({ userName, userEmail, permissions, signOutAction }: SidebarProps) {
+export function Sidebar({
+  userName,
+  userEmail,
+  permissions,
+  signOutAction,
+}: SidebarProps) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const isActive = (href: string) =>
-    href === "/dashboard" ? pathname === "/dashboard" : pathname.startsWith(href);
+    href === "/dashboard"
+      ? pathname === "/dashboard"
+      : pathname.startsWith(href);
 
   const pmVisible = pmItems.filter((item) => permissions.includes(item.perm));
 
@@ -100,7 +123,9 @@ export function Sidebar({ userName, userEmail, permissions, signOutAction }: Sid
       <div className="border-t border-border px-3 py-3">
         <div className="flex items-center justify-between px-3 py-2">
           <div className="min-w-0">
-            <p className="text-sm font-medium text-foreground truncate">{userName}</p>
+            <p className="text-sm font-medium text-foreground truncate">
+              {userName}
+            </p>
             <p
               className="text-xs text-muted-foreground truncate"
               style={{ fontFamily: "var(--font-mono)" }}
@@ -149,10 +174,21 @@ export function Sidebar({ userName, userEmail, permissions, signOutAction }: Sid
         }`}
       >
         <div className="px-5 py-5 border-b border-border flex items-center justify-between">
-          <Link href="/dashboard" className="flex items-center gap-2" onClick={() => setMobileOpen(false)}>
-            <Plant size={18} weight="fill" className="text-primary" />
+          <Link
+            href="/dashboard"
+            className="flex items-center gap-2"
+            onClick={() => setMobileOpen(false)}
+          >
+            <Image
+              src="/seed-logo-transparent.png"
+              alt="SEED"
+              width={36}
+              height={36}
+              unoptimized
+              className="object-contain flex-shrink-0"
+            />
             <span
-              className="text-sm font-semibold text-foreground tracking-tight"
+              className="text-lg font-semibold text-foreground tracking-tight"
               style={{ fontFamily: "var(--font-display)" }}
             >
               SEED Tracker
@@ -172,9 +208,16 @@ export function Sidebar({ userName, userEmail, permissions, signOutAction }: Sid
       <aside className="hidden lg:flex w-56 flex-shrink-0 h-screen sticky top-0 flex-col border-r border-border bg-card">
         <div className="px-5 py-5 border-b border-border">
           <Link href="/dashboard" className="flex items-center gap-2">
-            <Plant size={18} weight="fill" className="text-primary" />
+            <Image
+              src="/seed-logo-transparent.png"
+              alt="SEED"
+              width={36}
+              height={36}
+              unoptimized
+              className="object-contain flex-shrink-0"
+            />
             <span
-              className="text-sm font-semibold text-foreground tracking-tight"
+              className="text-lg font-semibold text-foreground tracking-tight"
               style={{ fontFamily: "var(--font-display)" }}
             >
               SEED Tracker

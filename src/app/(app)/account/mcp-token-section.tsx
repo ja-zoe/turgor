@@ -178,16 +178,69 @@ export function MpcTokenSection({ hasToken, appUrl }: Props) {
           </button>
         </div>
 
-        <div className="space-y-1">
+        <div className="space-y-3">
           <p className="text-xs font-medium text-foreground" style={{ fontFamily: "var(--font-mono)" }}>
             Available tools
           </p>
-          <ul className="text-xs text-muted-foreground space-y-0.5" style={{ fontFamily: "var(--font-mono)" }}>
-            <li>• list_projects — all projects you have access to</li>
-            <li>• get_project_detail — deliverables + open action items</li>
-            <li>• create_action_item — assign tasks (LEAD/SUBLEAD or PM)</li>
-            <li>• create_status_update — post weekly update (LEAD/SUBLEAD or PM)</li>
-          </ul>
+          {[
+            {
+              group: "Read",
+              tools: [
+                { name: "list_projects", desc: "all projects you have access to" },
+                { name: "get_project_detail", desc: "deliverables, subtasks & open action items" },
+                { name: "list_members", desc: "query members by project, role, or status" },
+                { name: "list_action_items", desc: "filter action items by project or status" },
+                { name: "get_my_subtasks", desc: "subtasks assigned to you" },
+              ],
+            },
+            {
+              group: "Action items",
+              tools: [
+                { name: "create_action_item", desc: "create (LEAD/SUBLEAD or PM)" },
+                { name: "update_action_item", desc: "close, reopen, or edit (LEAD/SUBLEAD or PM)" },
+              ],
+            },
+            {
+              group: "Status",
+              tools: [
+                { name: "create_status_update", desc: "post weekly update (LEAD/SUBLEAD or PM)" },
+              ],
+            },
+            {
+              group: "Deliverables",
+              tools: [
+                { name: "create_deliverable", desc: "create (LEAD/SUBLEAD or PM)" },
+                { name: "update_deliverable", desc: "edit title, dates, status, group (LEAD/SUBLEAD or PM)" },
+                { name: "delete_deliverable", desc: "delete + all subtasks (PM only)" },
+              ],
+            },
+            {
+              group: "Subtasks",
+              tools: [
+                { name: "create_subtask", desc: "create (any project member or PM)" },
+                { name: "update_subtask", desc: "edit title, dates, assignee, status (member or PM)" },
+                { name: "delete_subtask", desc: "delete (LEAD/SUBLEAD or PM)" },
+              ],
+            },
+          ].map(({ group, tools }) => (
+            <div key={group}>
+              <p
+                className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60 mb-1"
+                style={{ fontFamily: "var(--font-mono)" }}
+              >
+                {group}
+              </p>
+              <ul className="text-xs text-muted-foreground space-y-0.5" style={{ fontFamily: "var(--font-mono)" }}>
+                {tools.map((t) => (
+                  <li key={t.name}>
+                    <span className="text-foreground">{t.name}</span>
+                    {" — "}
+                    {t.desc}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
         </div>
       </div>
     </section>
