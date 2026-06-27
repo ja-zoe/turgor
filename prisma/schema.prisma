@@ -23,6 +23,7 @@ enum Permission {
   CONFIGURE_NOTIFICATIONS
   MANAGE_USERS
   MANAGE_ROLES
+  MANAGE_CALENDAR
 }
 
 enum UserStatus {
@@ -83,6 +84,7 @@ enum NotificationType {
   GOAL_MISSED
   USER_APPROVAL
   GENERAL
+  USER_SIGNUP
 }
 
 // ─── Auth adapter models (required by Auth.js Prisma adapter) ───────────────
@@ -171,12 +173,15 @@ model Project {
   status               ProjectStatus @default(ON_TRACK)
   statusOverride       Boolean       @default(false)
   correctiveActionPlan String?       @db.Text
+  startDate            DateTime?
+  endDate              DateTime?
 
-  assignments    ProjectAssignment[]
-  deliverables   Deliverable[]
-  statusUpdates  StatusUpdate[]
-  meetingRecords MeetingRecord[]
-  actionItems    ActionItem[]
+  assignments     ProjectAssignment[]
+  deliverables    Deliverable[]
+  statusUpdates   StatusUpdate[]
+  meetingRecords  MeetingRecord[]
+  actionItems     ActionItem[]
+  calendarEvents  CalendarEvent[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -323,4 +328,28 @@ model Settings {
   submissionDeadlineHours Int     @default(24)
 
   updatedAt DateTime @updatedAt
+}
+
+enum CalendarEventType {
+  PROJECT_MEETING
+  NON_PROJECT_EVENT
+}
+
+model CalendarEvent {
+  id          String            @id @default(cuid())
+  title       String
+  semester    String
+  type        CalendarEventType @default(PROJECT_MEETING)
+  startsAt    DateTime
+  endsAt      DateTime?
+  allDay      Boolean           @default(false)
+  location    String?
+  description String?           @db.Text
+  projectId   String?
+  project     Project?          @relation(fields: [projectId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([semester, startsAt])
 }
