@@ -201,6 +201,7 @@ model Deliverable {
   completed     Boolean        @default(false)
   completedDate DateTime?
   orderIndex    Int            @default(0)
+  group         String?
 
   project  Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
   subtasks Subtask[]

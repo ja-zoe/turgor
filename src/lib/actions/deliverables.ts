@@ -14,6 +14,7 @@ export async function createDeliverable(projectId: string, formData: FormData) {
   const targetDate = new Date(formData.get("targetDate") as string);
   const startDateRaw = formData.get("startDate") as string | null;
   const startDate = startDateRaw ? new Date(startDateRaw) : null;
+  const group = (formData.get("group") as string | null)?.trim() || null;
 
   if (!title) throw new Error("Title is required");
 
@@ -27,6 +28,7 @@ export async function createDeliverable(projectId: string, formData: FormData) {
       targetDate,
       startDate,
       orderIndex: count,
+      group,
     },
   });
 
@@ -55,6 +57,7 @@ export async function updateDeliverable(deliverableId: string, formData: FormDat
   const startDate = startDateRaw ? new Date(startDateRaw) : null;
   const status = (formData.get("status") as TimelineStatus) ?? TimelineStatus.NOT_STARTED;
   const completed = status === TimelineStatus.COMPLETE;
+  const group = (formData.get("group") as string | null)?.trim() || null;
 
   await prisma.deliverable.update({
     where: { id: deliverableId },
@@ -66,6 +69,7 @@ export async function updateDeliverable(deliverableId: string, formData: FormDat
       status,
       completed,
       completedDate: completed ? new Date() : null,
+      group,
     },
   });
 
@@ -118,6 +122,40 @@ export async function createSubtask(deliverableId: string, formData: FormData) {
 
   revalidatePath(`/projects/${deliverable.projectId}`);
   redirect(`/projects/${deliverable.projectId}`);
+}
+
+export async function updateSubtask(subtaskId: string, formData: FormData) {
+  const user = await requireAuth();
+
+  const subtask = await prisma.subtask.findUniqueOrThrow({
+    where: { id: subtaskId },
+    include: { deliverable: { select: { projectId: true } } },
+  });
+
+  const membership = await getProjectMembership(user.id, subtask.deliverable.projectId);
+  if (!membership) await requirePermission(Permission.MANAGE_MILESTONES);
+
+  const title = (formData.get("title") as string).trim();
+  const description = (formData.get("description") as string | null)?.trim() || null;
+  const dueDateRaw = formData.get("dueDate") as string | null;
+  const dueDate = dueDateRaw ? new Date(dueDateRaw) : null;
+  const assigneeId = (formData.get("assigneeId") as string | null) || null;
+  const status = formData.get("status") as TimelineStatus;
+
+  await prisma.subtask.update({
+    where: { id: subtaskId },
+    data: {
+      title,
+      description,
+      dueDate,
+      assigneeId: assigneeId || null,
+      status,
+      completedAt: status === TimelineStatus.COMPLETE ? new Date() : null,
+    },
+  });
+
+  revalidatePath(`/projects/${subtask.deliverable.projectId}`);
+  redirect(`/projects/${subtask.deliverable.projectId}`);
 }
 
 export async function updateSubtaskStatus(subtaskId: string, status: TimelineStatus) {

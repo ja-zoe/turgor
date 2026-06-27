@@ -329,17 +329,6 @@ export default async function UsersPage() {
                     >
                       Save role
                     </button>
-                    {!role.isBuiltIn && (
-                      <button
-                        type="button"
-                        onClick={async () => {
-                          // Handled via separate form below
-                        }}
-                        className="text-xs text-muted-foreground hover:text-[#A4503C] transition-colors"
-                        style={{ fontFamily: "var(--font-mono)" }}
-                        formNoValidate
-                      />
-                    )}
                   </div>
                 </form>
                 {!role.isBuiltIn && (

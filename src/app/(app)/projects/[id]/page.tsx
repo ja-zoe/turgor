@@ -3,7 +3,8 @@ import { notFound } from "next/navigation";
 import { requireAuth, getUserPermissions, getProjectMembership } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { Permission } from "@/generated/prisma";
-import { ProjectStatusBadge, TimelineStatusBadge } from "@/components/status-badge";
+import { ProjectStatusBadge } from "@/components/status-badge";
+import { SortableDeliverables } from "@/components/sortable-deliverables";
 import {
   ArrowLeft,
   Plus,
@@ -14,6 +15,7 @@ import {
   Check,
   ArrowClockwise,
   ListChecks,
+  PencilSimple,
 } from "@phosphor-icons/react/dist/ssr";
 import { deleteDeliverable } from "@/lib/actions/deliverables";
 import { removeMember } from "@/lib/actions/projects";
@@ -185,160 +187,31 @@ export default async function ProjectDetailPage({
 
       {/* Deliverables */}
       <section>
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-sm font-semibold text-foreground">Deliverables</h2>
-          {canManageMilestones && (
-            <Link
-              href={`/projects/${id}/deliverables/new`}
-              className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:text-primary/70 transition-colors"
-              style={{ fontFamily: "var(--font-mono)" }}
-            >
-              <Plus size={12} />
-              Add deliverable
-            </Link>
-          )}
-        </div>
-
-        {project.deliverables.length === 0 ? (
-          <div className="p-8 border border-dashed border-border rounded-xl text-center">
-            <p className="text-sm text-muted-foreground">No deliverables yet.</p>
-            {canManageMilestones && (
-              <Link
-                href={`/projects/${id}/deliverables/new`}
-                className="mt-2 inline-flex items-center gap-1 text-sm font-medium text-primary"
-              >
-                <Plus size={14} />
-                Add first deliverable
-              </Link>
-            )}
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {project.deliverables.map((deliverable) => (
-              <div key={deliverable.id} className="border border-border rounded-xl overflow-hidden">
-                <div className="flex items-start justify-between gap-4 p-4 bg-card">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-sm font-medium text-foreground">
-                        {deliverable.title}
-                      </span>
-                      <TimelineStatusBadge status={deliverable.status} />
-                    </div>
-                    <p
-                      className="text-xs text-muted-foreground mt-1"
-                      style={{ fontFamily: "var(--font-mono)" }}
-                    >
-                      Target:{" "}
-                      {deliverable.targetDate.toLocaleDateString("en-US", {
-                        month: "short",
-                        day: "numeric",
-                        year: "numeric",
-                      })}
-                      {deliverable.startDate && (
-                        <>
-                          {" "}
-                          &middot; Start:{" "}
-                          {deliverable.startDate.toLocaleDateString("en-US", {
-                            month: "short",
-                            day: "numeric",
-                          })}
-                        </>
-                      )}
-                      {!deliverable.completed &&
-                        deliverable.targetDate < new Date() && (
-                          <span className="text-[#A4503C] ml-2">overdue</span>
-                        )}
-                    </p>
-                  </div>
-                  {canManageMilestones && (
-                    <div className="flex items-center gap-2 flex-shrink-0">
-                      <Link
-                        href={`/projects/${id}/deliverables/${deliverable.id}/edit`}
-                        className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-                        style={{ fontFamily: "var(--font-mono)" }}
-                      >
-                        Edit
-                      </Link>
-                      <form
-                        action={async () => {
-                          "use server";
-                          await deleteDeliverable(deliverable.id);
-                        }}
-                      >
-                        <button
-                          type="submit"
-                          className="text-xs text-muted-foreground hover:text-[#A4503C] transition-colors"
-                          style={{ fontFamily: "var(--font-mono)" }}
-                        >
-                          Delete
-                        </button>
-                      </form>
-                    </div>
-                  )}
-                </div>
-
-                {deliverable.subtasks.length > 0 && (
-                  <div className="border-t border-border divide-y divide-border">
-                    {deliverable.subtasks.map((subtask) => (
-                      <div
-                        key={subtask.id}
-                        className="flex items-center justify-between px-4 py-2.5 bg-background/50"
-                      >
-                        <div className="flex items-center gap-2">
-                          <div
-                            className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${
-                              subtask.status === "COMPLETE"
-                                ? "bg-[#588157]"
-                                : subtask.status === "BLOCKED"
-                                  ? "bg-[#A4503C]"
-                                  : subtask.status === "IN_PROGRESS"
-                                    ? "bg-[#1F6C9F]"
-                                    : "bg-[#787774]"
-                            }`}
-                          />
-                          <span className="text-xs text-foreground">{subtask.title}</span>
-                          {subtask.assignee && (
-                            <span
-                              className="text-xs text-muted-foreground"
-                              style={{ fontFamily: "var(--font-mono)" }}
-                            >
-                              {subtask.assignee.name ??
-                                subtask.assignee.email.split("@")[0]}
-                            </span>
-                          )}
-                        </div>
-                        {subtask.dueDate && (
-                          <span
-                            className="text-xs text-muted-foreground"
-                            style={{ fontFamily: "var(--font-mono)" }}
-                          >
-                            {subtask.dueDate.toLocaleDateString("en-US", {
-                              month: "short",
-                              day: "numeric",
-                            })}
-                          </span>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {canManageMilestones && (
-                  <div className="border-t border-border px-4 py-2">
-                    <Link
-                      href={`/projects/${id}/deliverables/${deliverable.id}/subtasks/new`}
-                      className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
-                      style={{ fontFamily: "var(--font-mono)" }}
-                    >
-                      <Plus size={10} />
-                      Add subtask
-                    </Link>
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
+        <SortableDeliverables
+          projectId={id}
+          canManage={canManageMilestones}
+          userId={user.id}
+          deliverables={project.deliverables.map((d) => ({
+            id: d.id,
+            title: d.title,
+            status: d.status as "NOT_STARTED" | "IN_PROGRESS" | "BLOCKED" | "COMPLETE",
+            group: d.group,
+            targetDate: d.targetDate.toISOString(),
+            startDate: d.startDate?.toISOString() ?? null,
+            completed: d.completed,
+            subtasks: d.subtasks.map((s) => ({
+              id: s.id,
+              title: s.title,
+              status: s.status as "NOT_STARTED" | "IN_PROGRESS" | "BLOCKED" | "COMPLETE",
+              assignee: s.assignee,
+              dueDate: s.dueDate?.toISOString() ?? null,
+            })),
+          }))}
+          deleteDeliverableAction={async (deliverableId: string) => {
+            "use server";
+            await deleteDeliverable(deliverableId);
+          }}
+        />
       </section>
 
       {/* Action Items */}
@@ -447,22 +320,33 @@ export default async function ProjectDetailPage({
                     )}
                   </div>
                 </div>
-                {(canCloseActionItems || item.ownerId === user.id) && (
-                  <form
-                    action={async () => {
-                      "use server";
-                      await closeActionItem(item.id);
-                    }}
-                  >
-                    <button
-                      type="submit"
-                      title="Mark done"
-                      className="flex-shrink-0 w-6 h-6 rounded border border-border hover:border-[#588157] hover:bg-[#EDF3EC] transition-colors flex items-center justify-center text-muted-foreground hover:text-[#588157]"
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  {(canCreateActionItem) && (
+                    <Link
+                      href={`/projects/${id}/action-items/${item.id}/edit`}
+                      className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                      style={{ fontFamily: "var(--font-mono)" }}
                     >
-                      <Check size={12} />
-                    </button>
-                  </form>
-                )}
+                      <PencilSimple size={12} />
+                    </Link>
+                  )}
+                  {(canCloseActionItems || item.ownerId === user.id) && (
+                    <form
+                      action={async () => {
+                        "use server";
+                        await closeActionItem(item.id);
+                      }}
+                    >
+                      <button
+                        type="submit"
+                        title="Mark done"
+                        className="flex-shrink-0 w-6 h-6 rounded border border-border hover:border-[#588157] hover:bg-[#EDF3EC] transition-colors flex items-center justify-center text-muted-foreground hover:text-[#588157]"
+                      >
+                        <Check size={12} />
+                      </button>
+                    </form>
+                  )}
+                </div>
               </div>
             ))}
 

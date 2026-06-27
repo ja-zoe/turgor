@@ -3,6 +3,7 @@ import { requireAuth, getProjectMembership } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { createSubtask } from "@/lib/actions/deliverables";
 import { MarkdownEditor } from "@/components/markdown-editor";
+import { SubmitButton } from "@/components/submit-button";
 import { ArrowLeft } from "@phosphor-icons/react/dist/ssr";
 import Link from "next/link";
 
@@ -124,12 +125,7 @@ export default async function NewSubtaskPage({
         </div>
 
         <div className="flex items-center gap-3 pt-2">
-          <button
-            type="submit"
-            className="rounded-md bg-primary text-primary-foreground text-sm font-medium px-5 py-2.5 hover:bg-primary/80 transition-colors"
-          >
-            Add Subtask
-          </button>
+          <SubmitButton label="Add Subtask" pendingLabel="Adding…" className="rounded-md bg-primary text-primary-foreground text-sm font-medium px-5 py-2.5 hover:bg-primary/80 transition-colors disabled:opacity-50 disabled:cursor-not-allowed" />
           <Link
             href={`/projects/${id}`}
             className="text-sm text-muted-foreground hover:text-foreground transition-colors"

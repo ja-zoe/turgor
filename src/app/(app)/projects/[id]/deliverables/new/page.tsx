@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { Permission } from "@/generated/prisma";
 import { createDeliverable } from "@/lib/actions/deliverables";
 import { MarkdownEditor } from "@/components/markdown-editor";
+import { SubmitButton } from "@/components/submit-button";
 import { ArrowLeft } from "@phosphor-icons/react/dist/ssr";
 import Link from "next/link";
 
@@ -17,9 +18,21 @@ export default async function NewDeliverablePage({
 
   const project = await prisma.project.findUnique({
     where: { id },
-    select: { name: true },
+    select: {
+      name: true,
+      deliverables: {
+        select: { group: true },
+        distinct: ["group"],
+        where: { group: { not: null } },
+      },
+    },
   });
   if (!project) notFound();
+
+  // Existing group names for datalist suggestions
+  const existingGroups = project.deliverables
+    .map((d) => d.group)
+    .filter(Boolean) as string[];
 
   async function handleSubmit(formData: FormData) {
     "use server";
@@ -68,6 +81,25 @@ export default async function NewDeliverablePage({
           />
         </div>
 
+        <div>
+          <label className="block text-xs font-medium text-muted-foreground uppercase tracking-widest mb-2" style={{ fontFamily: "var(--font-mono)" }}>
+            Group
+            <span className="ml-2 text-muted-foreground/60 normal-case font-normal tracking-normal">optional — e.g. Software, Hardware, Marketing</span>
+          </label>
+          <input
+            name="group"
+            type="text"
+            list="group-suggestions"
+            placeholder="e.g. Software"
+            className="w-full rounded-md border border-border bg-card px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-colors"
+          />
+          <datalist id="group-suggestions">
+            {existingGroups.map((g) => (
+              <option key={g} value={g} />
+            ))}
+          </datalist>
+        </div>
+
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="block text-xs font-medium text-muted-foreground uppercase tracking-widest mb-2" style={{ fontFamily: "var(--font-mono)" }}>
@@ -106,12 +138,7 @@ export default async function NewDeliverablePage({
         </div>
 
         <div className="flex items-center gap-3 pt-2">
-          <button
-            type="submit"
-            className="rounded-md bg-primary text-primary-foreground text-sm font-medium px-5 py-2.5 hover:bg-primary/80 transition-colors"
-          >
-            Add Deliverable
-          </button>
+          <SubmitButton label="Add Deliverable" pendingLabel="Adding…" className="rounded-md bg-primary text-primary-foreground text-sm font-medium px-5 py-2.5 hover:bg-primary/80 transition-colors disabled:opacity-50 disabled:cursor-not-allowed" />
           <Link
             href={`/projects/${id}`}
             className="text-sm text-muted-foreground hover:text-foreground transition-colors"

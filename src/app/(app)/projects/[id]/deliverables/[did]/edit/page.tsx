@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { Permission, TimelineStatus } from "@/generated/prisma";
 import { updateDeliverable } from "@/lib/actions/deliverables";
 import { MarkdownEditor } from "@/components/markdown-editor";
+import { SubmitButton } from "@/components/submit-button";
 import { ArrowLeft } from "@phosphor-icons/react/dist/ssr";
 import Link from "next/link";
 
@@ -15,11 +16,20 @@ export default async function EditDeliverablePage({
   const { id, did } = await params;
   await requirePermission(Permission.MANAGE_MILESTONES);
 
-  const deliverable = await prisma.deliverable.findUnique({
-    where: { id: did, projectId: id },
-    include: { project: { select: { name: true } } },
-  });
+  const [deliverable, allDeliverables] = await Promise.all([
+    prisma.deliverable.findUnique({
+      where: { id: did, projectId: id },
+      include: { project: { select: { name: true } } },
+    }),
+    prisma.deliverable.findMany({
+      where: { projectId: id, group: { not: null } },
+      select: { group: true },
+      distinct: ["group"],
+    }),
+  ]);
   if (!deliverable) notFound();
+
+  const existingGroups = allDeliverables.map((d) => d.group).filter(Boolean) as string[];
 
   async function handleSubmit(formData: FormData) {
     "use server";
@@ -65,21 +75,41 @@ export default async function EditDeliverablePage({
           />
         </div>
 
-        <div>
-          <label className="block text-xs font-medium text-muted-foreground uppercase tracking-widest mb-2" style={{ fontFamily: "var(--font-mono)" }}>
-            Status
-          </label>
-          <select
-            name="status"
-            defaultValue={deliverable.status}
-            className="w-full rounded-md border border-border bg-card px-3 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-colors"
-            style={{ fontFamily: "var(--font-mono)" }}
-          >
-            <option value={TimelineStatus.NOT_STARTED}>Not Started</option>
-            <option value={TimelineStatus.IN_PROGRESS}>In Progress</option>
-            <option value={TimelineStatus.BLOCKED}>Blocked</option>
-            <option value={TimelineStatus.COMPLETE}>Complete</option>
-          </select>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-xs font-medium text-muted-foreground uppercase tracking-widest mb-2" style={{ fontFamily: "var(--font-mono)" }}>
+              Status
+            </label>
+            <select
+              name="status"
+              defaultValue={deliverable.status}
+              className="w-full rounded-md border border-border bg-card px-3 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-colors"
+              style={{ fontFamily: "var(--font-mono)" }}
+            >
+              <option value={TimelineStatus.NOT_STARTED}>Not Started</option>
+              <option value={TimelineStatus.IN_PROGRESS}>In Progress</option>
+              <option value={TimelineStatus.BLOCKED}>Blocked</option>
+              <option value={TimelineStatus.COMPLETE}>Complete</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-muted-foreground uppercase tracking-widest mb-2" style={{ fontFamily: "var(--font-mono)" }}>
+              Group
+            </label>
+            <input
+              name="group"
+              type="text"
+              list="group-suggestions"
+              defaultValue={deliverable.group ?? ""}
+              placeholder="e.g. Software"
+              className="w-full rounded-md border border-border bg-card px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-colors"
+            />
+            <datalist id="group-suggestions">
+              {existingGroups.map((g) => (
+                <option key={g} value={g} />
+              ))}
+            </datalist>
+          </div>
         </div>
 
         <div className="grid grid-cols-2 gap-4">
@@ -122,12 +152,7 @@ export default async function EditDeliverablePage({
         </div>
 
         <div className="flex items-center gap-3 pt-2">
-          <button
-            type="submit"
-            className="rounded-md bg-primary text-primary-foreground text-sm font-medium px-5 py-2.5 hover:bg-primary/80 transition-colors"
-          >
-            Save Changes
-          </button>
+          <SubmitButton label="Save Changes" pendingLabel="Saving…" className="rounded-md bg-primary text-primary-foreground text-sm font-medium px-5 py-2.5 hover:bg-primary/80 transition-colors disabled:opacity-50 disabled:cursor-not-allowed" />
           <Link
             href={`/projects/${id}`}
             className="text-sm text-muted-foreground hover:text-foreground transition-colors"
