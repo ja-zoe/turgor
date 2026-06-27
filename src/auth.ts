@@ -12,7 +12,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   providers: [
     Credentials({
       credentials: { token: { type: "text" } },
-      async authorize(credentials) {
+      async authorize(credentials, _request) {
         const raw = credentials?.token;
         if (typeof raw !== "string") return null;
 

@@ -6,8 +6,8 @@ declare module "next-auth" {
   interface User {
     status: UserStatus;
     roleId: string | null;
-    firstName: string | null;
-    nickname: string | null;
+    firstName?: string | null;
+    nickname?: string | null;
   }
   interface Session {
     user: {
