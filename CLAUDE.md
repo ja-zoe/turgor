@@ -116,7 +116,7 @@ Rule-based system stored in `NotificationRule`. `src/lib/notifications.ts` conta
 
 ## Revision tracking
 
-Changes are tracked under `changes/` by the **spec-driven-dev skill** (`.claude/skills/spec-driven-dev`). Layout:
+Changes are tracked under `changes/` by the **spec-driven-dev skill**. The skill is vendored as a git submodule at `.agents/skills/spec-driven-dev` (repo: `git@github.com:ja-zoe/agent-skill-spec-driven-dev.git`) and bridged to Claude Code via the symlink `.claude/skills/spec-driven-dev`. After a fresh clone, run `git submodule update --init` to populate it. Layout:
 
 - `changes/CONTEXT.md` — project-wide invariants. **Read this first** in any session.
 - `changes/N-slug/` — one directory per revision set, containing `_set.md` (status checklist + roll-up log) and one `RN.M-slug.md` file per feature (spec + notes). Large features with attachments become a `RN.M-slug/` directory instead.

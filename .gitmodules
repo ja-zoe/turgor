@@ -1,0 +1,3 @@
+[submodule ".agents/skills/spec-driven-dev"]
+	path = .agents/skills/spec-driven-dev
+	url = git@github.com:ja-zoe/agent-skill-spec-driven-dev.git
