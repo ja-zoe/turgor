@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useTransition, useEffect, useRef } from "react";
+import { useState, useTransition, useEffect, useRef, type CSSProperties } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import {
   Plus, SortAscending, ArrowsDownUp, XCircle,
@@ -95,95 +96,179 @@ function formatDateShort(iso: string) {
   return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
-// ─── Subtask status popover (immediate commit, no slide-in) ────────────────
+// ─── Shared portal hook ───────────────────────────────────────────────────────
 
-function StatusPopover({
-  subtaskId, current, onClose, anchorRef,
+function useAnchorPos(anchorEl: HTMLElement | null) {
+  const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
+  useEffect(() => {
+    if (!anchorEl) return;
+    const rect = anchorEl.getBoundingClientRect();
+    setPos({ top: rect.bottom + window.scrollY + 2, left: rect.left + window.scrollX });
+  }, [anchorEl]);
+  return pos;
+}
+
+function useOutsideClose(anchorEl: HTMLElement | null, onClose: () => void) {
+  useEffect(() => {
+    let cleanup: (() => void) | undefined;
+    const timer = setTimeout(() => {
+      function onDown(e: MouseEvent) {
+        if (anchorEl?.contains(e.target as Node)) return;
+        onClose();
+      }
+      function onEsc(e: KeyboardEvent) { if (e.key === "Escape") onClose(); }
+      document.addEventListener("mousedown", onDown);
+      document.addEventListener("keydown", onEsc);
+      cleanup = () => {
+        document.removeEventListener("mousedown", onDown);
+        document.removeEventListener("keydown", onEsc);
+      };
+    }, 0);
+    return () => { clearTimeout(timer); cleanup?.(); };
+  }, [anchorEl, onClose]);
+}
+
+// ─── StatusDropdown — portal-based status list (replaces old StatusPopover) ──
+
+function StatusDropdown({
+  subtaskId, current, anchorEl, onSelect, onClose,
 }: {
   subtaskId: string;
   current: TimelineStatus;
+  anchorEl: HTMLElement | null;
+  onSelect: (s: TimelineStatus) => void;
   onClose: () => void;
-  anchorRef: React.RefObject<HTMLElement | null>;
 }) {
-  const [isPending, startTransition] = useTransition();
-  const popoverRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    function handleOutside(e: MouseEvent) {
-      if (
-        popoverRef.current && !popoverRef.current.contains(e.target as Node) &&
-        anchorRef.current && !anchorRef.current.contains(e.target as Node)
-      ) onClose();
-    }
-    function handleEsc(e: KeyboardEvent) { if (e.key === "Escape") onClose(); }
-    document.addEventListener("mousedown", handleOutside);
-    document.addEventListener("keydown", handleEsc);
-    return () => {
-      document.removeEventListener("mousedown", handleOutside);
-      document.removeEventListener("keydown", handleEsc);
-    };
-  }, [onClose, anchorRef]);
-
-  return (
+  const pos = useAnchorPos(anchorEl);
+  useOutsideClose(anchorEl, onClose);
+  if (!pos) return null;
+  return createPortal(
     <div
-      ref={popoverRef}
-      className="absolute z-50 top-full mt-1 right-0 min-w-[160px] bg-card border border-border rounded-lg shadow-md py-1 text-xs"
-      style={{ fontFamily: "var(--font-mono)" }}
+      style={{ position: "absolute", top: pos.top, left: pos.left, zIndex: 9999, fontFamily: "var(--font-mono)" }}
+      onMouseDown={(e) => e.stopPropagation()}
+      className="min-w-[160px] bg-card border border-border rounded-lg shadow-md py-1 text-xs"
     >
       {ALL_STATUSES.map((s) => (
         <button
           key={s}
           type="button"
-          disabled={isPending}
-          onClick={() => {
-            if (s === current) { onClose(); return; }
-            startTransition(async () => { await updateSubtaskStatus(subtaskId, s); onClose(); });
-          }}
-          className={`w-full flex items-center gap-2 px-3 py-1.5 hover:bg-muted transition-colors text-left disabled:opacity-50 ${s === current ? "text-primary font-medium" : "text-foreground"}`}
+          onClick={() => onSelect(s)}
+          className={`w-full flex items-center gap-2 px-3 py-1.5 hover:bg-muted transition-colors text-left ${
+            s === current ? "text-primary font-medium" : "text-foreground"
+          }`}
         >
-          <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${STATUS_DOT[s]}`} />
+          <div className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: STATUS_DOT_COLOR[s] }} />
           {STATUS_LABELS[s]}
           {s === current && <span className="ml-auto text-muted-foreground">✓</span>}
         </button>
       ))}
-    </div>
+    </div>,
+    document.body
   );
 }
 
-// ─── Deliverable status popover (for standalone deliverables) ──────────────
+// ─── StatusPill — colored pill that replaces the status dot ──────────────────
+
+function StatusPill({
+  subtaskId, status, pendingStatus, canEdit,
+  onPick, onConfirm, onCancel, isTransitioning,
+}: {
+  subtaskId: string;
+  status: TimelineStatus;
+  pendingStatus: TimelineStatus | null;
+  canEdit: boolean;
+  onPick: (s: TimelineStatus) => void;
+  onConfirm: () => void;
+  onCancel: () => void;
+  isTransitioning: boolean;
+}) {
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const pillRef = useRef<HTMLButtonElement>(null);
+
+  const confirming = pendingStatus !== null;
+  const displayStatus = pendingStatus ?? status;
+  const bg = STATUS_DOT_COLOR[displayStatus];
+  const base = "inline-flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-medium text-white leading-none flex-shrink-0 transition-colors";
+
+  if (!canEdit) {
+    return (
+      <span className={base} style={{ backgroundColor: STATUS_DOT_COLOR[status] }}>
+        {STATUS_LABELS[status]}
+      </span>
+    );
+  }
+
+  if (confirming) {
+    return (
+      <div className={`${base} cursor-default`} style={{ backgroundColor: bg }}>
+        <span>{STATUS_LABELS[displayStatus]}</span>
+        <button
+          type="button"
+          onClick={onConfirm}
+          disabled={isTransitioning}
+          className="hover:opacity-80 disabled:opacity-40 transition-opacity"
+          title="Confirm"
+        >
+          ✓
+        </button>
+        <span className="opacity-40 select-none">|</span>
+        <button
+          type="button"
+          onClick={onCancel}
+          disabled={isTransitioning}
+          className="hover:opacity-80 disabled:opacity-40 transition-opacity"
+          title="Cancel"
+        >
+          ✗
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <button
+        ref={pillRef}
+        type="button"
+        className={`${base} hover:opacity-80`}
+        style={{ backgroundColor: bg }}
+        onClick={() => setDropdownOpen((o) => !o)}
+        data-testid="status-pill"
+      >
+        {STATUS_LABELS[status]}
+      </button>
+      {dropdownOpen && (
+        <StatusDropdown
+          subtaskId={subtaskId}
+          current={status}
+          anchorEl={pillRef.current}
+          onSelect={(s) => { setDropdownOpen(false); onPick(s); }}
+          onClose={() => setDropdownOpen(false)}
+        />
+      )}
+    </>
+  );
+}
+
+// ─── DeliverableStatusPopover — portal-based (standalone deliverables) ────────
 
 function DeliverableStatusPopover({
-  deliverableId, current, onClose, anchorRef,
+  deliverableId, current, onClose, anchorEl,
 }: {
   deliverableId: string;
   current: TimelineStatus;
   onClose: () => void;
-  anchorRef: React.RefObject<HTMLElement | null>;
+  anchorEl: HTMLElement | null;
 }) {
   const [isPending, startTransition] = useTransition();
-  const popoverRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    function handleOutside(e: MouseEvent) {
-      if (
-        popoverRef.current && !popoverRef.current.contains(e.target as Node) &&
-        anchorRef.current && !anchorRef.current.contains(e.target as Node)
-      ) onClose();
-    }
-    function handleEsc(e: KeyboardEvent) { if (e.key === "Escape") onClose(); }
-    document.addEventListener("mousedown", handleOutside);
-    document.addEventListener("keydown", handleEsc);
-    return () => {
-      document.removeEventListener("mousedown", handleOutside);
-      document.removeEventListener("keydown", handleEsc);
-    };
-  }, [onClose, anchorRef]);
-
-  return (
+  const pos = useAnchorPos(anchorEl);
+  useOutsideClose(anchorEl, onClose);
+  if (!pos) return null;
+  return createPortal(
     <div
-      ref={popoverRef}
-      className="absolute z-50 top-full mt-1 left-0 min-w-[160px] bg-card border border-border rounded-lg shadow-md py-1 text-xs"
-      style={{ fontFamily: "var(--font-mono)" }}
+      style={{ position: "absolute", top: pos.top, left: pos.left, zIndex: 9999, fontFamily: "var(--font-mono)" }}
+      onMouseDown={(e) => e.stopPropagation()}
+      className="min-w-[160px] bg-card border border-border rounded-lg shadow-md py-1 text-xs"
     >
       {ALL_STATUSES.map((s) => (
         <button
@@ -201,48 +286,40 @@ function DeliverableStatusPopover({
           {s === current && <span className="ml-auto text-muted-foreground">✓</span>}
         </button>
       ))}
-    </div>
+    </div>,
+    document.body
   );
 }
 
-// ─── Assignee search (inline picker for subtask assignee) ──────────────────
+// ─── AssigneeSearch — portal-based picker ────────────────────────────────────
 
 function AssigneeSearch({
-  members, currentId, onSelect, onClose,
+  members, currentId, onSelect, onClose, anchorEl,
 }: {
   members: Member[];
   currentId: string | null;
   onSelect: (id: string) => void;
   onClose: () => void;
+  anchorEl: HTMLElement | null;
 }) {
   const [query, setQuery] = useState("");
-  const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-
+  const pos = useAnchorPos(anchorEl);
   useEffect(() => { inputRef.current?.focus(); }, []);
-
-  useEffect(() => {
-    function handleOutside(e: MouseEvent) {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) onClose();
-    }
-    function handleEsc(e: KeyboardEvent) { if (e.key === "Escape") onClose(); }
-    document.addEventListener("mousedown", handleOutside);
-    document.addEventListener("keydown", handleEsc);
-    return () => {
-      document.removeEventListener("mousedown", handleOutside);
-      document.removeEventListener("keydown", handleEsc);
-    };
-  }, [onClose]);
+  useOutsideClose(anchorEl, onClose);
 
   const filtered = members.filter((m) =>
     getDisplayName(m).toLowerCase().includes(query.toLowerCase())
   );
 
-  return (
+  if (!pos) return null;
+
+  return createPortal(
     <div
-      ref={containerRef}
-      className="absolute left-0 top-full mt-1 z-50 w-52 bg-card border border-border rounded-lg shadow-md overflow-hidden"
-      style={{ fontFamily: "var(--font-mono)" }}
+      style={{ position: "absolute", top: pos.top + 2, left: pos.left, zIndex: 9999, fontFamily: "var(--font-mono)" }}
+      onMouseDown={(e) => e.stopPropagation()}
+      className="w-52 bg-card border border-border rounded-lg shadow-md overflow-hidden"
+      data-testid="assignee-picker"
     >
       <div className="p-1.5 border-b border-border">
         <input
@@ -279,42 +356,55 @@ function AssigneeSearch({
           <p className="px-3 py-1.5 text-xs text-muted-foreground">No members found</p>
         )}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 
-// ─── Main component ────────────────────────────────────────────────────────
+// ─── Main component ────────────────────────────────────────────────────────────
 
 export function SortableDeliverables({
   deliverables,
   projectId,
   canManage,
   canEdit,
-  members,
+  members = [],
   deleteDeliverableAction,
 }: SortableDeliverablesProps) {
   const [sortByStatus, setSortByStatus] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState<string | null>(null);
-  // subtask status popover
-  const [statusMenuFor, setStatusMenuFor] = useState<string | null>(null);
-  // deliverable status popover (standalone deliverables only)
+
+  // Deliverable status popover (standalone deliverables only)
   const [deliverableStatusMenuFor, setDeliverableStatusMenuFor] = useState<string | null>(null);
-  // unified pending-edit state for subtask field edits
+
+  // Pending status-pill confirm (hoisted so other interactions can cancel it)
+  const [pendingStatusEdit, setPendingStatusEdit] = useState<{
+    subtaskId: string;
+    status: TimelineStatus;
+  } | null>(null);
+  const [isStatusPending, startStatusTransition] = useTransition();
+
+  // Pending field edits: title / assignee / dueDate
   const [pendingEdit, setPendingEdit] = useState<{
     subtaskId: string;
     field: "title" | "assignee" | "dueDate";
     value: string;
   } | null>(null);
   const [isPendingEdit, startEditTransition] = useTransition();
+  // assigneePickerOpen is separate from pendingEdit so closing the picker
+  // doesn't cancel the pending selection before ✓ is clicked
+  const [assigneePickerOpen, setAssigneePickerOpen] = useState(false);
 
-  const dotRefs = useRef<Map<string, HTMLButtonElement | null>>(new Map());
+  // Refs for portal anchor elements
   const deliverableDotRefs = useRef<Map<string, HTMLButtonElement | null>>(new Map());
+  const personRefs = useRef<Map<string, HTMLButtonElement | null>>(new Map());
   const titleInputRef = useRef<HTMLInputElement | null>(null);
   const dateInputRef = useRef<HTMLInputElement | null>(null);
 
   function startEdit(subtaskId: string, field: "title" | "assignee" | "dueDate", value: string) {
     setConfirmingDelete(null);
-    setStatusMenuFor(null);
+    setPendingStatusEdit(null);
+    setAssigneePickerOpen(field === "assignee");
     setPendingEdit({ subtaskId, field, value });
     if (field === "title") setTimeout(() => titleInputRef.current?.select(), 0);
     if (field === "dueDate") setTimeout(() => dateInputRef.current?.focus(), 0);
@@ -323,6 +413,7 @@ export function SortableDeliverables({
   function commitEdit() {
     if (!pendingEdit || isPendingEdit) return;
     const { subtaskId, field, value } = pendingEdit;
+    setAssigneePickerOpen(false);
     setPendingEdit(null);
     startEditTransition(async () => {
       if (field === "title") await updateSubtaskTitle(subtaskId, value);
@@ -332,10 +423,22 @@ export function SortableDeliverables({
   }
 
   function cancelEdit() {
+    setAssigneePickerOpen(false);
     setPendingEdit(null);
   }
 
-  // ── Sort + group ──────────────────────────────────────────────────────────
+  function confirmStatusEdit() {
+    if (!pendingStatusEdit || isStatusPending) return;
+    const { subtaskId, status } = pendingStatusEdit;
+    setPendingStatusEdit(null);
+    startStatusTransition(async () => { await updateSubtaskStatus(subtaskId, status); });
+  }
+
+  function cancelStatusEdit() {
+    setPendingStatusEdit(null);
+  }
+
+  // ── Sort + group ───────────────────────────────────────────────────────────
 
   const sorted = sortByStatus
     ? [...deliverables].sort((a, b) => STATUS_ORDER[a.status] - STATUS_ORDER[b.status])
@@ -351,15 +454,15 @@ export function SortableDeliverables({
       if (!groupMap.has(key)) groupMap.set(key, []);
       groupMap.get(key)!.push(d);
     }
-    const ungrouped = groupMap.get("") ?? [];
-    const named = [...groupMap.entries()].filter(([k]) => k !== "").sort(([a], [b]) => a.localeCompare(b));
-    if (ungrouped.length) sections.push({ label: null, items: ungrouped });
-    for (const [label, items] of named) sections.push({ label, items });
+    sections = Array.from(groupMap.entries()).map(([label, items]) => ({
+      label: label || null,
+      items,
+    }));
   } else {
     sections = [{ label: null, items: sorted }];
   }
 
-  // ── Render ────────────────────────────────────────────────────────────────
+  // ── Render ─────────────────────────────────────────────────────────────────
 
   return (
     <div>
@@ -443,7 +546,6 @@ export function SortableDeliverables({
 
                             {/* Deliverable status badge — 3 variants */}
                             {hasSubtasks ? (
-                              // Locked: derived from subtasks, tooltip lists drivers
                               <div className="relative group/badge">
                                 <span
                                   className={`inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded-full cursor-help ${badge.bg} ${badge.text}`}
@@ -476,7 +578,6 @@ export function SortableDeliverables({
                                 )}
                               </div>
                             ) : canEdit ? (
-                              // Standalone + can edit: clickable status popover
                               <div className="relative">
                                 <button
                                   ref={(el) => { deliverableDotRefs.current.set(deliverable.id, el); }}
@@ -496,12 +597,11 @@ export function SortableDeliverables({
                                     deliverableId={deliverable.id}
                                     current={deliverable.status}
                                     onClose={() => setDeliverableStatusMenuFor(null)}
-                                    anchorRef={{ current: deliverableDotRefs.current.get(deliverable.id) ?? null }}
+                                    anchorEl={deliverableDotRefs.current.get(deliverable.id) ?? null}
                                   />
                                 )}
                               </div>
                             ) : (
-                              // Standalone + read-only: plain badge
                               <span
                                 className={`inline-flex items-center text-[10px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded-full ${badge.bg} ${badge.text}`}
                               >
@@ -561,91 +661,136 @@ export function SortableDeliverables({
                               ? pendingValue
                               : subtask.dueDate ?? "";
 
-                            // Right-panel mode
+                            // Right-panel mode drives the slide animation
                             const rowMode = isEditing ? "edit"
                               : confirmingDelete === subtask.id ? "delete"
                               : "controls";
+
+                            // Glow on hover or while actively editing this subtask
+                            const isActive = isEditing || pendingStatusEdit?.subtaskId === subtask.id;
+                            const dotColor = STATUS_DOT_COLOR[subtask.status];
 
                             return (
                               <div
                                 key={subtask.id}
                                 className="group/subtask flex items-center justify-between px-4 py-2.5 bg-background/50"
+                                data-testid="subtask-row"
                               >
-                                {/* ── Left: dot + title/assignee ── */}
+                                {/* ── Far-left status bullet (visual only, glows on hover/edit) ── */}
+                                <span
+                                  aria-hidden
+                                  className="w-1.5 h-1.5 rounded-full flex-shrink-0 mr-2 transition-shadow duration-200 group-hover/subtask:shadow-[0_0_6px_2px_var(--dot)]"
+                                  style={{
+                                    backgroundColor: dotColor,
+                                    ...({ "--dot": dotColor } as CSSProperties),
+                                    ...(isActive ? { boxShadow: `0 0 6px 2px ${dotColor}` } : {}),
+                                  }}
+                                  data-testid="status-bullet"
+                                />
+
+                                {/* ── Left: title+pencil, status pill, assignee ── */}
                                 <div className="flex items-center gap-2 flex-1 min-w-0 pr-3">
-                                  {/* Status dot */}
-                                  <div className="relative flex-shrink-0">
-                                    {canEdit ? (
-                                      <button
-                                        ref={(el) => { dotRefs.current.set(subtask.id, el); }}
-                                        type="button"
-                                        onClick={() =>
-                                          setStatusMenuFor(statusMenuFor === subtask.id ? null : subtask.id)
+
+                                  {/* Title + inline pencil */}
+                                  <div className="flex items-center gap-1 min-w-0 flex-1">
+                                    {canEdit && editField === "title" ? (
+                                      <input
+                                        ref={titleInputRef}
+                                        className="text-xs text-foreground bg-transparent border-b border-primary outline-none min-w-0 flex-1 max-w-[200px] disabled:opacity-50"
+                                        value={pendingValue}
+                                        disabled={isPendingEdit}
+                                        onChange={(e) =>
+                                          setPendingEdit((p) => p ? { ...p, value: e.target.value } : p)
                                         }
-                                        className={`w-2 h-2 rounded-full hover:ring-2 hover:ring-offset-1 hover:ring-border transition-all cursor-pointer ${STATUS_DOT[subtask.status]}`}
-                                        title="Change status"
+                                        onKeyDown={(e) => {
+                                          if (e.key === "Enter") { e.preventDefault(); commitEdit(); }
+                                          if (e.key === "Escape") cancelEdit();
+                                        }}
                                       />
                                     ) : (
-                                      <div className={`w-1.5 h-1.5 rounded-full ${STATUS_DOT[subtask.status]}`} />
-                                    )}
-                                    {statusMenuFor === subtask.id && (
-                                      <StatusPopover
-                                        subtaskId={subtask.id}
-                                        current={subtask.status}
-                                        onClose={() => setStatusMenuFor(null)}
-                                        anchorRef={{ current: dotRefs.current.get(subtask.id) ?? null }}
-                                      />
+                                      <>
+                                        <span className="text-xs text-foreground truncate">{subtask.title}</span>
+                                        {canEdit && (
+                                          <button
+                                            type="button"
+                                            onClick={() => startEdit(subtask.id, "title", subtask.title)}
+                                            className="flex-shrink-0 opacity-0 group-hover/subtask:opacity-100 text-muted-foreground hover:text-foreground transition-all"
+                                            title="Edit title"
+                                            data-testid="pencil-btn"
+                                          >
+                                            <PencilSimple size={11} />
+                                          </button>
+                                        )}
+                                      </>
                                     )}
                                   </div>
 
-                                  {/* Title */}
-                                  {canEdit && editField === "title" ? (
-                                    <input
-                                      ref={titleInputRef}
-                                      className="text-xs text-foreground bg-transparent border-b border-primary outline-none min-w-0 flex-1 max-w-[220px] disabled:opacity-50"
-                                      value={pendingValue}
-                                      disabled={isPendingEdit}
-                                      onChange={(e) =>
-                                        setPendingEdit((p) => p ? { ...p, value: e.target.value } : p)
-                                      }
-                                      onKeyDown={(e) => {
-                                        if (e.key === "Enter") { e.preventDefault(); commitEdit(); }
-                                        if (e.key === "Escape") cancelEdit();
-                                      }}
-                                    />
-                                  ) : (
-                                    <span className="text-xs text-foreground truncate">{subtask.title}</span>
-                                  )}
+                                  {/* Status pill (replaces dot) */}
+                                  <StatusPill
+                                    subtaskId={subtask.id}
+                                    status={subtask.status}
+                                    pendingStatus={
+                                      pendingStatusEdit?.subtaskId === subtask.id
+                                        ? pendingStatusEdit.status
+                                        : null
+                                    }
+                                    canEdit={canEdit}
+                                    onPick={(s) => {
+                                      setPendingStatusEdit({ subtaskId: subtask.id, status: s });
+                                    }}
+                                    onConfirm={confirmStatusEdit}
+                                    onCancel={cancelStatusEdit}
+                                    isTransitioning={isStatusPending}
+                                  />
 
-                                  {/* Assignee */}
-                                  {canEdit && editField === "assignee" ? (
-                                    <div className="relative flex-shrink-0">
-                                      <span
-                                        className="text-xs text-primary"
-                                        style={{ fontFamily: "var(--font-mono)" }}
-                                      >
-                                        {displayAssignee ? getDisplayName(displayAssignee) : "None"}
-                                      </span>
-                                      <AssigneeSearch
-                                        members={members}
-                                        currentId={displayAssigneeId}
-                                        onSelect={(id) =>
-                                          setPendingEdit((p) => p ? { ...p, value: id } : p)
-                                        }
-                                        onClose={cancelEdit}
-                                      />
-                                    </div>
-                                  ) : displayAssignee ? (
-                                    <span
-                                      className="text-xs text-muted-foreground flex-shrink-0"
-                                      style={{ fontFamily: "var(--font-mono)" }}
+                                  {/* Assignee — wrapper div holds the stable portal anchor ref */}
+                                  {(canEdit || displayAssignee) && (
+                                    <div
+                                      ref={(el) => { personRefs.current.set(subtask.id, el as HTMLButtonElement | null); }}
+                                      className="relative flex-shrink-0"
                                     >
-                                      {getDisplayName(displayAssignee)}
-                                    </span>
-                                  ) : null}
+                                      {canEdit && editField === "assignee" ? (
+                                        <span
+                                          className="text-xs text-primary"
+                                          style={{ fontFamily: "var(--font-mono)" }}
+                                        >
+                                          {displayAssignee ? getDisplayName(displayAssignee) : "None"}
+                                        </span>
+                                      ) : canEdit ? (
+                                        <button
+                                          type="button"
+                                          onClick={() => startEdit(subtask.id, "assignee", subtask.assignee?.id ?? "")}
+                                          className="text-xs text-muted-foreground hover:text-foreground hover:underline transition-colors"
+                                          style={{ fontFamily: "var(--font-mono)" }}
+                                          title="Change assignee"
+                                        >
+                                          {displayAssignee ? getDisplayName(displayAssignee) : <span className="opacity-50">Unassigned</span>}
+                                        </button>
+                                      ) : (
+                                        <span
+                                          className="text-xs text-muted-foreground"
+                                          style={{ fontFamily: "var(--font-mono)" }}
+                                        >
+                                          {displayAssignee ? getDisplayName(displayAssignee) : null}
+                                        </span>
+                                      )}
+                                      {assigneePickerOpen && (
+                                        <AssigneeSearch
+                                          members={members}
+                                          currentId={displayAssigneeId}
+                                          anchorEl={personRefs.current.get(subtask.id) ?? null}
+                                          onSelect={(id) => {
+                                            setPendingEdit((p) => p ? { ...p, value: id } : p);
+                                            setAssigneePickerOpen(false);
+                                          }}
+                                          onClose={() => setAssigneePickerOpen(false)}
+                                        />
+                                      )}
+                                    </div>
+                                  )}
                                 </div>
 
-                                {/* ── Right: date + controls ── */}
+                                {/* ── Right: date + 3-panel controls ── */}
                                 <div className="flex items-center gap-2 flex-shrink-0">
                                   {/* Due date */}
                                   {canEdit && editField === "dueDate" ? (
@@ -675,9 +820,9 @@ export function SortableDeliverables({
 
                                   {/* Three-state slide panel */}
                                   {canManage && (
-                                    <div className="relative flex items-center" style={{ minWidth: "72px" }}>
+                                    <div className="relative flex items-center" style={{ minWidth: "60px" }}>
 
-                                      {/* Panel A — normal icons */}
+                                      {/* Panel A — controls: calendar + person + delete */}
                                       <div
                                         className={`flex items-center gap-1.5 transition-all duration-200 ${
                                           rowMode === "controls"
@@ -686,48 +831,20 @@ export function SortableDeliverables({
                                         }`}
                                       >
                                         {canEdit && (
-                                          <>
-                                            <button
-                                              type="button"
-                                              onClick={() =>
-                                                startEdit(subtask.id, "title", subtask.title)
-                                              }
-                                              className="text-muted-foreground hover:text-foreground transition-colors opacity-0 group-hover/subtask:opacity-100"
-                                              title="Edit title"
-                                            >
-                                              <PencilSimple size={12} />
-                                            </button>
-                                            <button
-                                              type="button"
-                                              onClick={() =>
-                                                startEdit(
-                                                  subtask.id,
-                                                  "dueDate",
-                                                  subtask.dueDate
-                                                    ? subtask.dueDate.split("T")[0]
-                                                    : ""
-                                                )
-                                              }
-                                              className="text-muted-foreground hover:text-foreground transition-colors opacity-0 group-hover/subtask:opacity-100"
-                                              title="Edit due date"
-                                            >
-                                              <CalendarBlank size={12} />
-                                            </button>
-                                            <button
-                                              type="button"
-                                              onClick={() =>
-                                                startEdit(
-                                                  subtask.id,
-                                                  "assignee",
-                                                  subtask.assignee?.id ?? ""
-                                                )
-                                              }
-                                              className="text-muted-foreground hover:text-foreground transition-colors opacity-0 group-hover/subtask:opacity-100"
-                                              title="Change assignee"
-                                            >
-                                              <UserCircle size={12} />
-                                            </button>
-                                          </>
+                                          <button
+                                            type="button"
+                                            onClick={() =>
+                                              startEdit(
+                                                subtask.id,
+                                                "dueDate",
+                                                subtask.dueDate ? subtask.dueDate.split("T")[0] : ""
+                                              )
+                                            }
+                                            className="text-muted-foreground hover:text-foreground transition-colors opacity-0 group-hover/subtask:opacity-100"
+                                            title="Edit due date"
+                                          >
+                                            <CalendarBlank size={12} />
+                                          </button>
                                         )}
                                         <button
                                           type="button"
@@ -739,7 +856,7 @@ export function SortableDeliverables({
                                         </button>
                                       </div>
 
-                                      {/* Panel B — edit confirm */}
+                                      {/* Panel B — edit confirm: ✓ ✗ */}
                                       <div
                                         className={`absolute right-0 flex items-center gap-2 transition-all duration-200 ${
                                           rowMode === "edit"
