@@ -194,6 +194,13 @@ export function MpcTokenSection({ hasToken, appUrl }: Props) {
               ],
             },
             {
+              group: "Projects (MANAGE_PROJECTS)",
+              tools: [
+                { name: "create_project", desc: "create a new project" },
+                { name: "update_project", desc: "edit name, semester, dates, description, corrective action" },
+              ],
+            },
+            {
               group: "Action items",
               tools: [
                 { name: "create_action_item", desc: "create (LEAD/SUBLEAD or PM)" },
