@@ -16,6 +16,9 @@ import {
   updateDeliverableStatus,
 } from "@/lib/actions/deliverables";
 import { getDisplayName } from "@/lib/utils";
+import {
+  Tooltip, TooltipTrigger, TooltipContent,
+} from "@/components/ui/tooltip";
 
 type TimelineStatus = "NOT_STARTED" | "IN_PROGRESS" | "BLOCKED" | "COMPLETE";
 
@@ -87,6 +90,13 @@ const STATUS_LABELS: Record<TimelineStatus, string> = {
 };
 
 const ALL_STATUSES: TimelineStatus[] = ["NOT_STARTED", "IN_PROGRESS", "BLOCKED", "COMPLETE"];
+
+const LOCK_REASON: Record<TimelineStatus, string> = {
+  BLOCKED:     "Status is locked because a subtask is blocked.",
+  IN_PROGRESS: "Status is locked because a subtask is in progress.",
+  COMPLETE:    "Status is locked because all subtasks are complete.",
+  NOT_STARTED: "Status is locked — it follows subtask progress.",
+};
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
@@ -576,9 +586,6 @@ export function SortableDeliverables({
                   const badge = STATUS_BADGE[deliverable.status];
                   const isOverdue = !deliverable.completed && new Date(deliverable.targetDate) < new Date();
                   const hasSubtasks = deliverable.subtasks.length > 0;
-                  const nonStartedSubtasks = deliverable.subtasks.filter(
-                    (s) => s.status !== "NOT_STARTED"
-                  );
 
                   return (
                     <div key={deliverable.id} className="border border-border rounded-xl overflow-hidden">
@@ -592,37 +599,26 @@ export function SortableDeliverables({
 
                             {/* Deliverable status badge — 3 variants */}
                             {hasSubtasks ? (
-                              <div className="relative group/badge">
-                                <span
-                                  className={`inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded-full cursor-help ${badge.bg} ${badge.text}`}
+                              <Tooltip>
+                                <TooltipTrigger
+                                  render={
+                                    <span
+                                      className={`inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded-full cursor-help ${badge.bg} ${badge.text}`}
+                                      data-testid="deliverable-locked-badge"
+                                    />
+                                  }
                                 >
                                   {badge.label}
                                   <LockSimple size={8} />
-                                </span>
-                                {nonStartedSubtasks.length > 0 && (
-                                  <div className="absolute bottom-full left-0 mb-1.5 z-50 w-56 bg-foreground text-background rounded-md px-2.5 py-2 opacity-0 pointer-events-none group-hover/badge:opacity-100 transition-opacity duration-150">
-                                    <p
-                                      className="text-[10px] font-semibold uppercase tracking-widest mb-1.5 text-background/70"
-                                      style={{ fontFamily: "var(--font-mono)" }}
-                                    >
-                                      Driven by subtasks:
-                                    </p>
-                                    {nonStartedSubtasks.map((s) => (
-                                      <p
-                                        key={s.id}
-                                        className="text-[11px] flex items-center gap-1.5 mb-0.5"
-                                        style={{ fontFamily: "var(--font-mono)" }}
-                                      >
-                                        <span
-                                          className="w-1.5 h-1.5 rounded-full flex-shrink-0 inline-block"
-                                          style={{ backgroundColor: STATUS_DOT_COLOR[s.status] }}
-                                        />
-                                        {s.title} — {STATUS_LABELS[s.status]}
-                                      </p>
-                                    ))}
-                                  </div>
-                                )}
-                              </div>
+                                </TooltipTrigger>
+                                <TooltipContent
+                                  side="top"
+                                  className="text-[11px] px-2.5 py-1.5 font-normal normal-case tracking-normal"
+                                  style={{ fontFamily: "var(--font-mono)" }}
+                                >
+                                  {LOCK_REASON[deliverable.status]}
+                                </TooltipContent>
+                              </Tooltip>
                             ) : canEdit ? (
                               <div className="relative">
                                 <button
