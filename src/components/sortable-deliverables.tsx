@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition, useEffect, useRef } from "react";
 import Link from "next/link";
 import { Plus, SortAscending, ArrowsDownUp, XCircle } from "@phosphor-icons/react";
-import { deleteSubtask } from "@/lib/actions/deliverables";
+import { deleteSubtask, updateSubtaskStatus } from "@/lib/actions/deliverables";
 import { getDisplayName } from "@/lib/utils";
 
 type TimelineStatus = "NOT_STARTED" | "IN_PROGRESS" | "BLOCKED" | "COMPLETE";
@@ -31,6 +31,7 @@ interface SortableDeliverablesProps {
   deliverables: Deliverable[];
   projectId: string;
   canManage: boolean;
+  canEdit: boolean;
   userId: string;
   deleteDeliverableAction: (id: string) => Promise<void>;
 }
@@ -56,18 +57,117 @@ const STATUS_BADGE: Record<TimelineStatus, { bg: string; text: string; label: st
   COMPLETE: { bg: "bg-[#EDF3EC]", text: "text-[#588157]", label: "Complete" },
 };
 
+const STATUS_LABELS: Record<TimelineStatus, string> = {
+  NOT_STARTED: "Not Started",
+  IN_PROGRESS: "In Progress",
+  BLOCKED: "Blocked",
+  COMPLETE: "Complete",
+};
+
+const ALL_STATUSES: TimelineStatus[] = ["NOT_STARTED", "IN_PROGRESS", "BLOCKED", "COMPLETE"];
+
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+}
+
+function StatusDot({ status, interactive, onClick }: {
+  status: TimelineStatus;
+  interactive: boolean;
+  onClick?: () => void;
+}) {
+  const dot = (
+    <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${STATUS_DOT[status]}`} />
+  );
+  if (!interactive) return dot;
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="w-1.5 h-1.5 rounded-full flex-shrink-0 hover:ring-2 hover:ring-offset-1 hover:ring-current transition-all cursor-pointer"
+      style={{ backgroundColor: status === "COMPLETE" ? "#588157" : status === "BLOCKED" ? "#A4503C" : status === "IN_PROGRESS" ? "#1F6C9F" : "#787774" }}
+      title="Change status"
+    />
+  );
+}
+
+function StatusPopover({
+  subtaskId,
+  current,
+  onClose,
+  anchorRef,
+}: {
+  subtaskId: string;
+  current: TimelineStatus;
+  onClose: () => void;
+  anchorRef: React.RefObject<HTMLElement | null>;
+}) {
+  const [isPending, startTransition] = useTransition();
+  const popoverRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleOutside(e: MouseEvent) {
+      if (
+        popoverRef.current &&
+        !popoverRef.current.contains(e.target as Node) &&
+        anchorRef.current &&
+        !anchorRef.current.contains(e.target as Node)
+      ) {
+        onClose();
+      }
+    }
+    function handleEsc(e: KeyboardEvent) {
+      if (e.key === "Escape") onClose();
+    }
+    document.addEventListener("mousedown", handleOutside);
+    document.addEventListener("keydown", handleEsc);
+    return () => {
+      document.removeEventListener("mousedown", handleOutside);
+      document.removeEventListener("keydown", handleEsc);
+    };
+  }, [onClose, anchorRef]);
+
+  function handleSelect(status: TimelineStatus) {
+    if (status === current) { onClose(); return; }
+    startTransition(async () => {
+      await updateSubtaskStatus(subtaskId, status);
+      onClose();
+    });
+  }
+
+  return (
+    <div
+      ref={popoverRef}
+      className="absolute z-50 top-full mt-1 right-0 min-w-[160px] bg-card border border-border rounded-lg shadow-md py-1 text-xs"
+      style={{ fontFamily: "var(--font-mono)" }}
+    >
+      {ALL_STATUSES.map((s) => (
+        <button
+          key={s}
+          type="button"
+          disabled={isPending}
+          onClick={() => handleSelect(s)}
+          className={`w-full flex items-center gap-2 px-3 py-1.5 hover:bg-muted transition-colors text-left disabled:opacity-50 ${s === current ? "text-primary font-medium" : "text-foreground"}`}
+        >
+          <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${STATUS_DOT[s]}`} />
+          {STATUS_LABELS[s]}
+          {s === current && <span className="ml-auto text-muted-foreground">✓</span>}
+        </button>
+      ))}
+    </div>
+  );
 }
 
 export function SortableDeliverables({
   deliverables,
   projectId,
   canManage,
+  canEdit,
   deleteDeliverableAction,
 }: SortableDeliverablesProps) {
   const [sortByStatus, setSortByStatus] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState<string | null>(null);
+  const [statusMenuFor, setStatusMenuFor] = useState<string | null>(null);
+  const dotRefs = useRef<Map<string, HTMLButtonElement | null>>(new Map());
 
   const sorted = sortByStatus
     ? [...deliverables].sort(
@@ -87,7 +187,6 @@ export function SortableDeliverables({
       if (!groupMap.has(key)) groupMap.set(key, []);
       groupMap.get(key)!.push(d);
     }
-    // Ungrouped first, then named groups alphabetically
     const ungrouped = groupMap.get("") ?? [];
     const namedGroups = [...groupMap.entries()]
       .filter(([k]) => k !== "")
@@ -239,9 +338,28 @@ export function SortableDeliverables({
                               className="flex items-center justify-between px-4 py-2.5 bg-background/50"
                             >
                               <div className="flex items-center gap-2">
-                                <div
-                                  className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${STATUS_DOT[subtask.status]}`}
-                                />
+                                {/* Status dot — interactive when canEdit */}
+                                <div className="relative">
+                                  {canEdit ? (
+                                    <button
+                                      ref={(el) => { dotRefs.current.set(subtask.id, el); }}
+                                      type="button"
+                                      onClick={() => setStatusMenuFor(statusMenuFor === subtask.id ? null : subtask.id)}
+                                      className={`w-2 h-2 rounded-full flex-shrink-0 hover:ring-2 hover:ring-offset-1 hover:ring-border transition-all cursor-pointer ${STATUS_DOT[subtask.status]}`}
+                                      title="Change status"
+                                    />
+                                  ) : (
+                                    <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${STATUS_DOT[subtask.status]}`} />
+                                  )}
+                                  {statusMenuFor === subtask.id && (
+                                    <StatusPopover
+                                      subtaskId={subtask.id}
+                                      current={subtask.status}
+                                      onClose={() => setStatusMenuFor(null)}
+                                      anchorRef={{ current: dotRefs.current.get(subtask.id) ?? null }}
+                                    />
+                                  )}
+                                </div>
                                 <span className="text-xs text-foreground">{subtask.title}</span>
                                 {subtask.assignee && (
                                   <span
@@ -253,7 +371,7 @@ export function SortableDeliverables({
                                 )}
                               </div>
                               <div className="flex items-center gap-3 relative">
-                                {/* Date (unchanged) */}
+                                {/* Date */}
                                 {subtask.dueDate && (
                                   <span
                                     className="text-xs text-muted-foreground"
