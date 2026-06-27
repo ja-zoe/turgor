@@ -116,4 +116,11 @@ Rule-based system stored in `NotificationRule`. `src/lib/notifications.ts` conta
 
 ## Revision tracking
 
-Changes are logged in `changes/N.md` by revision set. The current revision set is `changes/4.md`. Each file contains the bootstrap prompt, feature specs, DB changes, and an append-only implementation log. Start new sessions for this repo by reading `changes/4.md`.
+Changes are tracked under `changes/` by the **spec-driven-dev skill** (`.claude/skills/spec-driven-dev`). Layout:
+
+- `changes/CONTEXT.md` — project-wide invariants. **Read this first** in any session.
+- `changes/N-slug/` — one directory per revision set, containing `_set.md` (status checklist + roll-up log) and one `RN.M-slug.md` file per feature (spec + notes). Large features with attachments become a `RN.M-slug/` directory instead.
+
+To resume work: read `CONTEXT.md` + the target set's `_set.md`, then load only the feature file(s) you're touching. The latest set is `changes/5-logo-mcp-notify/` (complete).
+
+**Branching:** `main` is the single integration branch (no `develop`). Each set → `feat/setN-<slug>` off `main`; each feature → `feat/setN/RN.M-<slug>` off the set branch. A feature merges into the set branch only after passing its tests/verification; the set merges into `main` only after every feature passes, the app boots, and the user approves.
