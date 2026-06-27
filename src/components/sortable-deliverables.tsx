@@ -169,6 +169,52 @@ function StatusDropdown({
 
 // ─── StatusPill — colored pill that replaces the status dot ──────────────────
 
+// ─── InlineConfirm — animated ✓/✗ controls, shared across pill and field edits ─
+
+export function InlineConfirm({
+  show, onConfirm, onCancel, disabled,
+}: {
+  show: boolean;
+  onConfirm: () => void;
+  onCancel: () => void;
+  disabled?: boolean;
+}) {
+  return (
+    <span
+      className={[
+        "pill-confirm-slide inline-flex items-center gap-0.5 overflow-hidden",
+        "transition-all duration-150 ease-out",
+        show ? "max-w-[44px] opacity-100" : "max-w-0 opacity-0 pointer-events-none",
+      ].join(" ")}
+      aria-hidden={!show}
+    >
+      <button
+        type="button"
+        onClick={onConfirm}
+        disabled={disabled}
+        className="hover:opacity-80 disabled:opacity-40 transition-opacity px-0.5"
+        title="Confirm"
+        tabIndex={show ? 0 : -1}
+      >
+        ✓
+      </button>
+      <span className="opacity-40 select-none">|</span>
+      <button
+        type="button"
+        onClick={onCancel}
+        disabled={disabled}
+        className="hover:opacity-80 disabled:opacity-40 transition-opacity px-0.5"
+        title="Cancel"
+        tabIndex={show ? 0 : -1}
+      >
+        ✗
+      </button>
+    </span>
+  );
+}
+
+// ─── StatusPill — uses InlineConfirm with animated label crossfade ────────────
+
 function StatusPill({
   subtaskId, status, pendingStatus, canEdit,
   onPick, onConfirm, onCancel, isTransitioning,
@@ -188,55 +234,55 @@ function StatusPill({
   const confirming = pendingStatus !== null;
   const displayStatus = pendingStatus ?? status;
   const bg = STATUS_DOT_COLOR[displayStatus];
-  const base = "inline-flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-medium text-white leading-none flex-shrink-0 transition-colors";
+  const base = "inline-flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-medium text-white leading-none flex-shrink-0";
 
   if (!canEdit) {
     return (
-      <span className={base} style={{ backgroundColor: STATUS_DOT_COLOR[status] }}>
+      <span className={base} style={{ backgroundColor: STATUS_DOT_COLOR[status], transition: "background-color 150ms ease-out" }}>
         {STATUS_LABELS[status]}
       </span>
     );
   }
 
-  if (confirming) {
-    return (
-      <div className={`${base} cursor-default`} style={{ backgroundColor: bg }}>
-        <span>{STATUS_LABELS[displayStatus]}</span>
-        <button
-          type="button"
-          onClick={onConfirm}
-          disabled={isTransitioning}
-          className="hover:opacity-80 disabled:opacity-40 transition-opacity"
-          title="Confirm"
-        >
-          ✓
-        </button>
-        <span className="opacity-40 select-none">|</span>
-        <button
-          type="button"
-          onClick={onCancel}
-          disabled={isTransitioning}
-          className="hover:opacity-80 disabled:opacity-40 transition-opacity"
-          title="Cancel"
-        >
-          ✗
-        </button>
-      </div>
-    );
-  }
-
+  // Always-mounted pill container: label + animated InlineConfirm
   return (
     <>
-      <button
-        ref={pillRef}
-        type="button"
-        className={`${base} hover:opacity-80`}
-        style={{ backgroundColor: bg }}
-        onClick={() => setDropdownOpen((o) => !o)}
-        data-testid="status-pill"
+      <div
+        className={`${base} cursor-default`}
+        style={{ backgroundColor: bg, transition: "background-color 150ms ease-out" }}
+        data-testid="status-pill-container"
       >
-        {STATUS_LABELS[status]}
-      </button>
+        {/* Label button — idle: clickable; confirming: inert */}
+        <button
+          ref={pillRef}
+          type="button"
+          className={[
+            "leading-none outline-none",
+            confirming ? "cursor-default pointer-events-none" : "hover:opacity-80 transition-opacity",
+          ].join(" ")}
+          onClick={() => { if (!confirming) setDropdownOpen((o) => !o); }}
+          data-testid={!confirming ? "status-pill" : undefined}
+          title={!confirming ? "Change status" : undefined}
+        >
+          {/* Key-change triggers fade-in animation when label switches */}
+          <span
+            key={displayStatus}
+            className="pill-pop-anim"
+            style={{ animation: "pill-label-in 120ms ease-out" }}
+          >
+            {STATUS_LABELS[displayStatus]}
+          </span>
+        </button>
+
+        {/* Animated confirm controls — slides in when confirming */}
+        <InlineConfirm
+          show={confirming}
+          onConfirm={onConfirm}
+          onCancel={onCancel}
+          disabled={isTransitioning}
+        />
+      </div>
+
       {dropdownOpen && (
         <StatusDropdown
           subtaskId={subtaskId}
