@@ -229,6 +229,15 @@ export function MpcTokenSection({ hasToken, appUrl }: Props) {
                 { name: "delete_subtask", desc: "delete (LEAD/SUBLEAD or PM)" },
               ],
             },
+            {
+              group: "Calendar (read-open / write MANAGE_CALENDAR)",
+              tools: [
+                { name: "list_calendar_events", desc: "list events, filter by semester/date/type" },
+                { name: "create_calendar_event", desc: "create an event (MANAGE_CALENDAR)" },
+                { name: "update_calendar_event", desc: "edit an event (MANAGE_CALENDAR)" },
+                { name: "delete_calendar_event", desc: "delete an event (MANAGE_CALENDAR)" },
+              ],
+            },
           ].map(({ group, tools }) => (
             <div key={group}>
               <p

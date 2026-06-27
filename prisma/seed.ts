@@ -19,6 +19,7 @@ const PM_PERMISSIONS: Permission[] = [
   Permission.CONFIGURE_NOTIFICATIONS,
   Permission.MANAGE_USERS,
   Permission.MANAGE_ROLES,
+  Permission.MANAGE_CALENDAR,
 ];
 
 const LEAD_PERMISSIONS: Permission[] = [
