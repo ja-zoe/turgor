@@ -19,17 +19,40 @@ export default async function CalendarPage({
     : { type: { notIn: ["LEAD_MEETING", "EBOARD_MEETING"] as CalendarEventType[] } };
 
   // Collect all known semesters from both Projects and CalendarEvents
-  const [projectSemesters, eventSemesters] = await Promise.all([
+  const [projectSemesters, eventSemesters, datedEvents] = await Promise.all([
     prisma.project.findMany({ select: { semester: true }, distinct: ["semester"] }),
     prisma.calendarEvent.findMany({ select: { semester: true }, distinct: ["semester"] }),
+    prisma.calendarEvent.findMany({ select: { semester: true, semesters: true, startsAt: true } }),
   ]);
 
-  const allSemesters = [...new Set([
+  const projectSemesterSet = new Set(projectSemesters.map((p) => p.semester));
+  const knownSemesters = [...new Set([
     ...projectSemesters.map((p) => p.semester),
     ...eventSemesters.map((e) => e.semester),
-  ])].sort().reverse();
+  ])];
 
-  // Active semester: from query param, or most recent known
+  // Semesters are free-text strings with no intrinsic dates, so a string sort is
+  // meaningless. "Current semester" is best signalled by where the *projects* are, so
+  // rank project-bearing semesters first; within each group break ties by which
+  // semester's events are nearest *today* (a lead/eboard meeting counts for every
+  // semester it's pinned to). This keeps the default off a stale, event-only semester.
+  const now = Date.now();
+  const distanceToNow = (semester: string) => {
+    let min = Infinity;
+    for (const e of datedEvents) {
+      if (e.semester === semester || e.semesters.includes(semester)) {
+        min = Math.min(min, Math.abs(e.startsAt.getTime() - now));
+      }
+    }
+    return min;
+  };
+  const allSemesters = knownSemesters
+    .map((s) => ({ s, hasProjects: projectSemesterSet.has(s), d: distanceToNow(s) }))
+    .sort((a, b) => (Number(b.hasProjects) - Number(a.hasProjects)) || (a.d - b.d))
+    .map((x) => x.s);
+
+  // Active semester: explicit param wins; otherwise the current semester (projects first,
+  // then nearest today).
   const activeSemester = semesterParam ?? allSemesters[0] ?? "";
 
   const events = activeSemester
