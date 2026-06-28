@@ -70,27 +70,32 @@ export default async function ProjectTimelinePage({
     subtasksDone: d.subtasks.filter((s) => s.status === "COMPLETE").length,
   }));
 
-  // Determine overall date range for the timeline
-  const allDates = [
+  // Collect all meaningful dates for range calculation (include startDates)
+  const allDates: Date[] = [
     ...project.deliverables.map((d) => d.targetDate),
-    ...project.deliverables.flatMap((d) => d.subtasks.map((s) => s.dueDate).filter(Boolean)),
-  ] as Date[];
-  const minDate =
-    allDates.length > 0
-      ? new Date(Math.min(...allDates.map((d) => d.getTime())))
-      : now;
-  const maxDate =
-    allDates.length > 0
-      ? new Date(Math.max(...allDates.map((d) => d.getTime())))
-      : now;
+    ...project.deliverables.flatMap((d) => [d.startDate].filter(Boolean) as Date[]),
+    ...project.deliverables.flatMap((d) =>
+      d.subtasks.flatMap((s) => [s.dueDate, s.startDate].filter(Boolean) as Date[])
+    ),
+  ];
 
-  // Timeline bar helpers
-  const rangeMs = Math.max(maxDate.getTime() - minDate.getTime(), 1);
+  let minDate = allDates.length > 0
+    ? new Date(Math.min(...allDates.map((d) => d.getTime())))
+    : now;
+  let maxDate = allDates.length > 0
+    ? new Date(Math.max(...allDates.map((d) => d.getTime())))
+    : now;
+
+  // Pad degenerate ranges so bars aren't bunched at one edge
+  const MS_PER_DAY = 86_400_000;
+  if (maxDate.getTime() - minDate.getTime() < 7 * MS_PER_DAY) {
+    minDate = new Date(minDate.getTime() - 7 * MS_PER_DAY);
+    maxDate = new Date(maxDate.getTime() + 7 * MS_PER_DAY);
+  }
+
+  const rangeMs = maxDate.getTime() - minDate.getTime();
   function pct(date: Date) {
-    return Math.min(
-      100,
-      Math.max(0, ((date.getTime() - minDate.getTime()) / rangeMs) * 100)
-    );
+    return Math.min(100, Math.max(0, ((date.getTime() - minDate.getTime()) / rangeMs) * 100));
   }
   const nowPct = pct(now);
 
@@ -161,63 +166,86 @@ export default async function ProjectTimelinePage({
         <section>
           <h2 className="text-sm font-semibold text-foreground mb-4">Deliverable Timeline</h2>
 
-          {/* Date axis */}
-          <div className="relative mb-2 h-6 ml-[220px]">
-            <div
-              className="absolute top-0 h-full border-l border-[#A4503C] z-10"
-              style={{ left: `${nowPct}%` }}
-            >
-              <span
-                className="absolute -top-0.5 left-1.5 text-[10px] text-[#A4503C]"
-                style={{ fontFamily: "var(--font-mono)" }}
-              >
-                today
-              </span>
-            </div>
-            <div className="absolute left-0 top-4 text-[10px] text-muted-foreground" style={{ fontFamily: "var(--font-mono)" }}>
-              {formatWeek(minDate)}
-            </div>
-            <div className="absolute right-0 top-4 text-[10px] text-muted-foreground" style={{ fontFamily: "var(--font-mono)" }}>
-              {formatWeek(maxDate)}
-            </div>
-          </div>
-
+          {/*
+            Unified grid: label(220px) | track(1fr) | date(96px)
+            The today line and all bars are positioned within the track column only,
+            so they always share the same horizontal extent.
+          */}
           <div className="space-y-px">
+            {/* Axis row */}
+            <div className="grid items-center mb-1" style={{ gridTemplateColumns: "220px 1fr 96px" }}>
+              <div />
+              <div className="relative h-6">
+                {/* Today line */}
+                <div
+                  className="absolute top-0 h-full border-l border-[#A4503C] z-10"
+                  style={{ left: `${nowPct}%` }}
+                >
+                  <span
+                    className="absolute -top-0.5 left-1.5 text-[10px] text-[#A4503C]"
+                    style={{ fontFamily: "var(--font-mono)" }}
+                  >
+                    today
+                  </span>
+                </div>
+                <span
+                  className="absolute bottom-0 left-0 text-[10px] text-muted-foreground"
+                  style={{ fontFamily: "var(--font-mono)" }}
+                >
+                  {formatWeek(minDate)}
+                </span>
+                <span
+                  className="absolute bottom-0 right-0 text-[10px] text-muted-foreground"
+                  style={{ fontFamily: "var(--font-mono)" }}
+                >
+                  {formatWeek(maxDate)}
+                </span>
+              </div>
+              <div />
+            </div>
+
             {project.deliverables.map((d) => {
               const targetPct = pct(d.targetDate);
-              const startPct = d.startDate ? pct(d.startDate) : 0;
               const isOverdue = !d.completed && d.targetDate < now;
+              const hasBar = !!d.startDate && d.startDate < d.targetDate;
+              const startPct = d.startDate ? pct(d.startDate) : null;
+              const barColor = d.completed ? "#588157" : isOverdue ? "#A4503C" : "#2E4034";
 
               return (
                 <div key={d.id}>
                   {/* Deliverable row */}
-                  <div className="flex items-center gap-3 py-2 group">
-                    <div className="w-[220px] flex-shrink-0 flex items-center gap-2">
+                  <div className="grid items-center py-2" style={{ gridTemplateColumns: "220px 1fr 96px" }}>
+                    <div className="flex items-center gap-2 pr-3">
                       <TimelineStatusBadge status={d.status} />
                       <span className="text-xs text-foreground truncate">{d.title}</span>
                     </div>
-                    <div className="flex-1 relative h-5">
-                      {/* Bar */}
+                    <div className="relative h-5">
+                      {hasBar ? (
+                        /* Bar from startDate to targetDate */
+                        <div
+                          className="absolute top-1/2 -translate-y-1/2 h-3 rounded-sm"
+                          style={{
+                            left: `${startPct}%`,
+                            right: `${100 - targetPct}%`,
+                            backgroundColor: barColor,
+                            opacity: d.completed ? 0.6 : 1,
+                          }}
+                        />
+                      ) : (
+                        /* Milestone diamond at targetDate — no startDate or start >= target */
+                        <div
+                          className="absolute top-1/2 -translate-y-1/2 w-3 h-3 rotate-45"
+                          style={{
+                            left: `calc(${targetPct}% - 6px)`,
+                            backgroundColor: barColor,
+                            opacity: d.completed ? 0.6 : 1,
+                          }}
+                        />
+                      )}
+                      {/* Target marker line */}
                       <div
-                        className="absolute top-1/2 -translate-y-1/2 h-3 rounded-sm"
-                        style={{
-                          left: `${startPct}%`,
-                          right: `${100 - targetPct}%`,
-                          backgroundColor: d.completed
-                            ? "#588157"
-                            : isOverdue
-                              ? "#A4503C"
-                              : "#2E4034",
-                          opacity: d.completed ? 0.6 : 1,
-                        }}
-                      />
-                      {/* Target marker */}
-                      <div
-                        className="absolute top-0 bottom-0 w-0.5 bg-current"
-                        style={{
-                          left: `${targetPct}%`,
-                          color: isOverdue ? "#A4503C" : "#2E4034",
-                        }}
+                        className="absolute top-0 bottom-0 w-0.5"
+                        style={{ left: `${targetPct}%`, backgroundColor: isOverdue ? "#A4503C" : "#2E4034" }}
                       />
                       {/* Today line */}
                       <div
@@ -226,7 +254,7 @@ export default async function ProjectTimelinePage({
                       />
                     </div>
                     <div
-                      className="w-24 flex-shrink-0 text-right text-[10px] text-muted-foreground"
+                      className="text-right text-[10px] text-muted-foreground"
                       style={{ fontFamily: "var(--font-mono)" }}
                     >
                       {formatWeek(d.targetDate)}
@@ -234,49 +262,64 @@ export default async function ProjectTimelinePage({
                   </div>
 
                   {/* Subtask rows */}
-                  {d.subtasks.map((s) => (
-                    <div key={s.id} className="flex items-center gap-3 py-1.5 pl-4 opacity-80">
-                      <div className="w-[220px] flex-shrink-0 flex items-center gap-2">
-                        <div className="ml-4">{subtaskStatusIcon(s.status)}</div>
-                        <span className="text-xs text-muted-foreground truncate">{s.title}</span>
+                  {d.subtasks.map((s) => {
+                    const duePct = s.dueDate ? pct(s.dueDate) : null;
+                    const sStartPct = s.startDate ? pct(s.startDate) : null;
+                    const hasSubBar = sStartPct !== null && duePct !== null && s.startDate! < s.dueDate!;
+                    const subBarColor = s.status === "BLOCKED" ? "#B07156" : "#A3B18A";
+
+                    return (
+                      <div key={s.id} className="grid items-center py-1.5 pl-4 opacity-80" style={{ gridTemplateColumns: "220px 1fr 96px" }}>
+                        <div className="flex items-center gap-2 pr-3">
+                          <div className="ml-4">{subtaskStatusIcon(s.status)}</div>
+                          <span className="text-xs text-muted-foreground truncate">{s.title}</span>
+                        </div>
+                        <div className="relative h-4">
+                          {duePct !== null && (
+                            <>
+                              {hasSubBar ? (
+                                /* Bar */
+                                <div
+                                  className="absolute top-1/2 -translate-y-1/2 h-2 rounded-sm"
+                                  style={{
+                                    left: `${sStartPct}%`,
+                                    right: `${100 - duePct}%`,
+                                    backgroundColor: subBarColor,
+                                    opacity: 0.6,
+                                  }}
+                                />
+                              ) : (
+                                /* Dot marker at dueDate */
+                                <div
+                                  className="absolute top-1/2 -translate-y-1/2 w-2 h-2 rounded-full"
+                                  style={{
+                                    left: `calc(${duePct}% - 4px)`,
+                                    backgroundColor: subBarColor,
+                                    opacity: 0.7,
+                                  }}
+                                />
+                              )}
+                              {/* Today line */}
+                              <div
+                                className="absolute top-0 bottom-0 border-l border-[#A4503C]/40 z-10"
+                                style={{ left: `${nowPct}%` }}
+                              />
+                            </>
+                          )}
+                        </div>
+                        <div
+                          className="text-right text-[10px] text-muted-foreground"
+                          style={{ fontFamily: "var(--font-mono)" }}
+                        >
+                          {s.dueDate
+                            ? formatWeek(s.dueDate)
+                            : s.assignee
+                              ? getDisplayName(s.assignee)
+                              : ""}
+                        </div>
                       </div>
-                      <div className="flex-1 relative h-4">
-                        {s.dueDate && (
-                          <>
-                            <div
-                              className="absolute top-1/2 -translate-y-1/2 h-2 rounded-sm"
-                              style={{
-                                left: s.startDate ? `${pct(s.startDate)}%` : `${pct(s.dueDate) - 5}%`,
-                                right: `${100 - pct(s.dueDate)}%`,
-                                minWidth: "4px",
-                                backgroundColor:
-                                  s.status === "COMPLETE"
-                                    ? "#A3B18A"
-                                    : s.status === "BLOCKED"
-                                      ? "#B07156"
-                                      : "#A3B18A",
-                                opacity: 0.6,
-                              }}
-                            />
-                            <div
-                              className="absolute top-0 bottom-0 border-l border-[#A4503C]/40 z-10"
-                              style={{ left: `${nowPct}%` }}
-                            />
-                          </>
-                        )}
-                      </div>
-                      <div
-                        className="w-24 flex-shrink-0 text-right text-[10px] text-muted-foreground"
-                        style={{ fontFamily: "var(--font-mono)" }}
-                      >
-                        {s.dueDate
-                          ? formatWeek(s.dueDate)
-                          : s.assignee
-                            ? getDisplayName(s.assignee)
-                            : ""}
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               );
             })}

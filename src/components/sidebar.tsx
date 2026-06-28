@@ -16,6 +16,7 @@ import {
   List,
   X,
   UserCircle,
+  CalendarDots,
 } from "@phosphor-icons/react";
 import { Permission } from "@/generated/prisma";
 import { NotificationBell } from "@/components/notification-bell";
@@ -32,6 +33,7 @@ const navItems = [
   { href: "/projects", label: "Projects", icon: Folders },
   { href: "/my-tasks", label: "My Tasks", icon: CheckSquare },
   { href: "/action-items", label: "Action Items", icon: ListChecks },
+  { href: "/calendar", label: "Semester Calendar", icon: CalendarDots },
   { href: "/account", label: "Account", icon: UserCircle },
 ];
 

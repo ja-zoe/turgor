@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getUserPermissions } from "@/lib/permissions";
-import { Permission, TimelineStatus, ActionItemStatus } from "@/generated/prisma";
+import { Permission, TimelineStatus, ActionItemStatus, CalendarEventType } from "@/generated/prisma";
 
 type McpUser = { id: string; email: string; roleId: string | null };
 
@@ -78,6 +78,41 @@ const TOOLS = [
         },
       },
       required: [],
+    },
+  },
+  // ── Projects ──────────────────────────────────────────────────────────────
+  {
+    name: "create_project",
+    description:
+      "Create a new project. Requires MANAGE_PROJECTS permission.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        name: { type: "string" },
+        semester: { type: "string", description: "e.g. 'Fall 2026'" },
+        description: { type: "string" },
+        startDate: { type: "string", description: "ISO date string (optional)" },
+        endDate: { type: "string", description: "ISO date string (optional)" },
+      },
+      required: ["name", "semester"],
+    },
+  },
+  {
+    name: "update_project",
+    description:
+      "Update a project's name, semester, description, dates, or corrective action plan. Requires MANAGE_PROJECTS permission.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        projectId: { type: "string" },
+        name: { type: "string" },
+        semester: { type: "string" },
+        description: { type: "string" },
+        startDate: { type: "string", description: "ISO date string, or null to clear" },
+        endDate: { type: "string", description: "ISO date string, or null to clear" },
+        correctiveActionPlan: { type: "string" },
+      },
+      required: ["projectId"],
     },
   },
   // ── Action items ──────────────────────────────────────────────────────────
@@ -185,6 +220,71 @@ const TOOLS = [
       required: ["deliverableId"],
     },
   },
+  // ── Calendar ──────────────────────────────────────────────────────────────
+  {
+    name: "list_calendar_events",
+    description: "List calendar events, optionally filtered by semester, date range, or type. Read-only, available to all active users.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        semester: { type: "string", description: "Filter by semester (e.g. 'Fall 2026')" },
+        from: { type: "string", description: "ISO date — only events on/after this date" },
+        to: { type: "string", description: "ISO date — only events on/before this date" },
+        type: { type: "string", enum: ["PROJECT_MEETING", "NON_PROJECT_EVENT"] },
+      },
+      required: [],
+    },
+  },
+  {
+    name: "create_calendar_event",
+    description: "Create a calendar event. Requires MANAGE_CALENDAR permission.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        title: { type: "string" },
+        semester: { type: "string" },
+        startsAt: { type: "string", description: "ISO datetime" },
+        type: { type: "string", enum: ["PROJECT_MEETING", "NON_PROJECT_EVENT"], description: "Default: PROJECT_MEETING" },
+        endsAt: { type: "string", description: "ISO datetime (optional)" },
+        allDay: { type: "boolean" },
+        location: { type: "string" },
+        description: { type: "string" },
+        projectId: { type: "string" },
+      },
+      required: ["title", "semester", "startsAt"],
+    },
+  },
+  {
+    name: "update_calendar_event",
+    description: "Update a calendar event. Requires MANAGE_CALENDAR permission.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        eventId: { type: "string" },
+        title: { type: "string" },
+        semester: { type: "string" },
+        startsAt: { type: "string", description: "ISO datetime" },
+        type: { type: "string", enum: ["PROJECT_MEETING", "NON_PROJECT_EVENT"] },
+        endsAt: { type: "string", description: "ISO datetime, or null to clear" },
+        allDay: { type: "boolean" },
+        location: { type: "string" },
+        description: { type: "string" },
+        projectId: { type: "string", description: "Project ID, or null to unlink" },
+      },
+      required: ["eventId"],
+    },
+  },
+  {
+    name: "delete_calendar_event",
+    description: "Delete a calendar event. Requires MANAGE_CALENDAR permission.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        eventId: { type: "string" },
+      },
+      required: ["eventId"],
+    },
+  },
   // ── Subtasks ──────────────────────────────────────────────────────────────
   {
     name: "create_subtask",
@@ -285,7 +385,11 @@ async function executeTool(
       if (!membership && !permissions.includes(Permission.VIEW_ALL_PROJECTS)) {
         return { error: "No access to this project" };
       }
-      const [deliverables, actionItems] = await Promise.all([
+      const [project, deliverables, actionItems] = await Promise.all([
+        prisma.project.findUnique({
+          where: { id: pid },
+          select: { id: true, name: true, semester: true, status: true, startDate: true, endDate: true, description: true },
+        }),
         prisma.deliverable.findMany({
           where: { projectId: pid },
           select: {
@@ -307,7 +411,7 @@ async function executeTool(
           take: 20,
         }),
       ]);
-      return { deliverables, actionItems };
+      return { project, deliverables, actionItems };
     }
 
     // ── list_members ─────────────────────────────────────────────────────────
@@ -431,6 +535,62 @@ async function executeTool(
           projectName: s.deliverable.project.name,
         })),
       };
+    }
+
+    // ── create_project ───────────────────────────────────────────────────────
+    case "create_project": {
+      if (!permissions.includes(Permission.MANAGE_PROJECTS)) {
+        return { error: "Requires MANAGE_PROJECTS permission" };
+      }
+      const name = (args.name as string | undefined)?.trim();
+      const semester = (args.semester as string | undefined)?.trim();
+      if (!name || !semester) return { error: "name and semester are required" };
+
+      const startDate = args.startDate ? new Date(args.startDate as string) : null;
+      const endDate = args.endDate ? new Date(args.endDate as string) : null;
+      if (startDate && endDate && endDate < startDate) {
+        return { error: "endDate must be after startDate" };
+      }
+
+      const project = await prisma.project.create({
+        data: {
+          name,
+          semester,
+          description: (args.description as string | undefined) ?? null,
+          startDate,
+          endDate,
+        },
+        select: { id: true, name: true, semester: true },
+      });
+      return { created: project };
+    }
+
+    // ── update_project ───────────────────────────────────────────────────────
+    case "update_project": {
+      if (!permissions.includes(Permission.MANAGE_PROJECTS)) {
+        return { error: "Requires MANAGE_PROJECTS permission" };
+      }
+      const pid = args.projectId as string;
+      const updateFields: Record<string, unknown> = {};
+      if (args.name !== undefined) updateFields.name = (args.name as string).trim();
+      if (args.semester !== undefined) updateFields.semester = (args.semester as string).trim();
+      if (args.description !== undefined) updateFields.description = args.description as string;
+      if (args.correctiveActionPlan !== undefined) updateFields.correctiveActionPlan = args.correctiveActionPlan as string;
+      if ("startDate" in args) updateFields.startDate = args.startDate ? new Date(args.startDate as string) : null;
+      if ("endDate" in args) updateFields.endDate = args.endDate ? new Date(args.endDate as string) : null;
+
+      if (Object.keys(updateFields).length === 0) return { error: "No fields to update" };
+
+      if (updateFields.startDate && updateFields.endDate && (updateFields.endDate as Date) < (updateFields.startDate as Date)) {
+        return { error: "endDate must be after startDate" };
+      }
+
+      const updated = await prisma.project.update({
+        where: { id: pid },
+        data: updateFields,
+        select: { id: true, name: true, semester: true, startDate: true, endDate: true },
+      });
+      return { updated };
     }
 
     // ── create_action_item ───────────────────────────────────────────────────
@@ -590,6 +750,108 @@ async function executeTool(
       return { deleted: { id: did, title: deliverable.title } };
     }
 
+    // ── list_calendar_events ─────────────────────────────────────────────────
+    case "list_calendar_events": {
+      const semester = args.semester as string | undefined;
+      const from = args.from ? new Date(args.from as string) : undefined;
+      const to = args.to ? new Date(args.to as string) : undefined;
+      const type = args.type as CalendarEventType | undefined;
+
+      const events = await prisma.calendarEvent.findMany({
+        where: {
+          ...(semester ? { semester } : {}),
+          ...(from || to ? { startsAt: { ...(from ? { gte: from } : {}), ...(to ? { lte: to } : {}) } } : {}),
+          ...(type ? { type } : {}),
+        },
+        include: { project: { select: { name: true } } },
+        orderBy: { startsAt: "asc" },
+        take: 100,
+      });
+      return {
+        events: events.map((e) => ({
+          id: e.id,
+          title: e.title,
+          type: e.type,
+          startsAt: e.startsAt,
+          endsAt: e.endsAt,
+          allDay: e.allDay,
+          location: e.location,
+          projectId: e.projectId,
+          project: e.project ? { name: e.project.name } : null,
+        })),
+      };
+    }
+
+    // ── create_calendar_event ────────────────────────────────────────────────
+    case "create_calendar_event": {
+      if (!permissions.includes(Permission.MANAGE_CALENDAR)) {
+        return { error: "Requires MANAGE_CALENDAR permission" };
+      }
+      const title = (args.title as string | undefined)?.trim();
+      const semester = (args.semester as string | undefined)?.trim();
+      const startsAtRaw = args.startsAt as string | undefined;
+      if (!title || !semester || !startsAtRaw) return { error: "title, semester, and startsAt are required" };
+
+      const startsAt = new Date(startsAtRaw);
+      const endsAt = args.endsAt ? new Date(args.endsAt as string) : null;
+      if (endsAt && endsAt < startsAt) return { error: "endsAt must be after startsAt" };
+
+      const event = await prisma.calendarEvent.create({
+        data: {
+          title,
+          semester,
+          type: (args.type as CalendarEventType | undefined) ?? CalendarEventType.PROJECT_MEETING,
+          startsAt,
+          endsAt,
+          allDay: (args.allDay as boolean | undefined) ?? false,
+          location: (args.location as string | undefined) ?? null,
+          description: (args.description as string | undefined) ?? null,
+          projectId: (args.projectId as string | undefined) ?? null,
+        },
+        select: { id: true, title: true, startsAt: true },
+      });
+      return { created: event };
+    }
+
+    // ── update_calendar_event ────────────────────────────────────────────────
+    case "update_calendar_event": {
+      if (!permissions.includes(Permission.MANAGE_CALENDAR)) {
+        return { error: "Requires MANAGE_CALENDAR permission" };
+      }
+      const eid = args.eventId as string;
+      const updateData: Record<string, unknown> = {};
+      if (args.title !== undefined) updateData.title = (args.title as string).trim();
+      if (args.semester !== undefined) updateData.semester = (args.semester as string).trim();
+      if (args.startsAt !== undefined) updateData.startsAt = new Date(args.startsAt as string);
+      if (args.type !== undefined) updateData.type = args.type as CalendarEventType;
+      if ("endsAt" in args) updateData.endsAt = args.endsAt ? new Date(args.endsAt as string) : null;
+      if (args.allDay !== undefined) updateData.allDay = args.allDay as boolean;
+      if (args.location !== undefined) updateData.location = args.location as string | null;
+      if (args.description !== undefined) updateData.description = args.description as string | null;
+      if ("projectId" in args) updateData.projectId = (args.projectId as string | null) ?? null;
+
+      if (Object.keys(updateData).length === 0) return { error: "No fields to update" };
+
+      const updated = await prisma.calendarEvent.update({
+        where: { id: eid },
+        data: updateData,
+        select: { id: true, title: true, startsAt: true },
+      });
+      return { updated };
+    }
+
+    // ── delete_calendar_event ────────────────────────────────────────────────
+    case "delete_calendar_event": {
+      if (!permissions.includes(Permission.MANAGE_CALENDAR)) {
+        return { error: "Requires MANAGE_CALENDAR permission" };
+      }
+      const eid = args.eventId as string;
+      const existing = await prisma.calendarEvent.findUnique({ where: { id: eid }, select: { id: true, title: true } });
+      if (!existing) return { error: "Calendar event not found" };
+      await prisma.calendarEvent.delete({ where: { id: eid } });
+      return { deleted: { id: eid, title: existing.title } };
+    }
+
     // ── create_subtask ───────────────────────────────────────────────────────
     case "create_subtask": {
       const delId = args.deliverableId as string;
@@ -696,7 +958,7 @@ export async function POST(req: NextRequest) {
       return ok({
         protocolVersion: "2024-11-05",
         capabilities: { tools: {} },
-        serverInfo: { name: "SEED Tracker", version: "2.0.0" },
+        serverInfo: { name: "SEED Tracker", version: "2.2.0" },
       });
 
     case "ping":

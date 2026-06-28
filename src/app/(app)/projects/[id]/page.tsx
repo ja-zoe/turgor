@@ -16,11 +16,12 @@ import {
   ArrowClockwise,
   ListChecks,
   PencilSimple,
+  CalendarBlank,
 } from "@phosphor-icons/react/dist/ssr";
 import { deleteDeliverable } from "@/lib/actions/deliverables";
 import { removeMember } from "@/lib/actions/projects";
 import { createActionItem, closeActionItem, reopenActionItem } from "@/lib/actions/action-items";
-import { getDisplayName } from "@/lib/utils";
+import { getDisplayName, projectDuration, formatProjectDate } from "@/lib/utils";
 
 export default async function ProjectDetailPage({
   params,
@@ -136,12 +137,34 @@ export default async function ProjectDetailPage({
             >
               {project.semester}
             </p>
+            {(project.startDate || project.createdAt) && (
+              <p
+                className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1"
+                style={{ fontFamily: "var(--font-mono)" }}
+              >
+                <CalendarBlank size={11} />
+                {formatProjectDate(project.startDate ?? project.createdAt)}
+                {" – "}
+                {project.endDate ? formatProjectDate(project.endDate) : "Present"}
+                {" · "}
+                {projectDuration(project.startDate ?? project.createdAt, project.endDate)}
+              </p>
+            )}
             {project.description && (
               <p className="text-sm text-muted-foreground mt-2">{project.description}</p>
             )}
           </div>
 
           <div className="flex items-center gap-2 flex-shrink-0">
+            {canManage && (
+              <Link
+                href={`/projects/${id}/edit`}
+                className="inline-flex items-center gap-1.5 rounded-md border border-border bg-card text-sm font-medium px-3 py-2 hover:bg-muted transition-colors"
+              >
+                <PencilSimple size={14} />
+                Edit project
+              </Link>
+            )}
             {canSubmitStatus && (
               <Link
                 href={`/projects/${id}/status/new`}
@@ -191,7 +214,9 @@ export default async function ProjectDetailPage({
         <SortableDeliverables
           projectId={id}
           canManage={canManageMilestones}
+          canEdit={canManageMilestones || !!membership}
           userId={user.id}
+          members={project.assignments.map((a) => a.user)}
           deliverables={project.deliverables.map((d) => ({
             id: d.id,
             title: d.title,

@@ -3,6 +3,13 @@ import { requirePermission } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { Permission, TimelineStatus } from "@/generated/prisma";
 import { updateDeliverable } from "@/lib/actions/deliverables";
+
+const STATUS_LABELS: Record<TimelineStatus, string> = {
+  NOT_STARTED: "Not Started",
+  IN_PROGRESS: "In Progress",
+  BLOCKED: "Blocked",
+  COMPLETE: "Complete",
+};
 import { MarkdownEditor } from "@/components/markdown-editor";
 import { SubmitButton } from "@/components/submit-button";
 import { ArrowLeft } from "@phosphor-icons/react/dist/ssr";
@@ -19,7 +26,10 @@ export default async function EditDeliverablePage({
   const [deliverable, allDeliverables] = await Promise.all([
     prisma.deliverable.findUnique({
       where: { id: did, projectId: id },
-      include: { project: { select: { name: true } } },
+      include: {
+        project: { select: { name: true } },
+        _count: { select: { subtasks: true } },
+      },
     }),
     prisma.deliverable.findMany({
       where: { projectId: id, group: { not: null } },
@@ -80,17 +90,26 @@ export default async function EditDeliverablePage({
             <label className="block text-xs font-medium text-muted-foreground uppercase tracking-widest mb-2" style={{ fontFamily: "var(--font-mono)" }}>
               Status
             </label>
-            <select
-              name="status"
-              defaultValue={deliverable.status}
-              className="w-full rounded-md border border-border bg-card px-3 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-colors"
-              style={{ fontFamily: "var(--font-mono)" }}
-            >
-              <option value={TimelineStatus.NOT_STARTED}>Not Started</option>
-              <option value={TimelineStatus.IN_PROGRESS}>In Progress</option>
-              <option value={TimelineStatus.BLOCKED}>Blocked</option>
-              <option value={TimelineStatus.COMPLETE}>Complete</option>
-            </select>
+            {deliverable._count.subtasks > 0 ? (
+              <p
+                className="text-sm text-muted-foreground px-3 py-2.5 rounded-md border border-border/50 bg-muted/40"
+                style={{ fontFamily: "var(--font-mono)" }}
+              >
+                {STATUS_LABELS[deliverable.status]} — auto-derived from subtasks
+              </p>
+            ) : (
+              <select
+                name="status"
+                defaultValue={deliverable.status}
+                className="w-full rounded-md border border-border bg-card px-3 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-colors"
+                style={{ fontFamily: "var(--font-mono)" }}
+              >
+                <option value={TimelineStatus.NOT_STARTED}>Not Started</option>
+                <option value={TimelineStatus.IN_PROGRESS}>In Progress</option>
+                <option value={TimelineStatus.BLOCKED}>Blocked</option>
+                <option value={TimelineStatus.COMPLETE}>Complete</option>
+              </select>
+            )}
           </div>
           <div>
             <label className="block text-xs font-medium text-muted-foreground uppercase tracking-widest mb-2" style={{ fontFamily: "var(--font-mono)" }}>

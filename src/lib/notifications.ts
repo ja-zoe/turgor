@@ -35,7 +35,7 @@ async function sendEmail(payloads: NotificationPayload[]) {
 
   const { Resend } = await import("resend");
   const resend = new Resend(apiKey);
-  const from = process.env.RESEND_FROM ?? "SEED Tracker <noreply@example.com>";
+  const from = process.env.EMAIL_FROM ?? process.env.RESEND_FROM ?? "SEED Tracker <onboarding@resend.dev>";
 
   await Promise.allSettled(
     payloads.map(async (p) => {
@@ -62,6 +62,28 @@ async function getPMUserIds(): Promise<string[]> {
     select: { id: true },
   });
   return pm.map((u) => u.id);
+}
+
+export async function getUserManagerIds(): Promise<string[]> {
+  const managers = await prisma.user.findMany({
+    where: { status: "ACTIVE", role: { permissions: { has: "MANAGE_USERS" } } },
+    select: { id: true },
+  });
+  return managers.map((u) => u.id);
+}
+
+export async function notifyNewSignup(newUser: { id: string; name: string | null; email: string }) {
+  const recipientIds = await getUserManagerIds();
+  if (recipientIds.length === 0) return;
+  const name = newUser.name ?? newUser.email.split("@")[0];
+  const payloads: NotificationPayload[] = recipientIds.map((userId) => ({
+    userId,
+    type: NotificationType.USER_SIGNUP,
+    title: "New account awaiting approval",
+    body: `${name} (${newUser.email}) signed in and is awaiting approval.`,
+    link: "/pm/users",
+  }));
+  await deliver(Channel.BOTH, payloads);
 }
 
 async function getProjectLeadUserIds(projectId: string): Promise<string[]> {

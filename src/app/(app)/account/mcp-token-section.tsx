@@ -194,6 +194,13 @@ export function MpcTokenSection({ hasToken, appUrl }: Props) {
               ],
             },
             {
+              group: "Projects (MANAGE_PROJECTS)",
+              tools: [
+                { name: "create_project", desc: "create a new project" },
+                { name: "update_project", desc: "edit name, semester, dates, description, corrective action" },
+              ],
+            },
+            {
               group: "Action items",
               tools: [
                 { name: "create_action_item", desc: "create (LEAD/SUBLEAD or PM)" },
@@ -220,6 +227,15 @@ export function MpcTokenSection({ hasToken, appUrl }: Props) {
                 { name: "create_subtask", desc: "create (any project member or PM)" },
                 { name: "update_subtask", desc: "edit title, dates, assignee, status (member or PM)" },
                 { name: "delete_subtask", desc: "delete (LEAD/SUBLEAD or PM)" },
+              ],
+            },
+            {
+              group: "Calendar (read-open / write MANAGE_CALENDAR)",
+              tools: [
+                { name: "list_calendar_events", desc: "list events, filter by semester/date/type" },
+                { name: "create_calendar_event", desc: "create an event (MANAGE_CALENDAR)" },
+                { name: "update_calendar_event", desc: "edit an event (MANAGE_CALENDAR)" },
+                { name: "delete_calendar_event", desc: "delete an event (MANAGE_CALENDAR)" },
               ],
             },
           ].map(({ group, tools }) => (

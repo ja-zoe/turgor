@@ -55,22 +55,21 @@ export async function updateDeliverable(deliverableId: string, formData: FormDat
   const targetDate = new Date(formData.get("targetDate") as string);
   const startDateRaw = formData.get("startDate") as string | null;
   const startDate = startDateRaw ? new Date(startDateRaw) : null;
-  const status = (formData.get("status") as TimelineStatus) ?? TimelineStatus.NOT_STARTED;
-  const completed = status === TimelineStatus.COMPLETE;
   const group = (formData.get("group") as string | null)?.trim() || null;
+
+  // Status is omitted from the form when the deliverable has subtasks (locked field).
+  const statusRaw = formData.get("status") as string | null;
+  const statusUpdate = statusRaw
+    ? {
+        status: statusRaw as TimelineStatus,
+        completed: statusRaw === TimelineStatus.COMPLETE,
+        completedDate: statusRaw === TimelineStatus.COMPLETE ? new Date() : null,
+      }
+    : {};
 
   await prisma.deliverable.update({
     where: { id: deliverableId },
-    data: {
-      title,
-      description,
-      targetDate,
-      startDate,
-      status,
-      completed,
-      completedDate: completed ? new Date() : null,
-      group,
-    },
+    data: { title, description, targetDate, startDate, group, ...statusUpdate },
   });
 
   revalidatePath(`/projects/${deliverable.projectId}`);
@@ -163,7 +162,7 @@ export async function updateSubtaskStatus(subtaskId: string, status: TimelineSta
 
   const subtask = await prisma.subtask.findUniqueOrThrow({
     where: { id: subtaskId },
-    include: { deliverable: { select: { projectId: true } } },
+    include: { deliverable: { select: { id: true, projectId: true } } },
   });
 
   const membership = await getProjectMembership(user.id, subtask.deliverable.projectId);
@@ -173,9 +172,57 @@ export async function updateSubtaskStatus(subtaskId: string, status: TimelineSta
     where: { id: subtaskId },
     data: {
       status,
-      completedAt:
-        status === TimelineStatus.COMPLETE ? new Date() : null,
+      completedAt: status === TimelineStatus.COMPLETE ? new Date() : null,
     },
+  });
+
+  // Derive the parent deliverable's status from all its subtasks after this update.
+  const siblings = await prisma.subtask.findMany({
+    where: { deliverableId: subtask.deliverable.id },
+    select: { status: true },
+  });
+
+  let derivedStatus: TimelineStatus;
+  if (siblings.every((s) => s.status === TimelineStatus.COMPLETE)) {
+    derivedStatus = TimelineStatus.COMPLETE;
+  } else if (siblings.some((s) => s.status === TimelineStatus.BLOCKED)) {
+    derivedStatus = TimelineStatus.BLOCKED;
+  } else if (siblings.some((s) => s.status === TimelineStatus.IN_PROGRESS || s.status === TimelineStatus.COMPLETE)) {
+    derivedStatus = TimelineStatus.IN_PROGRESS;
+  } else {
+    derivedStatus = TimelineStatus.NOT_STARTED;
+  }
+
+  const isNowComplete = derivedStatus === TimelineStatus.COMPLETE;
+  await prisma.deliverable.update({
+    where: { id: subtask.deliverable.id },
+    data: {
+      status: derivedStatus,
+      completed: isNowComplete,
+      completedDate: isNowComplete ? new Date() : null,
+    },
+  });
+
+  revalidatePath(`/projects/${subtask.deliverable.projectId}`);
+}
+
+export async function updateSubtaskTitle(subtaskId: string, title: string) {
+  const user = await requireAuth();
+
+  const subtask = await prisma.subtask.findUniqueOrThrow({
+    where: { id: subtaskId },
+    include: { deliverable: { select: { projectId: true } } },
+  });
+
+  const membership = await getProjectMembership(user.id, subtask.deliverable.projectId);
+  if (!membership) await requirePermission(Permission.MANAGE_MILESTONES);
+
+  const trimmed = title.trim();
+  if (!trimmed) throw new Error("Title cannot be empty");
+
+  await prisma.subtask.update({
+    where: { id: subtaskId },
+    data: { title: trimmed },
   });
 
   revalidatePath(`/projects/${subtask.deliverable.projectId}`);
@@ -193,6 +240,68 @@ export async function deleteSubtask(subtaskId: string) {
   if (!membership) await requirePermission(Permission.MANAGE_MILESTONES);
 
   await prisma.subtask.delete({ where: { id: subtaskId } });
+
+  revalidatePath(`/projects/${subtask.deliverable.projectId}`);
+}
+
+export async function updateDeliverableStatus(deliverableId: string, status: TimelineStatus) {
+  const user = await requireAuth();
+
+  const deliverable = await prisma.deliverable.findUniqueOrThrow({
+    where: { id: deliverableId },
+    include: { _count: { select: { subtasks: true } } },
+  });
+
+  if (deliverable._count.subtasks > 0) {
+    throw new Error("Status is derived from subtasks and cannot be set manually");
+  }
+
+  const membership = await getProjectMembership(user.id, deliverable.projectId);
+  if (!membership) await requirePermission(Permission.MANAGE_MILESTONES);
+
+  const isComplete = status === TimelineStatus.COMPLETE;
+  await prisma.deliverable.update({
+    where: { id: deliverableId },
+    data: { status, completed: isComplete, completedDate: isComplete ? new Date() : null },
+  });
+
+  revalidatePath(`/projects/${deliverable.projectId}`);
+}
+
+export async function updateSubtaskAssignee(subtaskId: string, assigneeId: string | null) {
+  const user = await requireAuth();
+
+  const subtask = await prisma.subtask.findUniqueOrThrow({
+    where: { id: subtaskId },
+    include: { deliverable: { select: { projectId: true } } },
+  });
+
+  const membership = await getProjectMembership(user.id, subtask.deliverable.projectId);
+  if (!membership) await requirePermission(Permission.MANAGE_MILESTONES);
+
+  await prisma.subtask.update({
+    where: { id: subtaskId },
+    data: { assigneeId: assigneeId ?? null },
+  });
+
+  revalidatePath(`/projects/${subtask.deliverable.projectId}`);
+}
+
+export async function updateSubtaskDueDate(subtaskId: string, dueDate: string | null) {
+  const user = await requireAuth();
+
+  const subtask = await prisma.subtask.findUniqueOrThrow({
+    where: { id: subtaskId },
+    include: { deliverable: { select: { projectId: true } } },
+  });
+
+  const membership = await getProjectMembership(user.id, subtask.deliverable.projectId);
+  if (!membership) await requirePermission(Permission.MANAGE_MILESTONES);
+
+  await prisma.subtask.update({
+    where: { id: subtaskId },
+    data: { dueDate: dueDate ? new Date(dueDate) : null },
+  });
 
   revalidatePath(`/projects/${subtask.deliverable.projectId}`);
 }
