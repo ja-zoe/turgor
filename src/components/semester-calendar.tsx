@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import {
   CalendarBlank,
   Users,
+  UsersThree,
+  Crown,
   Star,
   Plus,
   X,
@@ -15,7 +17,7 @@ import {
 } from "@phosphor-icons/react";
 import { createEvent, updateEvent, deleteEvent } from "@/lib/actions/calendar";
 
-type EventType = "PROJECT_MEETING" | "NON_PROJECT_EVENT";
+type EventType = "PROJECT_MEETING" | "NON_PROJECT_EVENT" | "LEAD_MEETING" | "EBOARD_MEETING";
 
 interface CalendarEvent {
   id: string;
@@ -48,16 +50,22 @@ interface Props {
 const TYPE_COLOR: Record<EventType, { bg: string; text: string; border: string }> = {
   PROJECT_MEETING: { bg: "bg-[#EDF3EC]", text: "text-[#2E4034]", border: "border-[#2E4034]/20" },
   NON_PROJECT_EVENT: { bg: "bg-[#FBF3DB]", text: "text-[#7A5C00]", border: "border-[#C99846]/30" },
+  LEAD_MEETING: { bg: "bg-[#E1F3FE]", text: "text-[#1F6C9F]", border: "border-[#1F6C9F]/30" },
+  EBOARD_MEETING: { bg: "bg-[#F3E8FF]", text: "text-[#6B3FA0]", border: "border-[#6B3FA0]/30" },
 };
 
 const TYPE_ICON: Record<EventType, React.ReactNode> = {
   PROJECT_MEETING: <Users size={11} weight="fill" />,
   NON_PROJECT_EVENT: <Star size={11} weight="fill" />,
+  LEAD_MEETING: <UsersThree size={11} weight="fill" />,
+  EBOARD_MEETING: <Crown size={11} weight="fill" />,
 };
 
 const TYPE_LABEL: Record<EventType, string> = {
   PROJECT_MEETING: "Project Meeting",
   NON_PROJECT_EVENT: "Non-Project Event",
+  LEAD_MEETING: "Lead Meeting",
+  EBOARD_MEETING: "Eboard Meeting",
 };
 
 function formatTime(iso: string): string {
@@ -201,6 +209,8 @@ function EventEditor({ event, defaultDate, semester, projects, canEdit, onClose 
               >
                 <option value="PROJECT_MEETING">Project Meeting</option>
                 <option value="NON_PROJECT_EVENT">Non-Project Event</option>
+                <option value="LEAD_MEETING">Lead Meeting</option>
+                <option value="EBOARD_MEETING">Eboard Meeting</option>
               </select>
             </div>
 
@@ -702,7 +712,7 @@ export function SemesterCalendar({ events, canEdit, semester, allSemesters, proj
           )}
           {/* Legend */}
           <div className="flex items-center gap-4 mt-4">
-            {(["PROJECT_MEETING", "NON_PROJECT_EVENT"] as EventType[]).map((t) => (
+            {(["PROJECT_MEETING", "NON_PROJECT_EVENT", "LEAD_MEETING", "EBOARD_MEETING"] as EventType[]).map((t) => (
               <div key={t} className="flex items-center gap-1.5">
                 <span className={`inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded ${TYPE_COLOR[t].bg} ${TYPE_COLOR[t].text}`}>
                   {TYPE_ICON[t]} {TYPE_LABEL[t]}

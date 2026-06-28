@@ -12,6 +12,11 @@ export default async function CalendarPage({
   const user = await requireAuth();
   const permissions = await getUserPermissions(user.roleId);
   const canEdit = permissions.includes(Permission.MANAGE_CALENDAR);
+  // Only leads / eboard / PM (VIEW_LEAD_MEETINGS) may see lead + eboard meetings.
+  const canSeeRestrictedMeetings = permissions.includes(Permission.VIEW_LEAD_MEETINGS);
+  const restrictedFilter = canSeeRestrictedMeetings
+    ? {}
+    : { type: { notIn: ["LEAD_MEETING", "EBOARD_MEETING"] as const } };
 
   // Collect all known semesters from both Projects and CalendarEvents
   const [projectSemesters, eventSemesters] = await Promise.all([
@@ -29,7 +34,7 @@ export default async function CalendarPage({
 
   const events = activeSemester
     ? await prisma.calendarEvent.findMany({
-        where: { semester: activeSemester },
+        where: { semester: activeSemester, ...restrictedFilter },
         orderBy: { startsAt: "asc" },
         include: { project: { select: { name: true } } },
       })

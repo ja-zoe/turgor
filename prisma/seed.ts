@@ -20,6 +20,7 @@ const PM_PERMISSIONS: Permission[] = [
   Permission.MANAGE_USERS,
   Permission.MANAGE_ROLES,
   Permission.MANAGE_CALENDAR,
+  Permission.VIEW_LEAD_MEETINGS,
 ];
 
 const LEAD_PERMISSIONS: Permission[] = [
@@ -28,11 +29,22 @@ const LEAD_PERMISSIONS: Permission[] = [
   Permission.SUBMIT_STATUS_UPDATES,
   Permission.EDIT_OWN_PROJECT,
   Permission.CLOSE_ACTION_ITEMS,
+  Permission.VIEW_LEAD_MEETINGS,
 ];
 
 const VIEWER_PERMISSIONS: Permission[] = [
   Permission.VIEW_ALL_PROJECTS,
   Permission.VIEW_ASSIGNED_PROJECTS,
+];
+
+// Eboard: built-in role that can see + manage lead/eboard meetings, with broad
+// visibility. (R10.2 will also grant it privileged status-update edit/delete.)
+const EBOARD_PERMISSIONS: Permission[] = [
+  Permission.VIEW_ALL_PROJECTS,
+  Permission.VIEW_ASSIGNED_PROJECTS,
+  Permission.VIEW_MONTHLY_REVIEW,
+  Permission.MANAGE_CALENDAR,
+  Permission.VIEW_LEAD_MEETINGS,
 ];
 
 async function main() {
@@ -54,6 +66,12 @@ async function main() {
     where: { name: "Viewer" },
     create: { name: "Viewer", isBuiltIn: true, permissions: VIEWER_PERMISSIONS },
     update: { isBuiltIn: true, permissions: VIEWER_PERMISSIONS },
+  });
+
+  await prisma.role.upsert({
+    where: { name: "Eboard" },
+    create: { name: "Eboard", isBuiltIn: true, permissions: EBOARD_PERMISSIONS },
+    update: { isBuiltIn: true, permissions: EBOARD_PERMISSIONS },
   });
 
   console.log("Seeding Settings singleton...");
