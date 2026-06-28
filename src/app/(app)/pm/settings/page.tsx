@@ -85,6 +85,26 @@ export default async function SettingsPage() {
                 className="block text-xs text-muted-foreground mb-1"
                 style={{ fontFamily: "var(--font-mono)" }}
               >
+                Status submit window (days before a lead meeting)
+              </label>
+              <input
+                type="number"
+                name="statusSubmitWindowDays"
+                defaultValue={settings?.statusSubmitWindowDays ?? 3}
+                min={1}
+                max={30}
+                className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
+                data-testid="status-submit-window"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                The &ldquo;Submit Update&rdquo; button appears this many days before a project&apos;s lead meeting.
+              </p>
+            </div>
+            <div>
+              <label
+                className="block text-xs text-muted-foreground mb-1"
+                style={{ fontFamily: "var(--font-mono)" }}
+              >
                 Weeks behind milestone to flag
               </label>
               <input

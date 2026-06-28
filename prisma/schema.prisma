@@ -24,6 +24,7 @@ enum Permission {
   MANAGE_USERS
   MANAGE_ROLES
   MANAGE_CALENDAR
+  VIEW_LEAD_MEETINGS
 }
 
 enum UserStatus {
@@ -333,6 +334,7 @@ model Settings {
   missedGoalsInARow       Int     @default(2)
   requireBoth             Boolean @default(false)
   submissionDeadlineHours Int     @default(24)
+  statusSubmitWindowDays  Int     @default(3)
 
   updatedAt DateTime @updatedAt
 }
@@ -340,6 +342,8 @@ model Settings {
 enum CalendarEventType {
   PROJECT_MEETING
   NON_PROJECT_EVENT
+  LEAD_MEETING
+  EBOARD_MEETING
 }
 
 model CalendarEvent {

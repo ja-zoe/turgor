@@ -2,7 +2,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/permissions";
-import { Permission } from "@/generated/prisma";
+import { Permission, CalendarEventType } from "@/generated/prisma";
 import { revalidatePath } from "next/cache";
 
 export async function createEvent(formData: FormData) {
@@ -10,7 +10,7 @@ export async function createEvent(formData: FormData) {
 
   const title = (formData.get("title") as string).trim();
   const semester = (formData.get("semester") as string).trim();
-  const type = (formData.get("type") as string) as "PROJECT_MEETING" | "NON_PROJECT_EVENT";
+  const type = (formData.get("type") as string) as CalendarEventType;
   const startsAtRaw = formData.get("startsAt") as string;
   const endsAtRaw = formData.get("endsAt") as string | null;
   const allDay = formData.get("allDay") === "true";
@@ -37,7 +37,7 @@ export async function updateEvent(eventId: string, formData: FormData) {
 
   const title = (formData.get("title") as string | null)?.trim();
   const semester = (formData.get("semester") as string | null)?.trim();
-  const type = formData.get("type") as "PROJECT_MEETING" | "NON_PROJECT_EVENT" | null;
+  const type = formData.get("type") as CalendarEventType | null;
   const startsAtRaw = formData.get("startsAt") as string | null;
   const endsAtRaw = formData.get("endsAt") as string | null;
   const allDayRaw = formData.get("allDay");
