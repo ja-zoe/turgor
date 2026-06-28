@@ -110,6 +110,16 @@ function formatDateShort(iso: string) {
   return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
+// Like formatDateShort, but includes the year when it isn't the current year.
+function formatDueDate(iso: string) {
+  const d = new Date(iso);
+  const opts: Intl.DateTimeFormatOptions =
+    d.getFullYear() === new Date().getFullYear()
+      ? { month: "short", day: "numeric" }
+      : { month: "short", day: "numeric", year: "numeric" };
+  return d.toLocaleDateString("en-US", opts);
+}
+
 function toDateInput(iso: string | null | undefined): string {
   if (!iso) return "";
   return iso.slice(0, 10);
@@ -1048,6 +1058,8 @@ export function SortableDeliverables({
                                       className="text-xs text-foreground bg-transparent border-b border-primary outline-none w-28 disabled:opacity-50"
                                       style={{ fontFamily: "var(--font-mono)" }}
                                       value={pendingValue}
+                                      max={deliverable.targetDate.slice(0, 10)}
+                                      min={deliverable.startDate ? deliverable.startDate.slice(0, 10) : undefined}
                                       disabled={isPendingEdit}
                                       onChange={(e) =>
                                         setPendingEdit((p) => p ? { ...p, value: e.target.value } : p)
@@ -1062,7 +1074,7 @@ export function SortableDeliverables({
                                       className="text-xs text-muted-foreground"
                                       style={{ fontFamily: "var(--font-mono)" }}
                                     >
-                                      {formatDateShort(displayDueDate)}
+                                      {formatDueDate(displayDueDate)}
                                     </span>
                                   ) : null}
 

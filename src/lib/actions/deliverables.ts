@@ -59,6 +59,22 @@ export async function deriveDeliverableStatus(deliverableId: string) {
   });
 }
 
+/**
+ * Reject a subtask due date that falls outside its deliverable's window
+ * (after the target date, or before the start date). No-op for a null date.
+ */
+async function assertDueWithinDeliverable(deliverableId: string, dueDate: Date | null) {
+  if (!dueDate) return;
+  const d = await prisma.deliverable.findUnique({
+    where: { id: deliverableId },
+    select: { startDate: true, targetDate: true },
+  });
+  if (!d) return;
+  if (dueDate > d.targetDate || (d.startDate && dueDate < d.startDate)) {
+    throw new Error("Due date must fall within the deliverable's dates");
+  }
+}
+
 export async function createDeliverable(projectId: string, formData: FormData) {
   await requirePermission(Permission.MANAGE_MILESTONES);
 
@@ -159,6 +175,8 @@ export async function createSubtask(deliverableId: string, formData: FormData) {
   const dueDate = dueDateRaw ? new Date(dueDateRaw) : null;
   const assigneeId = (formData.get("assigneeId") as string | null) || null;
 
+  await assertDueWithinDeliverable(deliverableId, dueDate);
+
   const count = await prisma.subtask.count({ where: { deliverableId } });
 
   await prisma.subtask.create({
@@ -196,6 +214,8 @@ export async function updateSubtask(subtaskId: string, formData: FormData) {
   const dueDate = dueDateRaw ? new Date(dueDateRaw) : null;
   const assigneeId = (formData.get("assigneeId") as string | null) || null;
   const status = formData.get("status") as TimelineStatus;
+
+  await assertDueWithinDeliverable(subtask.deliverable.id, dueDate);
 
   await prisma.subtask.update({
     where: { id: subtaskId },
@@ -330,11 +350,13 @@ export async function updateSubtaskDueDate(subtaskId: string, dueDate: string | 
 
   const subtask = await prisma.subtask.findUniqueOrThrow({
     where: { id: subtaskId },
-    include: { deliverable: { select: { projectId: true } } },
+    include: { deliverable: { select: { id: true, projectId: true } } },
   });
 
   const membership = await getProjectMembership(user.id, subtask.deliverable.projectId);
   if (!membership) await requirePermission(Permission.MANAGE_MILESTONES);
+
+  await assertDueWithinDeliverable(subtask.deliverable.id, dueDate ? new Date(dueDate) : null);
 
   await prisma.subtask.update({
     where: { id: subtaskId },
