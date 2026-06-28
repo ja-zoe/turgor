@@ -125,6 +125,7 @@ export async function updateDeliverable(deliverableId: string, formData: FormDat
   const startDateRaw = formData.get("startDate") as string | null;
   const startDate = startDateRaw ? new Date(startDateRaw) : null;
   const group = (formData.get("group") as string | null)?.trim() || null;
+  const priorityRaw = formData.get("priority") as string | null;
 
   // Status is omitted from the form when the deliverable has subtasks (locked field).
   const statusRaw = formData.get("status") as string | null;
@@ -136,13 +137,21 @@ export async function updateDeliverable(deliverableId: string, formData: FormDat
       }
     : {};
 
+  if (startDate && startDate > targetDate) {
+    throw new Error("Start date must not be after target date");
+  }
+
   await prisma.deliverable.update({
     where: { id: deliverableId },
-    data: { title, description, targetDate, startDate, group, ...statusUpdate },
+    data: {
+      title, description, targetDate, startDate, group,
+      ...(priorityRaw ? { priority: priorityRaw as Priority } : {}),
+      ...statusUpdate,
+    },
   });
 
+  // No redirect — the edit modal closes itself; revalidate refreshes in place.
   revalidatePath(`/projects/${deliverable.projectId}`);
-  redirect(`/projects/${deliverable.projectId}`);
 }
 
 export async function deleteDeliverable(deliverableId: string) {
