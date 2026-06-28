@@ -1,7 +1,16 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getUserPermissions } from "@/lib/permissions";
-import { Permission, TimelineStatus, ActionItemStatus, CalendarEventType } from "@/generated/prisma";
+import { Permission, TimelineStatus, ActionItemStatus, CalendarEventType, ProjectStatus } from "@/generated/prisma";
+import { carryOverActionItems } from "@/lib/actions/action-items";
+import { runRedFlagDetection } from "@/lib/red-flag";
+
+// Lead/eboard meetings are hidden from users without VIEW_LEAD_MEETINGS — mirrors
+// calendar/page.tsx and api/calendar/ics/route.ts.
+const RESTRICTED_EVENT_TYPES: CalendarEventType[] = [
+  CalendarEventType.LEAD_MEETING,
+  CalendarEventType.EBOARD_MEETING,
+];
 
 type McpUser = { id: string; email: string; roleId: string | null };
 
@@ -169,6 +178,62 @@ const TOOLS = [
       ],
     },
   },
+  {
+    name: "list_status_updates",
+    description:
+      "List submitted project standing updates. Scoped to the caller's projects unless VIEW_ALL_PROJECTS.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        projectId: { type: "string", description: "Restrict to a specific project" },
+        limit: { type: "number", description: "Max rows (default 20, max 50)" },
+      },
+      required: [],
+    },
+  },
+  // ── Meeting records ───────────────────────────────────────────────────────
+  {
+    name: "list_meeting_records",
+    description:
+      "List post-meeting tracking records for a project (status, goal met, blockers, notes), newest first.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        projectId: { type: "string" },
+        limit: { type: "number", description: "Max rows (default 20, max 50)" },
+      },
+      required: ["projectId"],
+    },
+  },
+  {
+    name: "create_meeting_record",
+    description:
+      "Record a post-meeting tracking entry for a project. Requires POST_MEETING_TRACKING. Applies the chosen status to the project (unless overridden) and re-runs red-flag detection.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        projectId: { type: "string" },
+        meetingDate: { type: "string", description: "ISO date string" },
+        status: { type: "string", enum: ["ON_TRACK", "AT_RISK", "BEHIND"] },
+        goalMet: { type: "boolean", description: "Whether the weekly goal was met (optional)" },
+        keyBlockers: { type: "string", description: "Blockers (optional)" },
+        notes: { type: "string", description: "Notes (optional)" },
+      },
+      required: ["projectId", "meetingDate", "status"],
+    },
+  },
+  {
+    name: "delete_meeting_record",
+    description:
+      "Delete a meeting record. Requires MANAGE_MEETING_RECORDS. Action items carried at that meeting are preserved.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        meetingRecordId: { type: "string" },
+      },
+      required: ["meetingRecordId"],
+    },
+  },
   // ── Deliverables ──────────────────────────────────────────────────────────
   {
     name: "create_deliverable",
@@ -223,14 +288,14 @@ const TOOLS = [
   // ── Calendar ──────────────────────────────────────────────────────────────
   {
     name: "list_calendar_events",
-    description: "List calendar events, optionally filtered by semester, date range, or type. Read-only, available to all active users.",
+    description: "List calendar events, optionally filtered by semester, date range, or type. Read-only. Lead/eboard meetings are only returned to users with VIEW_LEAD_MEETINGS.",
     inputSchema: {
       type: "object",
       properties: {
         semester: { type: "string", description: "Filter by semester (e.g. 'Fall 2026')" },
         from: { type: "string", description: "ISO date — only events on/after this date" },
         to: { type: "string", description: "ISO date — only events on/before this date" },
-        type: { type: "string", enum: ["PROJECT_MEETING", "NON_PROJECT_EVENT"] },
+        type: { type: "string", enum: ["PROJECT_MEETING", "NON_PROJECT_EVENT", "LEAD_MEETING", "EBOARD_MEETING"] },
       },
       required: [],
     },
@@ -244,7 +309,8 @@ const TOOLS = [
         title: { type: "string" },
         semester: { type: "string" },
         startsAt: { type: "string", description: "ISO datetime" },
-        type: { type: "string", enum: ["PROJECT_MEETING", "NON_PROJECT_EVENT"], description: "Default: PROJECT_MEETING" },
+        type: { type: "string", enum: ["PROJECT_MEETING", "NON_PROJECT_EVENT", "LEAD_MEETING", "EBOARD_MEETING"], description: "Default: PROJECT_MEETING" },
+        semesters: { type: "array", items: { type: "string" }, description: "Semesters a lead/eboard meeting governs. Defaults to [semester] for LEAD_MEETING/EBOARD_MEETING." },
         endsAt: { type: "string", description: "ISO datetime (optional)" },
         allDay: { type: "boolean" },
         location: { type: "string" },
@@ -264,7 +330,8 @@ const TOOLS = [
         title: { type: "string" },
         semester: { type: "string" },
         startsAt: { type: "string", description: "ISO datetime" },
-        type: { type: "string", enum: ["PROJECT_MEETING", "NON_PROJECT_EVENT"] },
+        type: { type: "string", enum: ["PROJECT_MEETING", "NON_PROJECT_EVENT", "LEAD_MEETING", "EBOARD_MEETING"] },
+        semesters: { type: "array", items: { type: "string" }, description: "Semesters a lead/eboard meeting governs" },
         endsAt: { type: "string", description: "ISO datetime, or null to clear" },
         allDay: { type: "boolean" },
         location: { type: "string" },
@@ -672,6 +739,126 @@ async function executeTool(
       return { created: update };
     }
 
+    // ── list_status_updates ──────────────────────────────────────────────────
+    case "list_status_updates": {
+      const pid = args.projectId as string | undefined;
+      const hasViewAll = permissions.includes(Permission.VIEW_ALL_PROJECTS);
+      const limit = Math.min(Math.max(Number(args.limit) || 20, 1), 50);
+
+      if (pid) {
+        const membership = await getProjectMembership(user.id, pid);
+        if (!membership && !hasViewAll) return { error: "No access to this project" };
+      }
+
+      const updates = await prisma.statusUpdate.findMany({
+        where: {
+          ...(pid ? { projectId: pid } : !hasViewAll
+            ? { project: { assignments: { some: { userId: user.id } } } }
+            : {}),
+        },
+        include: {
+          project: { select: { id: true, name: true } },
+          submittedBy: { select: { name: true } },
+        },
+        orderBy: { meetingDate: "desc" },
+        take: limit,
+      });
+      return {
+        statusUpdates: updates.map((u) => ({
+          id: u.id,
+          projectId: u.project.id,
+          projectName: u.project.name,
+          meetingDate: u.meetingDate,
+          plannedWork: u.plannedWork,
+          actualProgress: u.actualProgress,
+          blockers: u.blockers,
+          nextWeekGoals: u.nextWeekGoals,
+          needsHelp: u.needsHelp,
+          helpNeeded: u.helpNeeded,
+          isLate: u.isLate,
+          submittedByName: u.submittedBy?.name ?? null,
+        })),
+      };
+    }
+
+    // ── list_meeting_records ─────────────────────────────────────────────────
+    case "list_meeting_records": {
+      const pid = args.projectId as string;
+      const membership = await getProjectMembership(user.id, pid);
+      if (!membership && !permissions.includes(Permission.VIEW_ALL_PROJECTS)) {
+        return { error: "No access to this project" };
+      }
+      const limit = Math.min(Math.max(Number(args.limit) || 20, 1), 50);
+      const records = await prisma.meetingRecord.findMany({
+        where: { projectId: pid },
+        include: { recordedBy: { select: { name: true } } },
+        orderBy: { meetingDate: "desc" },
+        take: limit,
+      });
+      return {
+        meetingRecords: records.map((r) => ({
+          id: r.id,
+          meetingDate: r.meetingDate,
+          status: r.status,
+          goalMet: r.goalMet,
+          keyBlockers: r.keyBlockers,
+          notes: r.notes,
+          recordedByName: r.recordedBy?.name ?? null,
+        })),
+      };
+    }
+
+    // ── create_meeting_record ────────────────────────────────────────────────
+    case "create_meeting_record": {
+      if (!permissions.includes(Permission.POST_MEETING_TRACKING)) {
+        return { error: "Requires POST_MEETING_TRACKING permission" };
+      }
+      const pid = args.projectId as string;
+      const project = await prisma.project.findUnique({
+        where: { id: pid },
+        select: { id: true, statusOverride: true },
+      });
+      if (!project) return { error: "Project not found" };
+
+      const status = args.status as ProjectStatus;
+      const record = await prisma.meetingRecord.create({
+        data: {
+          projectId: pid,
+          meetingDate: new Date(args.meetingDate as string),
+          status,
+          goalMet: typeof args.goalMet === "boolean" ? (args.goalMet as boolean) : null,
+          keyBlockers: (args.keyBlockers as string | undefined)?.trim() || null,
+          notes: (args.notes as string | undefined)?.trim() || null,
+          recordedById: user.id,
+        },
+        select: { id: true, meetingDate: true, status: true },
+      });
+
+      // Mirror the createMeetingRecord server action's side effects.
+      if (!project.statusOverride) {
+        await prisma.project.update({ where: { id: pid }, data: { status } });
+      }
+      await carryOverActionItems(pid);
+      await runRedFlagDetection(pid);
+      return { created: record };
+    }
+
+    // ── delete_meeting_record ────────────────────────────────────────────────
+    case "delete_meeting_record": {
+      if (!permissions.includes(Permission.MANAGE_MEETING_RECORDS)) {
+        return { error: "Requires MANAGE_MEETING_RECORDS permission" };
+      }
+      const mid = args.meetingRecordId as string;
+      const record = await prisma.meetingRecord.findUnique({
+        where: { id: mid },
+        select: { id: true, projectId: true },
+      });
+      if (!record) return { error: "Meeting record not found" };
+      await prisma.meetingRecord.delete({ where: { id: mid } });
+      await runRedFlagDetection(record.projectId);
+      return { deleted: { id: mid } };
+    }
+
     // ── create_deliverable ───────────────────────────────────────────────────
     case "create_deliverable": {
       const pid = args.projectId as string;
@@ -757,11 +944,18 @@ async function executeTool(
       const to = args.to ? new Date(args.to as string) : undefined;
       const type = args.type as CalendarEventType | undefined;
 
+      // Members without VIEW_LEAD_MEETINGS never see lead/eboard meetings — if they
+      // explicitly ask for a restricted type, return nothing rather than leak.
+      const canSeeRestricted = permissions.includes(Permission.VIEW_LEAD_MEETINGS);
+      if (!canSeeRestricted && type && RESTRICTED_EVENT_TYPES.includes(type)) {
+        return { events: [] };
+      }
+
       const events = await prisma.calendarEvent.findMany({
         where: {
           ...(semester ? { semester } : {}),
           ...(from || to ? { startsAt: { ...(from ? { gte: from } : {}), ...(to ? { lte: to } : {}) } } : {}),
-          ...(type ? { type } : {}),
+          ...(type ? { type } : canSeeRestricted ? {} : { type: { notIn: RESTRICTED_EVENT_TYPES } }),
         },
         include: { project: { select: { name: true } } },
         orderBy: { startsAt: "asc" },
@@ -796,11 +990,21 @@ async function executeTool(
       const endsAt = args.endsAt ? new Date(args.endsAt as string) : null;
       if (endsAt && endsAt < startsAt) return { error: "endsAt must be after startsAt" };
 
+      const eventType = (args.type as CalendarEventType | undefined) ?? CalendarEventType.PROJECT_MEETING;
+      // Lead/eboard meetings govern projects by `semesters` (see lead-meeting.ts);
+      // default it to [semester] so an MCP-created meeting actually takes effect.
+      const semesters = Array.isArray(args.semesters)
+        ? (args.semesters as string[])
+        : RESTRICTED_EVENT_TYPES.includes(eventType)
+          ? [semester]
+          : [];
+
       const event = await prisma.calendarEvent.create({
         data: {
           title,
           semester,
-          type: (args.type as CalendarEventType | undefined) ?? CalendarEventType.PROJECT_MEETING,
+          type: eventType,
+          semesters,
           startsAt,
           endsAt,
           allDay: (args.allDay as boolean | undefined) ?? false,
@@ -824,6 +1028,7 @@ async function executeTool(
       if (args.semester !== undefined) updateData.semester = (args.semester as string).trim();
       if (args.startsAt !== undefined) updateData.startsAt = new Date(args.startsAt as string);
       if (args.type !== undefined) updateData.type = args.type as CalendarEventType;
+      if (Array.isArray(args.semesters)) updateData.semesters = args.semesters as string[];
       if ("endsAt" in args) updateData.endsAt = args.endsAt ? new Date(args.endsAt as string) : null;
       if (args.allDay !== undefined) updateData.allDay = args.allDay as boolean;
       if (args.location !== undefined) updateData.location = args.location as string | null;
@@ -958,7 +1163,7 @@ export async function POST(req: NextRequest) {
       return ok({
         protocolVersion: "2024-11-05",
         capabilities: { tools: {} },
-        serverInfo: { name: "SEED Tracker", version: "2.2.0" },
+        serverInfo: { name: "SEED Tracker", version: "2.3.0" },
       });
 
     case "ping":
