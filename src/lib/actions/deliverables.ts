@@ -305,3 +305,52 @@ export async function updateSubtaskDueDate(subtaskId: string, dueDate: string | 
 
   revalidatePath(`/projects/${subtask.deliverable.projectId}`);
 }
+
+export async function updateDeliverableTitle(deliverableId: string, title: string) {
+  const user = await requireAuth();
+
+  const deliverable = await prisma.deliverable.findUniqueOrThrow({
+    where: { id: deliverableId },
+    select: { projectId: true },
+  });
+
+  const membership = await getProjectMembership(user.id, deliverable.projectId);
+  if (!membership) await requirePermission(Permission.MANAGE_MILESTONES);
+
+  const trimmed = title.trim();
+  if (!trimmed) throw new Error("Title cannot be empty");
+
+  await prisma.deliverable.update({
+    where: { id: deliverableId },
+    data: { title: trimmed },
+  });
+
+  revalidatePath(`/projects/${deliverable.projectId}`);
+}
+
+export async function updateDeliverableDates(
+  deliverableId: string,
+  startDate: string | null,
+  targetDate: string,
+) {
+  const user = await requireAuth();
+
+  const deliverable = await prisma.deliverable.findUniqueOrThrow({
+    where: { id: deliverableId },
+    select: { projectId: true },
+  });
+
+  const membership = await getProjectMembership(user.id, deliverable.projectId);
+  if (!membership) await requirePermission(Permission.MANAGE_MILESTONES);
+
+  const target = new Date(targetDate);
+  const start = startDate ? new Date(startDate) : null;
+  if (start && start > target) throw new Error("Start date must not be after target date");
+
+  await prisma.deliverable.update({
+    where: { id: deliverableId },
+    data: { startDate: start, targetDate: target },
+  });
+
+  revalidatePath(`/projects/${deliverable.projectId}`);
+}
