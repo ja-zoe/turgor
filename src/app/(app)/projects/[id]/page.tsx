@@ -224,6 +224,7 @@ export default async function ProjectDetailPage({
             status: d.status as "NOT_STARTED" | "IN_PROGRESS" | "BLOCKED" | "COMPLETE",
             priority: d.priority as "LOW" | "MEDIUM" | "HIGH",
             group: d.group,
+            orderIndex: d.orderIndex,
             targetDate: d.targetDate.toISOString(),
             startDate: d.startDate?.toISOString() ?? null,
             completed: d.completed,

@@ -418,6 +418,44 @@ export async function updateDeliverableGroup(deliverableId: string, group: strin
   revalidatePath(`/projects/${deliverable.projectId}`);
 }
 
+/**
+ * Manually reorder a deliverable within its group, among siblings of the **same
+ * priority** (priority is the primary sort key; orderIndex orders within a tier).
+ * Swaps orderIndex with the adjacent same-group, same-priority deliverable.
+ */
+export async function moveDeliverable(deliverableId: string, direction: "up" | "down") {
+  const user = await requireAuth();
+
+  const deliverable = await prisma.deliverable.findUniqueOrThrow({
+    where: { id: deliverableId },
+    select: { projectId: true, group: true, priority: true, orderIndex: true },
+  });
+
+  const membership = await getProjectMembership(user.id, deliverable.projectId);
+  if (!membership) await requirePermission(Permission.MANAGE_MILESTONES);
+
+  const siblings = await prisma.deliverable.findMany({
+    where: {
+      projectId: deliverable.projectId,
+      group: deliverable.group,
+      priority: deliverable.priority,
+    },
+    orderBy: { orderIndex: "asc" },
+    select: { id: true, orderIndex: true },
+  });
+
+  const idx = siblings.findIndex((s) => s.id === deliverableId);
+  const swapWith = direction === "up" ? siblings[idx - 1] : siblings[idx + 1];
+  if (!swapWith) return; // already at the tier boundary
+
+  await prisma.$transaction([
+    prisma.deliverable.update({ where: { id: deliverableId }, data: { orderIndex: swapWith.orderIndex } }),
+    prisma.deliverable.update({ where: { id: swapWith.id }, data: { orderIndex: deliverable.orderIndex } }),
+  ]);
+
+  revalidatePath(`/projects/${deliverable.projectId}`);
+}
+
 export async function updateDeliverablePriority(deliverableId: string, priority: Priority) {
   const user = await requireAuth();
 
