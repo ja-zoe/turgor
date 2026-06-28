@@ -354,6 +354,25 @@ export async function updateSubtaskAssignee(subtaskId: string, assigneeId: strin
   revalidatePath(`/projects/${subtask.deliverable.projectId}`);
 }
 
+export async function updateSubtaskDescription(subtaskId: string, description: string | null) {
+  const user = await requireAuth();
+
+  const subtask = await prisma.subtask.findUniqueOrThrow({
+    where: { id: subtaskId },
+    include: { deliverable: { select: { projectId: true } } },
+  });
+
+  const membership = await getProjectMembership(user.id, subtask.deliverable.projectId);
+  if (!membership) await requirePermission(Permission.MANAGE_MILESTONES);
+
+  await prisma.subtask.update({
+    where: { id: subtaskId },
+    data: { description: description?.trim() || null },
+  });
+
+  revalidatePath(`/projects/${subtask.deliverable.projectId}`);
+}
+
 export async function updateSubtaskDueDate(subtaskId: string, dueDate: string | null) {
   const user = await requireAuth();
 
