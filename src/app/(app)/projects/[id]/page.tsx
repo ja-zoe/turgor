@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { Permission } from "@/generated/prisma";
 import { ProjectStatusBadge } from "@/components/status-badge";
 import { SortableDeliverables } from "@/components/sortable-deliverables";
+import { ProjectModal } from "@/components/project-modal";
 import {
   ArrowLeft,
   Plus,
@@ -157,13 +158,27 @@ export default async function ProjectDetailPage({
 
           <div className="flex items-center gap-2 flex-shrink-0">
             {canManage && (
-              <Link
-                href={`/projects/${id}/edit`}
-                className="inline-flex items-center gap-1.5 rounded-md border border-border bg-card text-sm font-medium px-3 py-2 hover:bg-muted transition-colors"
-              >
-                <PencilSimple size={14} />
-                Edit project
-              </Link>
+              <ProjectModal
+                project={{
+                  id,
+                  name: project.name,
+                  semester: project.semester,
+                  description: project.description,
+                  correctiveActionPlan: project.correctiveActionPlan,
+                  startDate: project.startDate?.toISOString() ?? null,
+                  endDate: project.endDate?.toISOString() ?? null,
+                }}
+                trigger={
+                  <button
+                    type="button"
+                    className="inline-flex items-center gap-1.5 rounded-md border border-border bg-card text-sm font-medium px-3 py-2 hover:bg-muted transition-colors"
+                    data-testid="edit-project"
+                  >
+                    <PencilSimple size={14} />
+                    Edit project
+                  </button>
+                }
+              />
             )}
             {canSubmitStatus && (
               <Link
