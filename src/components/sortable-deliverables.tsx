@@ -8,6 +8,7 @@ import {
   PencilSimple, CalendarBlank, UserCircle, CheckFat, LockSimple, NotePencil,
 } from "@phosphor-icons/react";
 import { SubtaskModal } from "@/components/subtask-modal";
+import { DeliverableModal } from "@/components/deliverable-modal";
 import { MarkdownView } from "@/components/markdown-view";
 import { MarkdownEditor } from "@/components/markdown-editor";
 import {
@@ -877,7 +878,7 @@ export function SortableDeliverables({
                   const hasSubtasks = deliverable.subtasks.length > 0;
 
                   return (
-                    <div key={deliverable.id} className="border border-border rounded-xl overflow-hidden">
+                    <div key={deliverable.id} data-deliverable-id={deliverable.id} className="border border-border rounded-xl overflow-hidden">
                       {/* Deliverable header — click the body (not a control) to expand the description */}
                       <div
                         className="flex items-start justify-between gap-4 p-4 bg-card group/deliv cursor-pointer"
@@ -1155,13 +1156,30 @@ export function SortableDeliverables({
                         </div>
                         {canManage && (
                           <div className="flex items-center gap-2 flex-shrink-0">
-                            <Link
-                              href={`/projects/${projectId}/deliverables/${deliverable.id}/edit`}
-                              className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-                              style={{ fontFamily: "var(--font-mono)" }}
-                            >
-                              Edit
-                            </Link>
+                            <DeliverableModal
+                              deliverable={{
+                                id: deliverable.id,
+                                title: deliverable.title,
+                                description: deliverable.description,
+                                status: deliverable.status,
+                                priority: deliverable.priority,
+                                group: deliverable.group,
+                                startDate: deliverable.startDate,
+                                targetDate: deliverable.targetDate,
+                              }}
+                              groups={allGroups}
+                              hasSubtasks={deliverable.subtasks.length > 0}
+                              trigger={
+                                <button
+                                  type="button"
+                                  className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                                  style={{ fontFamily: "var(--font-mono)" }}
+                                  data-testid="deliverable-edit"
+                                >
+                                  Edit
+                                </button>
+                              }
+                            />
                             {confirmingDeliverableDelete === deliverable.id ? (
                               <span
                                 className="inline-flex items-center gap-1 text-xs text-muted-foreground"
