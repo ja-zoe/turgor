@@ -719,7 +719,7 @@ export function SortableDeliverables({
                                 <TooltipTrigger
                                   render={
                                     <span
-                                      className={`inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded-full cursor-help ${badge.bg} ${badge.text}`}
+                                      className={`inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded-full ${badge.bg} ${badge.text}`}
                                       data-testid="deliverable-locked-badge"
                                     />
                                   }
