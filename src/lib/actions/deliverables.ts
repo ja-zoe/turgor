@@ -175,8 +175,8 @@ export async function createSubtask(deliverableId: string, formData: FormData) {
   // A new subtask changes the set → re-derive the deliverable's status.
   await deriveDeliverableStatus(deliverableId);
 
+  // No redirect — created from the in-page modal; revalidate refreshes the list.
   revalidatePath(`/projects/${deliverable.projectId}`);
-  redirect(`/projects/${deliverable.projectId}`);
 }
 
 export async function updateSubtask(subtaskId: string, formData: FormData) {
@@ -212,8 +212,8 @@ export async function updateSubtask(subtaskId: string, formData: FormData) {
   // Status may have changed → re-derive the parent deliverable.
   await deriveDeliverableStatus(subtask.deliverable.id);
 
+  // No redirect — used by the in-page modal; the full-page edit form redirects itself.
   revalidatePath(`/projects/${subtask.deliverable.projectId}`);
-  redirect(`/projects/${subtask.deliverable.projectId}`);
 }
 
 export async function updateSubtaskStatus(subtaskId: string, status: TimelineStatus) {

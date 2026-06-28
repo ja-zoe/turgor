@@ -1,4 +1,4 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { requireAuth, getUserPermissions, getProjectMembership } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { Permission } from "@/generated/prisma";
@@ -89,6 +89,7 @@ export default async function EditSubtaskPage({
         action={async (formData: FormData) => {
           "use server";
           await updateSubtask(sid, formData);
+          redirect(`/projects/${id}`);
         }}
         className="space-y-6"
       >
