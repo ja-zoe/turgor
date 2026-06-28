@@ -4,8 +4,9 @@ import { prisma } from "@/lib/prisma";
  * The "active" lead meeting whose submission window is open for a project, or null.
  *
  * Lead meetings are **global per semester** (the PM schedules them on the calendar for
- * all leads — they are not tied to a single project). For a project we look at lead
- * meetings in the **same semester**. A meeting's window opens `statusSubmitWindowDays`
+ * all leads — they are not tied to a single project). A lead meeting is **pinned to a
+ * set of semesters** (`CalendarEvent.semesters`); it governs every project whose
+ * `semester` is in that set. A meeting's window opens `statusSubmitWindowDays`
  * before it; we pick the **latest** meeting whose window has opened
  * (`startsAt - window <= now`), so when the PM schedules meetings on consecutive days
  * the windows overlap into one continuous submission period. `isLate` is true once
@@ -25,7 +26,11 @@ export async function getActiveLeadMeeting(projectId: string) {
   const windowEnd = new Date(now.getTime() + windowDays * 86_400_000);
 
   const meeting = await prisma.calendarEvent.findFirst({
-    where: { type: "LEAD_MEETING", semester: project.semester, startsAt: { lte: windowEnd } },
+    where: {
+      type: "LEAD_MEETING",
+      semesters: { has: project.semester },
+      startsAt: { lte: windowEnd },
+    },
     orderBy: { startsAt: "desc" },
     select: { id: true, title: true, startsAt: true },
   });

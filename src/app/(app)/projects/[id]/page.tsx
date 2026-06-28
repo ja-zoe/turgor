@@ -90,6 +90,15 @@ export default async function ProjectDetailPage({
   if (!membership && !canViewAll) notFound();
 
   const submissionState = await getStatusSubmissionState(id);
+  const allSemesters = (
+    await prisma.project.findMany({
+      select: { semester: true },
+      distinct: ["semester"],
+      orderBy: { semester: "desc" },
+    })
+  )
+    .map((p) => p.semester)
+    .filter(Boolean);
   const canManageStatusUpdates = permissions.includes(Permission.MANAGE_STATUS_UPDATES);
   const isLeadHere = membership?.role === "LEAD" || membership?.role === "SUBLEAD";
   // "Submit Project Standing" only appears for a lead when the project's lead meeting is open
@@ -172,6 +181,7 @@ export default async function ProjectDetailPage({
           <div className="flex items-center gap-2 flex-shrink-0">
             {canManage && (
               <ProjectModal
+                allSemesters={allSemesters}
                 project={{
                   id,
                   name: project.name,

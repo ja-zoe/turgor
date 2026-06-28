@@ -353,6 +353,10 @@ model CalendarEvent {
   id          String            @id @default(cuid())
   title       String
   semester    String
+  // Lead/eboard meetings can be pinned to multiple semesters (they govern Project
+  // Standing submissions for every project in any of these). For other event types
+  // this is just [semester]. Always includes `semester`.
+  semesters   String[]          @default([])
   type        CalendarEventType @default(PROJECT_MEETING)
   startsAt    DateTime
   endsAt      DateTime?

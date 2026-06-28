@@ -24,6 +24,7 @@ interface CalendarEvent {
   id: string;
   title: string;
   semester: string;
+  semesters: string[];
   type: EventType;
   startsAt: string;
   endsAt: string | null;
@@ -88,17 +89,38 @@ interface EditorProps {
   event: CalendarEvent | null;
   defaultDate: string | null;
   semester: string;
+  allSemesters: string[];
   projects: Project[];
   canEdit: boolean;
   onClose: () => void;
 }
 
-function EventEditor({ event, defaultDate, semester, projects, canEdit, onClose }: EditorProps) {
+/** Types that govern Project Standing across whole semesters (not a single project). */
+const MULTI_SEMESTER_TYPES: EventType[] = ["LEAD_MEETING", "EBOARD_MEETING"];
+
+function EventEditor({ event, defaultDate, semester, allSemesters, projects, canEdit, onClose }: EditorProps) {
   const [isPending, startTransition] = useTransition();
   const [confirmDelete, setConfirmDelete] = useState(false);
   const backdropRef = useRef<HTMLDivElement>(null);
 
   const isNew = !event;
+
+  const [eventType, setEventType] = useState<EventType>(event?.type ?? "PROJECT_MEETING");
+  // Which semesters a lead/eboard meeting is pinned to. Seeded from the event (or the
+  // active semester for a new one); the active semester is always available to pick.
+  const semesterOptions = [...new Set([semester, ...allSemesters].filter(Boolean))];
+  const initialPinned =
+    event && event.semesters.length > 0
+      ? event.semesters
+      : event
+        ? [event.semester]
+        : [semester].filter(Boolean);
+  const [pinnedSemesters, setPinnedSemesters] = useState<string[]>(initialPinned);
+  const isMultiSemester = MULTI_SEMESTER_TYPES.includes(eventType);
+
+  function togglePinned(s: string) {
+    setPinnedSemesters((prev) => (prev.includes(s) ? prev.filter((x) => x !== s) : [...prev, s]));
+  }
 
   const defaultStartsAt = defaultDate
     ? `${defaultDate}T09:00`
@@ -207,7 +229,11 @@ function EventEditor({ event, defaultDate, semester, projects, canEdit, onClose 
         {/* Edit / create form */}
         {canEdit && (
           <form action={handleSubmit} className="px-5 py-4 space-y-4">
+            {/* Active semester is the fallback for single-semester event types. For
+                lead/eboard meetings the pinned set below (name="semesters") wins. */}
             <input type="hidden" name="semester" value={semester} />
+            {isMultiSemester &&
+              pinnedSemesters.map((s) => <input key={s} type="hidden" name="semesters" value={s} />)}
 
             <div>
               <label className="block text-xs font-medium text-muted-foreground uppercase tracking-widest mb-1.5" style={{ fontFamily: "var(--font-mono)" }}>
@@ -228,7 +254,8 @@ function EventEditor({ event, defaultDate, semester, projects, canEdit, onClose 
               </label>
               <select
                 name="type"
-                defaultValue={event?.type ?? "PROJECT_MEETING"}
+                value={eventType}
+                onChange={(e) => setEventType(e.target.value as EventType)}
                 className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-colors"
                 style={{ fontFamily: "var(--font-mono)" }}
               >
@@ -238,6 +265,40 @@ function EventEditor({ event, defaultDate, semester, projects, canEdit, onClose 
                 <option value="EBOARD_MEETING">Eboard Meeting</option>
               </select>
             </div>
+
+            {/* Multi-semester pinning — a lead/eboard meeting governs Project Standing
+                for every project in the chosen semesters. */}
+            {isMultiSemester && (
+              <div>
+                <label className="block text-xs font-medium text-muted-foreground uppercase tracking-widest mb-1.5" style={{ fontFamily: "var(--font-mono)" }}>
+                  Applies to semesters
+                </label>
+                <p className="text-[11px] text-muted-foreground mb-2">
+                  Opens Project Standing submissions for every project in the selected semesters.
+                </p>
+                <div className="space-y-1.5 max-h-40 overflow-y-auto rounded-md border border-border p-2" data-testid="meeting-semesters">
+                  {semesterOptions.length === 0 ? (
+                    <p className="text-xs text-muted-foreground">No semesters yet — create a project first.</p>
+                  ) : (
+                    semesterOptions.map((s) => (
+                      <label key={s} className="flex items-center gap-2 text-sm text-foreground cursor-pointer" style={{ fontFamily: "var(--font-mono)" }}>
+                        <input
+                          type="checkbox"
+                          checked={pinnedSemesters.includes(s)}
+                          onChange={() => togglePinned(s)}
+                          className="accent-primary"
+                          data-testid={`meeting-semester-${s}`}
+                        />
+                        {s}
+                      </label>
+                    ))
+                  )}
+                </div>
+                {pinnedSemesters.length === 0 && (
+                  <p className="text-[11px] text-[#A4503C] mt-1">Select at least one semester.</p>
+                )}
+              </div>
+            )}
 
             <div className="grid grid-cols-2 gap-3">
               <div>
@@ -313,7 +374,7 @@ function EventEditor({ event, defaultDate, semester, projects, canEdit, onClose 
               <div className="flex items-center gap-3">
                 <button
                   type="submit"
-                  disabled={isPending}
+                  disabled={isPending || (isMultiSemester && pinnedSemesters.length === 0)}
                   className="rounded-md bg-primary text-primary-foreground text-sm font-medium px-4 py-2 hover:bg-primary/80 transition-colors disabled:opacity-50"
                 >
                   {isPending ? "Saving…" : isNew ? "Add Event" : "Save"}
@@ -773,6 +834,7 @@ export function SemesterCalendar({ events, canEdit, semester, allSemesters, proj
           event={editingEvent}
           defaultDate={defaultDate}
           semester={semester}
+          allSemesters={allSemesters}
           projects={projects}
           canEdit={canEdit}
           onClose={() => setEditorOpen(false)}

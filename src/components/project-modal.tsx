@@ -11,6 +11,7 @@ import {
 import { updateProject, deleteProject } from "@/lib/actions/projects";
 import { MarkdownEditor } from "@/components/markdown-editor";
 import { InlineConfirm } from "@/components/sortable-deliverables";
+import { SemesterField } from "@/components/semester-field";
 
 interface EditableProject {
   id: string;
@@ -32,9 +33,11 @@ const labelClass = "block text-xs font-medium text-muted-foreground uppercase tr
 
 export function ProjectModal({
   project,
+  allSemesters,
   trigger,
 }: {
   project: EditableProject;
+  allSemesters: string[];
   trigger: ReactElement;
 }) {
   const [open, setOpen] = useState(false);
@@ -109,12 +112,11 @@ export function ProjectModal({
             </div>
             <div>
               <label className={labelClass} style={{ fontFamily: "var(--font-mono)" }}>Semester *</label>
-              <input
+              <SemesterField
                 value={semester}
-                onChange={(e) => setSemester(e.target.value)}
-                className={inputClass}
-                style={{ fontFamily: "var(--font-mono)" }}
-                data-testid="project-modal-semester"
+                onChange={setSemester}
+                options={allSemesters}
+                testId="project-modal-semester"
               />
             </div>
           </div>
