@@ -328,14 +328,13 @@ function StatusPill({
 // ─── DeliverableStatusPopover — portal-based (standalone deliverables) ────────
 
 function DeliverableStatusPopover({
-  deliverableId, current, onClose, anchorEl,
+  current, onSelect, onClose, anchorEl,
 }: {
-  deliverableId: string;
   current: TimelineStatus;
+  onSelect: (s: TimelineStatus) => void;
   onClose: () => void;
   anchorEl: HTMLElement | null;
 }) {
-  const [isPending, startTransition] = useTransition();
   const pos = useAnchorPos(anchorEl);
   useOutsideClose(anchorEl, onClose);
   if (!pos) return null;
@@ -349,12 +348,8 @@ function DeliverableStatusPopover({
         <button
           key={s}
           type="button"
-          disabled={isPending}
-          onClick={() => {
-            if (s === current) { onClose(); return; }
-            startTransition(async () => { await updateDeliverableStatus(deliverableId, s); onClose(); });
-          }}
-          className={`w-full flex items-center gap-2 px-3 py-1.5 hover:bg-muted transition-colors text-left disabled:opacity-50 ${s === current ? "text-primary font-medium" : "text-foreground"}`}
+          onClick={() => onSelect(s)}
+          className={`w-full flex items-center gap-2 px-3 py-1.5 hover:bg-muted transition-colors text-left ${s === current ? "text-primary font-medium" : "text-foreground"}`}
         >
           <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${STATUS_DOT[s]}`} />
           {STATUS_LABELS[s]}
@@ -478,6 +473,17 @@ export function SortableDeliverables({
   // Deliverable status popover (standalone deliverables only)
   const [deliverableStatusMenuFor, setDeliverableStatusMenuFor] = useState<string | null>(null);
 
+  // Pending deliverable status confirm (✓/✗ microinteraction, no-subtask deliverables)
+  const [pendingDeliverableStatus, setPendingDeliverableStatus] = useState<{
+    id: string;
+    status: TimelineStatus;
+  } | null>(null);
+  const [isDelivStatusPending, startDelivStatusTransition] = useTransition();
+
+  // Armed deliverable delete confirm (✓/✗ microinteraction)
+  const [confirmingDeliverableDelete, setConfirmingDeliverableDelete] = useState<string | null>(null);
+  const [isDelivDeletePending, startDelivDeleteTransition] = useTransition();
+
   // Pending status-pill confirm (hoisted so other interactions can cancel it)
   const [pendingStatusEdit, setPendingStatusEdit] = useState<{
     subtaskId: string;
@@ -510,6 +516,24 @@ export function SortableDeliverables({
   const [isDelivEditPending, startDelivEditTransition] = useTransition();
   const [delivEditError, setDelivEditError] = useState<string | null>(null);
   const delivTitleInputRef = useRef<HTMLInputElement | null>(null);
+
+  function confirmDeliverableStatus() {
+    if (!pendingDeliverableStatus || isDelivStatusPending) return;
+    const { id, status } = pendingDeliverableStatus;
+    setPendingDeliverableStatus(null);
+    startDelivStatusTransition(async () => { await updateDeliverableStatus(id, status); });
+  }
+  function cancelDeliverableStatus() {
+    setPendingDeliverableStatus(null);
+  }
+
+  function confirmDeliverableDelete(id: string) {
+    if (isDelivDeletePending) return;
+    startDelivDeleteTransition(async () => {
+      await deleteDeliverableAction(id);
+      setConfirmingDeliverableDelete(null);
+    });
+  }
 
   function startDelivEdit(field: "title" | "dates", d: Deliverable) {
     setDeliverableEdit({
@@ -752,29 +776,50 @@ export function SortableDeliverables({
                                 </TooltipContent>
                               </Tooltip>
                             ) : canEdit ? (
-                              <div className="relative">
+                              (() => {
+                                const pending = pendingDeliverableStatus?.id === deliverable.id
+                                  ? pendingDeliverableStatus.status
+                                  : null;
+                                const dispBadge = STATUS_BADGE[pending ?? deliverable.status];
+                                return (
+                              <div className="relative inline-flex items-center gap-1">
                                 <button
                                   ref={(el) => { deliverableDotRefs.current.set(deliverable.id, el); }}
                                   type="button"
-                                  onClick={() =>
+                                  onClick={() => {
+                                    if (pending) return;
                                     setDeliverableStatusMenuFor(
                                       deliverableStatusMenuFor === deliverable.id ? null : deliverable.id
-                                    )
-                                  }
-                                  className={`inline-flex items-center text-[10px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded-full hover:opacity-80 transition-opacity cursor-pointer ${badge.bg} ${badge.text}`}
-                                  title="Change status"
+                                    );
+                                  }}
+                                  className={`inline-flex items-center text-[10px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded-full transition-opacity ${pending ? "" : "hover:opacity-80 cursor-pointer"} ${dispBadge.bg} ${dispBadge.text}`}
+                                  title={pending ? undefined : "Change status"}
+                                  data-testid="deliverable-status-badge"
                                 >
-                                  {badge.label}
+                                  {dispBadge.label}
                                 </button>
+                                <span data-testid="deliv-status-confirm">
+                                  <InlineConfirm
+                                    show={pending !== null}
+                                    onConfirm={confirmDeliverableStatus}
+                                    onCancel={cancelDeliverableStatus}
+                                    disabled={isDelivStatusPending}
+                                  />
+                                </span>
                                 {deliverableStatusMenuFor === deliverable.id && (
                                   <DeliverableStatusPopover
-                                    deliverableId={deliverable.id}
                                     current={deliverable.status}
+                                    onSelect={(s) => {
+                                      setPendingDeliverableStatus({ id: deliverable.id, status: s });
+                                      setDeliverableStatusMenuFor(null);
+                                    }}
                                     onClose={() => setDeliverableStatusMenuFor(null)}
                                     anchorEl={deliverableDotRefs.current.get(deliverable.id) ?? null}
                                   />
                                 )}
                               </div>
+                                );
+                              })()
                             ) : (
                               <span
                                 className={`inline-flex items-center text-[10px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded-full ${badge.bg} ${badge.text}`}
@@ -861,15 +906,31 @@ export function SortableDeliverables({
                             >
                               Edit
                             </Link>
-                            <form action={async () => { await deleteDeliverableAction(deliverable.id); }}>
+                            {confirmingDeliverableDelete === deliverable.id ? (
+                              <span
+                                className="inline-flex items-center gap-1 text-xs text-muted-foreground"
+                                style={{ fontFamily: "var(--font-mono)" }}
+                                data-testid="deliv-delete-confirm"
+                              >
+                                Delete?
+                                <InlineConfirm
+                                  show
+                                  onConfirm={() => confirmDeliverableDelete(deliverable.id)}
+                                  onCancel={() => setConfirmingDeliverableDelete(null)}
+                                  disabled={isDelivDeletePending}
+                                />
+                              </span>
+                            ) : (
                               <button
-                                type="submit"
+                                type="button"
+                                onClick={() => setConfirmingDeliverableDelete(deliverable.id)}
                                 className="text-xs text-muted-foreground hover:text-[#A4503C] transition-colors"
                                 style={{ fontFamily: "var(--font-mono)" }}
+                                data-testid="deliverable-delete"
                               >
                                 Delete
                               </button>
-                            </form>
+                            )}
                           </div>
                         )}
                       </div>
