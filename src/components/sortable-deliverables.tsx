@@ -5,8 +5,9 @@ import { createPortal } from "react-dom";
 import Link from "next/link";
 import {
   Plus, SortAscending, ArrowsDownUp, XCircle,
-  PencilSimple, CalendarBlank, UserCircle, CheckFat, LockSimple,
+  PencilSimple, CalendarBlank, UserCircle, CheckFat, LockSimple, NotePencil,
 } from "@phosphor-icons/react";
+import { SubtaskModal } from "@/components/subtask-modal";
 import {
   deleteSubtask,
   updateSubtaskStatus,
@@ -35,6 +36,7 @@ interface Member {
 interface Subtask {
   id: string;
   title: string;
+  description: string | null;
   status: TimelineStatus;
   assignee: Member | null;
   dueDate: string | null;
@@ -1075,6 +1077,33 @@ export function SortableDeliverables({
                                             <CalendarBlank size={12} />
                                           </button>
                                         )}
+                                        {canEdit && (
+                                          <SubtaskModal
+                                            mode="edit"
+                                            deliverableId={deliverable.id}
+                                            members={members}
+                                            deliverableStart={deliverable.startDate}
+                                            deliverableTarget={deliverable.targetDate}
+                                            subtask={{
+                                              id: subtask.id,
+                                              title: subtask.title,
+                                              description: subtask.description,
+                                              assigneeId: subtask.assignee?.id ?? null,
+                                              dueDate: subtask.dueDate,
+                                              status: subtask.status,
+                                            }}
+                                            trigger={
+                                              <button
+                                                type="button"
+                                                className="text-muted-foreground hover:text-foreground transition-colors opacity-0 group-hover/subtask:opacity-100"
+                                                title="Edit subtask"
+                                                data-testid="edit-subtask-modal"
+                                              >
+                                                <NotePencil size={13} />
+                                              </button>
+                                            }
+                                          />
+                                        )}
                                         <button
                                           type="button"
                                           onClick={() => setConfirmingDelete(subtask.id)}
@@ -1150,17 +1179,27 @@ export function SortableDeliverables({
                         </div>
                       )}
 
-                      {/* Add subtask */}
+                      {/* Add subtask — opens the create modal */}
                       {canManage && (
                         <div className="border-t border-border px-4 py-2">
-                          <Link
-                            href={`/projects/${projectId}/deliverables/${deliverable.id}/subtasks/new`}
-                            className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
-                            style={{ fontFamily: "var(--font-mono)" }}
-                          >
-                            <Plus size={10} />
-                            Add subtask
-                          </Link>
+                          <SubtaskModal
+                            mode="create"
+                            deliverableId={deliverable.id}
+                            members={members}
+                            deliverableStart={deliverable.startDate}
+                            deliverableTarget={deliverable.targetDate}
+                            trigger={
+                              <button
+                                type="button"
+                                className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                                style={{ fontFamily: "var(--font-mono)" }}
+                                data-testid="add-subtask"
+                              >
+                                <Plus size={10} />
+                                Add subtask
+                              </button>
+                            }
+                          />
                         </div>
                       )}
                     </div>
