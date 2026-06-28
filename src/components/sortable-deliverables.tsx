@@ -365,14 +365,25 @@ function AssigneeSearch({
   anchorEl: HTMLElement | null;
 }) {
   const [query, setQuery] = useState("");
+  const [activeIndex, setActiveIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
   const pos = useAnchorPos(anchorEl);
-  useEffect(() => { inputRef.current?.focus(); }, []);
+  // The portal renders null until `pos` resolves, so the input only mounts on the
+  // second render — focus once `pos` is available, not on first commit.
+  useEffect(() => { if (pos) inputRef.current?.focus(); }, [pos]);
   useOutsideClose(anchorEl, onClose);
 
   const filtered = members.filter((m) =>
     getDisplayName(m).toLowerCase().includes(query.toLowerCase())
   );
+  // Option 0 is always "None"; the rest are the filtered members. activeIndex
+  // tracks the keyboard highlight across this combined list.
+  const options: { id: string; label: string }[] = [
+    { id: "", label: "None" },
+    ...filtered.map((m) => ({ id: m.id, label: getDisplayName(m) })),
+  ];
+  // Narrowing the query resets the highlight to the top.
+  useEffect(() => { setActiveIndex(0); }, [query]);
 
   if (!pos) return null;
 
@@ -388,32 +399,47 @@ function AssigneeSearch({
           ref={inputRef}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "ArrowDown") {
+              e.preventDefault();
+              setActiveIndex((i) => Math.min(i + 1, options.length - 1));
+            } else if (e.key === "ArrowUp") {
+              e.preventDefault();
+              setActiveIndex((i) => Math.max(i - 1, 0));
+            } else if (e.key === "Enter") {
+              e.preventDefault();
+              const opt = options[activeIndex];
+              if (opt) onSelect(opt.id);
+            } else if (e.key === "Escape") {
+              e.preventDefault();
+              onClose();
+            }
+          }}
           placeholder="Search members…"
           className="w-full text-xs bg-transparent outline-none px-1 py-0.5 text-foreground placeholder:text-muted-foreground/60"
         />
       </div>
       <div className="max-h-40 overflow-y-auto py-1">
-        <button
-          type="button"
-          onClick={() => onSelect("")}
-          className={`w-full flex items-center gap-2 px-3 py-1.5 hover:bg-muted transition-colors text-left text-xs ${!currentId ? "text-primary font-medium" : "text-muted-foreground"}`}
-        >
-          <UserCircle size={12} />
-          None
-          {!currentId && <span className="ml-auto">✓</span>}
-        </button>
-        {filtered.map((m) => (
-          <button
-            key={m.id}
-            type="button"
-            onClick={() => onSelect(m.id)}
-            className={`w-full flex items-center gap-2 px-3 py-1.5 hover:bg-muted transition-colors text-left text-xs ${m.id === currentId ? "text-primary font-medium" : "text-foreground"}`}
-          >
-            <UserCircle size={12} />
-            {getDisplayName(m)}
-            {m.id === currentId && <span className="ml-auto">✓</span>}
-          </button>
-        ))}
+        {options.map((opt, idx) => {
+          const isActive = idx === activeIndex;
+          const isCurrent = (opt.id || null) === (currentId || null);
+          return (
+            <button
+              key={opt.id || "__none__"}
+              type="button"
+              onClick={() => onSelect(opt.id)}
+              onMouseEnter={() => setActiveIndex(idx)}
+              data-active={isActive ? "true" : undefined}
+              className={`w-full flex items-center gap-2 px-3 py-1.5 transition-colors text-left text-xs ${
+                isActive ? "bg-muted" : ""
+              } ${isCurrent ? "text-primary font-medium" : opt.id ? "text-foreground" : "text-muted-foreground"}`}
+            >
+              <UserCircle size={12} />
+              {opt.label}
+              {isCurrent && <span className="ml-auto">✓</span>}
+            </button>
+          );
+        })}
         {filtered.length === 0 && (
           <p className="px-3 py-1.5 text-xs text-muted-foreground">No members found</p>
         )}
@@ -853,8 +879,10 @@ export function SortableDeliverables({
                               ? pendingValue
                               : subtask.dueDate ?? "";
 
-                            // Right-panel mode drives the slide animation
-                            const rowMode = isEditing ? "edit"
+                            // Right-panel mode drives the slide animation.
+                            // Title edits confirm next to the title (not in the right panel),
+                            // so the title field stays in "controls" mode here.
+                            const rowMode = isEditing && editField !== "title" ? "edit"
                               : confirmingDelete === subtask.id ? "delete"
                               : "controls";
 
@@ -886,19 +914,28 @@ export function SortableDeliverables({
                                   {/* Title + inline pencil */}
                                   <div className="flex items-center gap-1 min-w-0 flex-1">
                                     {canEdit && editField === "title" ? (
-                                      <input
-                                        ref={titleInputRef}
-                                        className="text-xs text-foreground bg-transparent border-b border-primary outline-none min-w-0 flex-1 max-w-[200px] disabled:opacity-50"
-                                        value={pendingValue}
-                                        disabled={isPendingEdit}
-                                        onChange={(e) =>
-                                          setPendingEdit((p) => p ? { ...p, value: e.target.value } : p)
-                                        }
-                                        onKeyDown={(e) => {
-                                          if (e.key === "Enter") { e.preventDefault(); commitEdit(); }
-                                          if (e.key === "Escape") cancelEdit();
-                                        }}
-                                      />
+                                      <>
+                                        <input
+                                          ref={titleInputRef}
+                                          className="text-xs text-foreground bg-transparent border-b border-primary outline-none min-w-0 flex-1 max-w-[200px] disabled:opacity-50"
+                                          value={pendingValue}
+                                          disabled={isPendingEdit}
+                                          onChange={(e) =>
+                                            setPendingEdit((p) => p ? { ...p, value: e.target.value } : p)
+                                          }
+                                          onKeyDown={(e) => {
+                                            if (e.key === "Enter") { e.preventDefault(); commitEdit(); }
+                                            if (e.key === "Escape") cancelEdit();
+                                          }}
+                                        />
+                                        {/* Confirm sits next to the title, not in the right panel */}
+                                        <InlineConfirm
+                                          show
+                                          onConfirm={commitEdit}
+                                          onCancel={cancelEdit}
+                                          disabled={isPendingEdit}
+                                        />
+                                      </>
                                     ) : (
                                       <>
                                         <span className="text-xs text-foreground truncate">{subtask.title}</span>
@@ -966,7 +1003,7 @@ export function SortableDeliverables({
                                           {displayAssignee ? getDisplayName(displayAssignee) : null}
                                         </span>
                                       )}
-                                      {assigneePickerOpen && (
+                                      {assigneePickerOpen && isEditing && editField === "assignee" && (
                                         <AssigneeSearch
                                           members={members}
                                           currentId={displayAssigneeId}
