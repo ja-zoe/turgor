@@ -641,16 +641,21 @@ export function SemesterCalendar({ events, canEdit, semester, allSemesters, proj
   });
 
   const today = new Date();
-  const [displayMonth, setDisplayMonth] = useState(
-    events.length > 0
-      ? new Date(events[0].startsAt).getMonth()
-      : today.getMonth()
-  );
-  const [displayYear, setDisplayYear] = useState(
-    events.length > 0
-      ? new Date(events[0].startsAt).getFullYear()
-      : today.getFullYear()
-  );
+  // Open on the month of the event nearest today (not the semester's *earliest* event),
+  // so a multi-month semester lands on the current month. Falls back to today.
+  const anchorDate = (() => {
+    if (events.length === 0) return today;
+    const now = today.getTime();
+    let best = events[0];
+    let bestDist = Math.abs(new Date(best.startsAt).getTime() - now);
+    for (const e of events) {
+      const dist = Math.abs(new Date(e.startsAt).getTime() - now);
+      if (dist < bestDist) { best = e; bestDist = dist; }
+    }
+    return new Date(best.startsAt);
+  })();
+  const [displayMonth, setDisplayMonth] = useState(anchorDate.getMonth());
+  const [displayYear, setDisplayYear] = useState(anchorDate.getFullYear());
 
   const [editorOpen, setEditorOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
