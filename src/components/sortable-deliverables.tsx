@@ -209,22 +209,21 @@ export function InlineConfirm({
         type="button"
         onClick={onConfirm}
         disabled={disabled}
-        className="hover:opacity-80 disabled:opacity-40 transition-opacity px-0.5"
+        className="text-[#588157] hover:opacity-70 disabled:opacity-40 transition-opacity px-0.5"
         title="Confirm"
         tabIndex={show ? 0 : -1}
       >
-        ✓
+        <CheckFat size={13} weight="fill" />
       </button>
-      <span className="opacity-40 select-none">|</span>
       <button
         type="button"
         onClick={onCancel}
         disabled={disabled}
-        className="hover:opacity-80 disabled:opacity-40 transition-opacity px-0.5"
+        className="hover:opacity-70 disabled:opacity-40 transition-opacity px-0.5"
         title="Cancel"
         tabIndex={show ? 0 : -1}
       >
-        ✗
+        <XCircle size={13} weight="bold" />
       </button>
     </span>
   );
