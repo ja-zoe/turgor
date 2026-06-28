@@ -6,6 +6,59 @@ import { Permission, TimelineStatus } from "@/generated/prisma";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
+/**
+ * Recompute a deliverable's status from its subtasks and persist it. Must run after
+ * ANY change to the subtask set (status edit, create, delete) — not just status edits —
+ * otherwise the derived status goes stale (e.g. adding a subtask under an all-complete
+ * deliverable should drop it out of COMPLETE).
+ */
+export async function deriveDeliverableStatus(deliverableId: string) {
+  const siblings = await prisma.subtask.findMany({
+    where: { deliverableId },
+    select: { status: true },
+  });
+
+  // No subtasks left → the deliverable becomes manually-controlled again; clear
+  // completion but leave its current status untouched.
+  if (siblings.length === 0) {
+    await prisma.deliverable.update({
+      where: { id: deliverableId },
+      data: { completed: false, completedDate: null },
+    });
+    return;
+  }
+
+  let derivedStatus: TimelineStatus;
+  if (siblings.every((s) => s.status === TimelineStatus.COMPLETE)) {
+    derivedStatus = TimelineStatus.COMPLETE;
+  } else if (siblings.some((s) => s.status === TimelineStatus.BLOCKED)) {
+    derivedStatus = TimelineStatus.BLOCKED;
+  } else if (
+    siblings.some(
+      (s) => s.status === TimelineStatus.IN_PROGRESS || s.status === TimelineStatus.COMPLETE,
+    )
+  ) {
+    derivedStatus = TimelineStatus.IN_PROGRESS;
+  } else {
+    derivedStatus = TimelineStatus.NOT_STARTED;
+  }
+
+  const isComplete = derivedStatus === TimelineStatus.COMPLETE;
+  // Preserve the original completion date if it was already complete.
+  const existing = await prisma.deliverable.findUnique({
+    where: { id: deliverableId },
+    select: { completedDate: true },
+  });
+  await prisma.deliverable.update({
+    where: { id: deliverableId },
+    data: {
+      status: derivedStatus,
+      completed: isComplete,
+      completedDate: isComplete ? existing?.completedDate ?? new Date() : null,
+    },
+  });
+}
+
 export async function createDeliverable(projectId: string, formData: FormData) {
   await requirePermission(Permission.MANAGE_MILESTONES);
 
@@ -119,6 +172,9 @@ export async function createSubtask(deliverableId: string, formData: FormData) {
     },
   });
 
+  // A new subtask changes the set → re-derive the deliverable's status.
+  await deriveDeliverableStatus(deliverableId);
+
   revalidatePath(`/projects/${deliverable.projectId}`);
   redirect(`/projects/${deliverable.projectId}`);
 }
@@ -128,7 +184,7 @@ export async function updateSubtask(subtaskId: string, formData: FormData) {
 
   const subtask = await prisma.subtask.findUniqueOrThrow({
     where: { id: subtaskId },
-    include: { deliverable: { select: { projectId: true } } },
+    include: { deliverable: { select: { id: true, projectId: true } } },
   });
 
   const membership = await getProjectMembership(user.id, subtask.deliverable.projectId);
@@ -152,6 +208,9 @@ export async function updateSubtask(subtaskId: string, formData: FormData) {
       completedAt: status === TimelineStatus.COMPLETE ? new Date() : null,
     },
   });
+
+  // Status may have changed → re-derive the parent deliverable.
+  await deriveDeliverableStatus(subtask.deliverable.id);
 
   revalidatePath(`/projects/${subtask.deliverable.projectId}`);
   redirect(`/projects/${subtask.deliverable.projectId}`);
@@ -177,31 +236,7 @@ export async function updateSubtaskStatus(subtaskId: string, status: TimelineSta
   });
 
   // Derive the parent deliverable's status from all its subtasks after this update.
-  const siblings = await prisma.subtask.findMany({
-    where: { deliverableId: subtask.deliverable.id },
-    select: { status: true },
-  });
-
-  let derivedStatus: TimelineStatus;
-  if (siblings.every((s) => s.status === TimelineStatus.COMPLETE)) {
-    derivedStatus = TimelineStatus.COMPLETE;
-  } else if (siblings.some((s) => s.status === TimelineStatus.BLOCKED)) {
-    derivedStatus = TimelineStatus.BLOCKED;
-  } else if (siblings.some((s) => s.status === TimelineStatus.IN_PROGRESS || s.status === TimelineStatus.COMPLETE)) {
-    derivedStatus = TimelineStatus.IN_PROGRESS;
-  } else {
-    derivedStatus = TimelineStatus.NOT_STARTED;
-  }
-
-  const isNowComplete = derivedStatus === TimelineStatus.COMPLETE;
-  await prisma.deliverable.update({
-    where: { id: subtask.deliverable.id },
-    data: {
-      status: derivedStatus,
-      completed: isNowComplete,
-      completedDate: isNowComplete ? new Date() : null,
-    },
-  });
+  await deriveDeliverableStatus(subtask.deliverable.id);
 
   revalidatePath(`/projects/${subtask.deliverable.projectId}`);
 }
@@ -233,13 +268,16 @@ export async function deleteSubtask(subtaskId: string) {
 
   const subtask = await prisma.subtask.findUniqueOrThrow({
     where: { id: subtaskId },
-    include: { deliverable: { select: { projectId: true } } },
+    include: { deliverable: { select: { id: true, projectId: true } } },
   });
 
   const membership = await getProjectMembership(user.id, subtask.deliverable.projectId);
   if (!membership) await requirePermission(Permission.MANAGE_MILESTONES);
 
   await prisma.subtask.delete({ where: { id: subtaskId } });
+
+  // Removing a subtask changes the set → re-derive the deliverable's status.
+  await deriveDeliverableStatus(subtask.deliverable.id);
 
   revalidatePath(`/projects/${subtask.deliverable.projectId}`);
 }
