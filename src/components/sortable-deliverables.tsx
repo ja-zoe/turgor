@@ -221,13 +221,24 @@ function StatusDropdown({
 // ─── InlineConfirm — animated ✓/✗ controls, shared across pill and field edits ─
 
 export function InlineConfirm({
-  show, onConfirm, onCancel, disabled,
+  show, onConfirm, onCancel, disabled, tone = "default",
 }: {
   show: boolean;
   onConfirm: () => void;
   onCancel: () => void;
   disabled?: boolean;
+  /** "onColor" renders white icons for use inside a solid-colored pill (e.g. the
+   *  COMPLETE status pill, where the default green ✓ would be invisible). */
+  tone?: "default" | "onColor";
 }) {
+  const confirmClass =
+    tone === "onColor"
+      ? "text-white hover:opacity-70 disabled:opacity-40 transition-opacity px-0.5"
+      : "text-[#588157] hover:opacity-70 disabled:opacity-40 transition-opacity px-0.5";
+  const cancelClass =
+    tone === "onColor"
+      ? "text-white/90 hover:opacity-70 disabled:opacity-40 transition-opacity px-0.5"
+      : "hover:opacity-70 disabled:opacity-40 transition-opacity px-0.5";
   return (
     <span
       className={[
@@ -241,7 +252,7 @@ export function InlineConfirm({
         type="button"
         onClick={onConfirm}
         disabled={disabled}
-        className="text-[#588157] hover:opacity-70 disabled:opacity-40 transition-opacity px-0.5"
+        className={confirmClass}
         title="Confirm"
         tabIndex={show ? 0 : -1}
       >
@@ -251,7 +262,7 @@ export function InlineConfirm({
         type="button"
         onClick={onCancel}
         disabled={disabled}
-        className="hover:opacity-70 disabled:opacity-40 transition-opacity px-0.5"
+        className={cancelClass}
         title="Cancel"
         tabIndex={show ? 0 : -1}
       >
@@ -322,12 +333,15 @@ function StatusPill({
           </span>
         </button>
 
-        {/* Animated confirm controls — slides in when confirming */}
+        {/* Animated confirm controls — slides in when confirming.
+            The pill has white text on a solid status color, so use the white
+            ("onColor") tone — the default green ✓ is invisible on the COMPLETE pill. */}
         <InlineConfirm
           show={confirming}
           onConfirm={onConfirm}
           onCancel={onCancel}
           disabled={isTransitioning}
+          tone="onColor"
         />
       </div>
 
