@@ -5,8 +5,10 @@ import { createPortal } from "react-dom";
 import Link from "next/link";
 import {
   Plus, SortAscending, ArrowsDownUp, XCircle,
-  PencilSimple, CalendarBlank, UserCircle, CheckFat, LockSimple,
+  PencilSimple, CalendarBlank, UserCircle, CheckFat, LockSimple, NotePencil,
 } from "@phosphor-icons/react";
+import { SubtaskModal } from "@/components/subtask-modal";
+import { MarkdownView } from "@/components/markdown-view";
 import {
   deleteSubtask,
   updateSubtaskStatus,
@@ -35,6 +37,7 @@ interface Member {
 interface Subtask {
   id: string;
   title: string;
+  description: string | null;
   status: TimelineStatus;
   assignee: Member | null;
   dueDate: string | null;
@@ -106,6 +109,16 @@ function formatDate(iso: string) {
 
 function formatDateShort(iso: string) {
   return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
+// Like formatDateShort, but includes the year when it isn't the current year.
+function formatDueDate(iso: string) {
+  const d = new Date(iso);
+  const opts: Intl.DateTimeFormatOptions =
+    d.getFullYear() === new Date().getFullYear()
+      ? { month: "short", day: "numeric" }
+      : { month: "short", day: "numeric", year: "numeric" };
+  return d.toLocaleDateString("en-US", opts);
 }
 
 function toDateInput(iso: string | null | undefined): string {
@@ -482,6 +495,9 @@ export function SortableDeliverables({
   // assigneePickerOpen is separate from pendingEdit so closing the picker
   // doesn't cancel the pending selection before ✓ is clicked
   const [assigneePickerOpen, setAssigneePickerOpen] = useState(false);
+
+  // Click a subtask title to expand its description (pushes siblings down)
+  const [expandedSubtaskId, setExpandedSubtaskId] = useState<string | null>(null);
 
   // Deliverable inline editing
   const [deliverableEdit, setDeliverableEdit] = useState<{
@@ -893,8 +909,23 @@ export function SortableDeliverables({
                             return (
                               <div
                                 key={subtask.id}
-                                className="group/subtask flex items-center justify-between px-4 py-2.5 bg-background/50"
+                                className="group/subtask bg-background/50"
                                 data-testid="subtask-row"
+                              >
+                              <div
+                                className="flex items-center justify-between px-4 py-2.5 cursor-pointer"
+                                role="button"
+                                aria-expanded={expandedSubtaskId === subtask.id}
+                                data-testid="subtask-row-body"
+                                onClick={(e) => {
+                                  // Toggle the description unless the click landed on an interactive control.
+                                  // (All inline controls are real <button>/<input> elements; the row's own
+                                  //  role="button" is a <div>, so closest('button') never self-matches.)
+                                  if ((e.target as HTMLElement).closest(
+                                    'button, a, input, select, textarea, [data-no-expand]'
+                                  )) return;
+                                  setExpandedSubtaskId((cur) => (cur === subtask.id ? null : subtask.id));
+                                }}
                               >
                                 {/* ── Far-left status bullet (visual only, glows on hover/edit) ── */}
                                 <span
@@ -938,7 +969,20 @@ export function SortableDeliverables({
                                       </>
                                     ) : (
                                       <>
-                                        <span className="text-xs text-foreground truncate">{subtask.title}</span>
+                                        <button
+                                          type="button"
+                                          onClick={() =>
+                                            setExpandedSubtaskId((cur) =>
+                                              cur === subtask.id ? null : subtask.id
+                                            )
+                                          }
+                                          aria-expanded={expandedSubtaskId === subtask.id}
+                                          className="text-xs text-foreground truncate text-left hover:text-primary transition-colors"
+                                          data-testid="subtask-title-toggle"
+                                          title="Show description"
+                                        >
+                                          {subtask.title}
+                                        </button>
                                         {canEdit && (
                                           <button
                                             type="button"
@@ -1029,6 +1073,8 @@ export function SortableDeliverables({
                                       className="text-xs text-foreground bg-transparent border-b border-primary outline-none w-28 disabled:opacity-50"
                                       style={{ fontFamily: "var(--font-mono)" }}
                                       value={pendingValue}
+                                      max={deliverable.targetDate.slice(0, 10)}
+                                      min={deliverable.startDate ? deliverable.startDate.slice(0, 10) : undefined}
                                       disabled={isPendingEdit}
                                       onChange={(e) =>
                                         setPendingEdit((p) => p ? { ...p, value: e.target.value } : p)
@@ -1043,7 +1089,7 @@ export function SortableDeliverables({
                                       className="text-xs text-muted-foreground"
                                       style={{ fontFamily: "var(--font-mono)" }}
                                     >
-                                      {formatDateShort(displayDueDate)}
+                                      {formatDueDate(displayDueDate)}
                                     </span>
                                   ) : null}
 
@@ -1074,6 +1120,33 @@ export function SortableDeliverables({
                                           >
                                             <CalendarBlank size={12} />
                                           </button>
+                                        )}
+                                        {canEdit && (
+                                          <SubtaskModal
+                                            mode="edit"
+                                            deliverableId={deliverable.id}
+                                            members={members}
+                                            deliverableStart={deliverable.startDate}
+                                            deliverableTarget={deliverable.targetDate}
+                                            subtask={{
+                                              id: subtask.id,
+                                              title: subtask.title,
+                                              description: subtask.description,
+                                              assigneeId: subtask.assignee?.id ?? null,
+                                              dueDate: subtask.dueDate,
+                                              status: subtask.status,
+                                            }}
+                                            trigger={
+                                              <button
+                                                type="button"
+                                                className="text-muted-foreground hover:text-foreground transition-colors opacity-0 group-hover/subtask:opacity-100"
+                                                title="Edit subtask"
+                                                data-testid="edit-subtask-modal"
+                                              >
+                                                <NotePencil size={13} />
+                                              </button>
+                                            }
+                                          />
                                         )}
                                         <button
                                           type="button"
@@ -1145,22 +1218,47 @@ export function SortableDeliverables({
                                   )}
                                 </div>
                               </div>
+
+                              {/* Expanded description — pushes following rows down */}
+                              {expandedSubtaskId === subtask.id && (
+                                <div
+                                  className="px-4 pb-3 pl-[1.375rem] text-xs text-muted-foreground"
+                                  data-testid="subtask-description"
+                                >
+                                  {subtask.description ? (
+                                    <MarkdownView>{subtask.description}</MarkdownView>
+                                  ) : (
+                                    <p className="italic opacity-60">No description</p>
+                                  )}
+                                </div>
+                              )}
+                              </div>
                             );
                           })}
                         </div>
                       )}
 
-                      {/* Add subtask */}
+                      {/* Add subtask — opens the create modal */}
                       {canManage && (
                         <div className="border-t border-border px-4 py-2">
-                          <Link
-                            href={`/projects/${projectId}/deliverables/${deliverable.id}/subtasks/new`}
-                            className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
-                            style={{ fontFamily: "var(--font-mono)" }}
-                          >
-                            <Plus size={10} />
-                            Add subtask
-                          </Link>
+                          <SubtaskModal
+                            mode="create"
+                            deliverableId={deliverable.id}
+                            members={members}
+                            deliverableStart={deliverable.startDate}
+                            deliverableTarget={deliverable.targetDate}
+                            trigger={
+                              <button
+                                type="button"
+                                className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                                style={{ fontFamily: "var(--font-mono)" }}
+                                data-testid="add-subtask"
+                              >
+                                <Plus size={10} />
+                                Add subtask
+                              </button>
+                            }
+                          />
                         </div>
                       )}
                     </div>

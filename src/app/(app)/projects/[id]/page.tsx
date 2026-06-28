@@ -228,6 +228,7 @@ export default async function ProjectDetailPage({
             subtasks: d.subtasks.map((s) => ({
               id: s.id,
               title: s.title,
+              description: s.description ?? null,
               status: s.status as "NOT_STARTED" | "IN_PROGRESS" | "BLOCKED" | "COMPLETE",
               assignee: s.assignee,
               dueDate: s.dueDate?.toISOString() ?? null,

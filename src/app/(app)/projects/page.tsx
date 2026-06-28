@@ -2,8 +2,8 @@ import Link from "next/link";
 import { requireAuth, getUserPermissions } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { Permission } from "@/generated/prisma";
-import { ProjectStatusBadge } from "@/components/status-badge";
-import { ArrowRight, Folders, Plant } from "@phosphor-icons/react/dist/ssr";
+import { ProjectsList } from "@/components/projects-list";
+import { ArrowRight, Folders } from "@phosphor-icons/react/dist/ssr";
 
 export default async function ProjectsPage() {
   const user = await requireAuth();
@@ -84,47 +84,7 @@ export default async function ProjectsPage() {
           )}
         </div>
       ) : (
-        <div className="grid gap-3">
-          {projects.map((project) => (
-            <Link
-              key={project.id}
-              href={`/projects/${project.id}`}
-              className="group p-5 bg-card border border-border rounded-xl hover:border-primary/30 transition-colors"
-            >
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex items-start gap-3">
-                  <Plant size={16} className="text-primary mt-0.5" weight="fill" />
-                  <div>
-                    <p className="text-sm font-medium text-foreground group-hover:text-primary transition-colors">
-                      {project.name}
-                    </p>
-                    {project.description && (
-                      <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">
-                        {project.description}
-                      </p>
-                    )}
-                    <p
-                      className="text-xs text-muted-foreground mt-1"
-                      style={{ fontFamily: "var(--font-mono)" }}
-                    >
-                      {project.semester} &middot; {project._count.deliverables} deliverable
-                      {project._count.deliverables !== 1 ? "s" : ""} &middot;{" "}
-                      {project._count.assignments} member
-                      {project._count.assignments !== 1 ? "s" : ""}
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2 flex-shrink-0">
-                  <ProjectStatusBadge status={project.status} />
-                  <ArrowRight
-                    size={14}
-                    className="text-muted-foreground group-hover:text-foreground transition-colors"
-                  />
-                </div>
-              </div>
-            </Link>
-          ))}
-        </div>
+        <ProjectsList projects={projects} canManage={canManage} />
       )}
     </div>
   );
