@@ -6,6 +6,7 @@ import Link from "next/link";
 import {
   Plus, SortAscending, ArrowsDownUp, XCircle,
   PencilSimple, CalendarBlank, UserCircle, CheckFat, LockSimple, NotePencil,
+  CaretUp, CaretDown,
 } from "@phosphor-icons/react";
 import { SubtaskModal } from "@/components/subtask-modal";
 import { DeliverableModal } from "@/components/deliverable-modal";
@@ -23,6 +24,7 @@ import {
   updateDeliverableGroup,
   updateDeliverableDescription,
   updateDeliverablePriority,
+  moveDeliverable,
 } from "@/lib/actions/deliverables";
 import { getDisplayName } from "@/lib/utils";
 import {
@@ -64,6 +66,7 @@ interface Deliverable {
   status: TimelineStatus;
   priority: DeliverablePriority;
   group: string | null;
+  orderIndex: number;
   targetDate: string;
   startDate: string | null;
   completed: boolean;
@@ -605,6 +608,8 @@ export function SortableDeliverables({
   deleteDeliverableAction,
 }: SortableDeliverablesProps) {
   const [sortByStatus, setSortByStatus] = useState(false);
+  const [groupFilter, setGroupFilter] = useState<string>("ALL"); // "ALL" | "UNGROUPED" | <group>
+  const [, startMoveTransition] = useTransition();
   const [confirmingDelete, setConfirmingDelete] = useState<string | null>(null);
 
   // Deliverable status popover (standalone deliverables only)
@@ -784,11 +789,26 @@ export function SortableDeliverables({
     setPendingStatusEdit(null);
   }
 
-  // ── Sort + group ───────────────────────────────────────────────────────────
+  // ── Filter + sort + group ────────────────────────────────────────────────────
+
+  function moveDeliv(id: string, dir: "up" | "down") {
+    startMoveTransition(async () => { await moveDeliverable(id, dir); });
+  }
+
+  // Default within-group order: priority DESC (HIGH on top), then manual orderIndex.
+  const byPriorityThenOrder = (a: Deliverable, b: Deliverable) =>
+    PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority] || a.orderIndex - b.orderIndex;
+
+  const filteredDeliverables =
+    groupFilter === "ALL"
+      ? deliverables
+      : groupFilter === "UNGROUPED"
+        ? deliverables.filter((d) => !d.group)
+        : deliverables.filter((d) => d.group === groupFilter);
 
   const sorted = sortByStatus
-    ? [...deliverables].sort((a, b) => STATUS_ORDER[a.status] - STATUS_ORDER[b.status])
-    : deliverables;
+    ? [...filteredDeliverables].sort((a, b) => STATUS_ORDER[a.status] - STATUS_ORDER[b.status])
+    : filteredDeliverables;
 
   const useGroups = !sortByStatus && sorted.some((d) => d.group);
 
@@ -802,10 +822,10 @@ export function SortableDeliverables({
     }
     sections = Array.from(groupMap.entries()).map(([label, items]) => ({
       label: label || null,
-      items,
+      items: [...items].sort(byPriorityThenOrder),
     }));
   } else {
-    sections = [{ label: null, items: sorted }];
+    sections = [{ label: null, items: sortByStatus ? sorted : [...sorted].sort(byPriorityThenOrder) }];
   }
 
   // ── Render ─────────────────────────────────────────────────────────────────
@@ -816,6 +836,22 @@ export function SortableDeliverables({
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-sm font-semibold text-foreground">Deliverables</h2>
         <div className="flex items-center gap-3">
+          {allGroups.length > 0 && (
+            <select
+              value={groupFilter}
+              onChange={(e) => setGroupFilter(e.target.value)}
+              className="text-xs bg-transparent border border-border rounded-md px-2 py-1 text-muted-foreground hover:text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
+              style={{ fontFamily: "var(--font-mono)" }}
+              data-testid="group-filter"
+              aria-label="Filter by group"
+            >
+              <option value="ALL">All groups</option>
+              <option value="UNGROUPED">Ungrouped</option>
+              {allGroups.map((g) => (
+                <option key={g} value={g}>{g}</option>
+              ))}
+            </select>
+          )}
           <button
             onClick={() => setSortByStatus((s) => !s)}
             className={`inline-flex items-center gap-1.5 text-xs transition-colors ${
@@ -872,9 +908,13 @@ export function SortableDeliverables({
               )}
 
               <div className="space-y-3">
-                {items.map((deliverable) => {
+                {items.map((deliverable, di) => {
                   const badge = STATUS_BADGE[deliverable.status];
                   const isOverdue = !deliverable.completed && new Date(deliverable.targetDate) < new Date();
+                  // Items are sorted priority-then-orderIndex, so same-priority rows are
+                  // contiguous; a deliverable can move within its priority tier only.
+                  const canMoveUp = !sortByStatus && di > 0 && items[di - 1].priority === deliverable.priority;
+                  const canMoveDown = !sortByStatus && di < items.length - 1 && items[di + 1].priority === deliverable.priority;
                   const hasSubtasks = deliverable.subtasks.length > 0;
 
                   return (
@@ -1156,6 +1196,30 @@ export function SortableDeliverables({
                         </div>
                         {canManage && (
                           <div className="flex items-center gap-2 flex-shrink-0">
+                            {(canMoveUp || canMoveDown) && (
+                              <div className="flex flex-col -my-1" data-testid="deliverable-reorder">
+                                <button
+                                  type="button"
+                                  onClick={() => moveDeliv(deliverable.id, "up")}
+                                  disabled={!canMoveUp}
+                                  className="text-muted-foreground hover:text-foreground disabled:opacity-30 disabled:pointer-events-none transition-colors"
+                                  title="Move up"
+                                  data-testid="deliverable-move-up"
+                                >
+                                  <CaretUp size={11} weight="bold" />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => moveDeliv(deliverable.id, "down")}
+                                  disabled={!canMoveDown}
+                                  className="text-muted-foreground hover:text-foreground disabled:opacity-30 disabled:pointer-events-none transition-colors"
+                                  title="Move down"
+                                  data-testid="deliverable-move-down"
+                                >
+                                  <CaretDown size={11} weight="bold" />
+                                </button>
+                              </div>
+                            )}
                             <DeliverableModal
                               deliverable={{
                                 id: deliverable.id,
