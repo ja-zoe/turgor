@@ -46,6 +46,12 @@ enum TimelineStatus {
   COMPLETE
 }
 
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+}
+
 enum ProjectMemberRole {
   LEAD
   SUBLEAD
@@ -211,6 +217,7 @@ model Deliverable {
   completedDate DateTime?
   orderIndex    Int            @default(0)
   group         String?
+  priority      Priority       @default(MEDIUM)
 
   project  Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
   subtasks Subtask[]

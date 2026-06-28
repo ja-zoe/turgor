@@ -2,7 +2,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { requirePermission, requireAuth, getProjectMembership } from "@/lib/permissions";
-import { Permission, TimelineStatus } from "@/generated/prisma";
+import { Permission, TimelineStatus, Priority } from "@/generated/prisma";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
@@ -125,6 +125,7 @@ export async function updateDeliverable(deliverableId: string, formData: FormDat
   const startDateRaw = formData.get("startDate") as string | null;
   const startDate = startDateRaw ? new Date(startDateRaw) : null;
   const group = (formData.get("group") as string | null)?.trim() || null;
+  const priorityRaw = formData.get("priority") as string | null;
 
   // Status is omitted from the form when the deliverable has subtasks (locked field).
   const statusRaw = formData.get("status") as string | null;
@@ -136,13 +137,21 @@ export async function updateDeliverable(deliverableId: string, formData: FormDat
       }
     : {};
 
+  if (startDate && startDate > targetDate) {
+    throw new Error("Start date must not be after target date");
+  }
+
   await prisma.deliverable.update({
     where: { id: deliverableId },
-    data: { title, description, targetDate, startDate, group, ...statusUpdate },
+    data: {
+      title, description, targetDate, startDate, group,
+      ...(priorityRaw ? { priority: priorityRaw as Priority } : {}),
+      ...statusUpdate,
+    },
   });
 
+  // No redirect — the edit modal closes itself; revalidate refreshes in place.
   revalidatePath(`/projects/${deliverable.projectId}`);
-  redirect(`/projects/${deliverable.projectId}`);
 }
 
 export async function deleteDeliverable(deliverableId: string) {
@@ -345,6 +354,25 @@ export async function updateSubtaskAssignee(subtaskId: string, assigneeId: strin
   revalidatePath(`/projects/${subtask.deliverable.projectId}`);
 }
 
+export async function updateSubtaskDescription(subtaskId: string, description: string | null) {
+  const user = await requireAuth();
+
+  const subtask = await prisma.subtask.findUniqueOrThrow({
+    where: { id: subtaskId },
+    include: { deliverable: { select: { projectId: true } } },
+  });
+
+  const membership = await getProjectMembership(user.id, subtask.deliverable.projectId);
+  if (!membership) await requirePermission(Permission.MANAGE_MILESTONES);
+
+  await prisma.subtask.update({
+    where: { id: subtaskId },
+    data: { description: description?.trim() || null },
+  });
+
+  revalidatePath(`/projects/${subtask.deliverable.projectId}`);
+}
+
 export async function updateSubtaskDueDate(subtaskId: string, dueDate: string | null) {
   const user = await requireAuth();
 
@@ -383,6 +411,103 @@ export async function updateDeliverableTitle(deliverableId: string, title: strin
   await prisma.deliverable.update({
     where: { id: deliverableId },
     data: { title: trimmed },
+  });
+
+  revalidatePath(`/projects/${deliverable.projectId}`);
+}
+
+export async function updateDeliverableGroup(deliverableId: string, group: string | null) {
+  const user = await requireAuth();
+
+  const deliverable = await prisma.deliverable.findUniqueOrThrow({
+    where: { id: deliverableId },
+    select: { projectId: true },
+  });
+
+  const membership = await getProjectMembership(user.id, deliverable.projectId);
+  if (!membership) await requirePermission(Permission.MANAGE_MILESTONES);
+
+  const trimmed = group?.trim() || null;
+
+  await prisma.deliverable.update({
+    where: { id: deliverableId },
+    data: { group: trimmed },
+  });
+
+  revalidatePath(`/projects/${deliverable.projectId}`);
+}
+
+/**
+ * Manually reorder a deliverable within its group, among siblings of the **same
+ * priority** (priority is the primary sort key; orderIndex orders within a tier).
+ * Swaps orderIndex with the adjacent same-group, same-priority deliverable.
+ */
+export async function moveDeliverable(deliverableId: string, direction: "up" | "down") {
+  const user = await requireAuth();
+
+  const deliverable = await prisma.deliverable.findUniqueOrThrow({
+    where: { id: deliverableId },
+    select: { projectId: true, group: true, priority: true, orderIndex: true },
+  });
+
+  const membership = await getProjectMembership(user.id, deliverable.projectId);
+  if (!membership) await requirePermission(Permission.MANAGE_MILESTONES);
+
+  const siblings = await prisma.deliverable.findMany({
+    where: {
+      projectId: deliverable.projectId,
+      group: deliverable.group,
+      priority: deliverable.priority,
+    },
+    orderBy: { orderIndex: "asc" },
+    select: { id: true, orderIndex: true },
+  });
+
+  const idx = siblings.findIndex((s) => s.id === deliverableId);
+  const swapWith = direction === "up" ? siblings[idx - 1] : siblings[idx + 1];
+  if (!swapWith) return; // already at the tier boundary
+
+  await prisma.$transaction([
+    prisma.deliverable.update({ where: { id: deliverableId }, data: { orderIndex: swapWith.orderIndex } }),
+    prisma.deliverable.update({ where: { id: swapWith.id }, data: { orderIndex: deliverable.orderIndex } }),
+  ]);
+
+  revalidatePath(`/projects/${deliverable.projectId}`);
+}
+
+export async function updateDeliverablePriority(deliverableId: string, priority: Priority) {
+  const user = await requireAuth();
+
+  const deliverable = await prisma.deliverable.findUniqueOrThrow({
+    where: { id: deliverableId },
+    select: { projectId: true },
+  });
+
+  const membership = await getProjectMembership(user.id, deliverable.projectId);
+  if (!membership) await requirePermission(Permission.MANAGE_MILESTONES);
+
+  await prisma.deliverable.update({
+    where: { id: deliverableId },
+    data: { priority },
+  });
+
+  revalidatePath(`/projects/${deliverable.projectId}`);
+}
+
+export async function updateDeliverableDescription(deliverableId: string, description: string | null) {
+  const user = await requireAuth();
+
+  const deliverable = await prisma.deliverable.findUniqueOrThrow({
+    where: { id: deliverableId },
+    select: { projectId: true },
+  });
+
+  const membership = await getProjectMembership(user.id, deliverable.projectId);
+  if (!membership) await requirePermission(Permission.MANAGE_MILESTONES);
+
+  await prisma.deliverable.update({
+    where: { id: deliverableId },
+    data: { description: description?.trim() || null },
   });
 
   revalidatePath(`/projects/${deliverable.projectId}`);

@@ -6,18 +6,26 @@ import Link from "next/link";
 import {
   Plus, SortAscending, ArrowsDownUp, XCircle,
   PencilSimple, CalendarBlank, UserCircle, CheckFat, LockSimple, NotePencil,
+  CaretUp, CaretDown,
 } from "@phosphor-icons/react";
 import { SubtaskModal } from "@/components/subtask-modal";
+import { DeliverableModal } from "@/components/deliverable-modal";
 import { MarkdownView } from "@/components/markdown-view";
+import { MarkdownEditor } from "@/components/markdown-editor";
 import {
   deleteSubtask,
   updateSubtaskStatus,
   updateSubtaskTitle,
   updateSubtaskAssignee,
   updateSubtaskDueDate,
+  updateSubtaskDescription,
   updateDeliverableStatus,
   updateDeliverableTitle,
   updateDeliverableDates,
+  updateDeliverableGroup,
+  updateDeliverableDescription,
+  updateDeliverablePriority,
+  moveDeliverable,
 } from "@/lib/actions/deliverables";
 import { getDisplayName } from "@/lib/utils";
 import {
@@ -25,6 +33,15 @@ import {
 } from "@/components/ui/tooltip";
 
 type TimelineStatus = "NOT_STARTED" | "IN_PROGRESS" | "BLOCKED" | "COMPLETE";
+type DeliverablePriority = "LOW" | "MEDIUM" | "HIGH";
+
+const PRIORITY_ORDER: Record<DeliverablePriority, number> = { HIGH: 0, MEDIUM: 1, LOW: 2 };
+const PRIORITY_META: Record<DeliverablePriority, { label: string; cls: string }> = {
+  HIGH: { label: "High", cls: "bg-[#FDEBEC] text-[#A4503C]" },
+  MEDIUM: { label: "Med", cls: "bg-[#FBF3DB] text-[#C99846]" },
+  LOW: { label: "Low", cls: "bg-muted text-muted-foreground" },
+};
+const ALL_PRIORITIES: DeliverablePriority[] = ["HIGH", "MEDIUM", "LOW"];
 
 interface Member {
   id: string;
@@ -46,8 +63,11 @@ interface Subtask {
 interface Deliverable {
   id: string;
   title: string;
+  description: string | null;
   status: TimelineStatus;
+  priority: DeliverablePriority;
   group: string | null;
+  orderIndex: number;
   targetDate: string;
   startDate: string | null;
   completed: boolean;
@@ -202,13 +222,24 @@ function StatusDropdown({
 // ─── InlineConfirm — animated ✓/✗ controls, shared across pill and field edits ─
 
 export function InlineConfirm({
-  show, onConfirm, onCancel, disabled,
+  show, onConfirm, onCancel, disabled, tone = "default",
 }: {
   show: boolean;
   onConfirm: () => void;
   onCancel: () => void;
   disabled?: boolean;
+  /** "onColor" renders white icons for use inside a solid-colored pill (e.g. the
+   *  COMPLETE status pill, where the default green ✓ would be invisible). */
+  tone?: "default" | "onColor";
 }) {
+  const confirmClass =
+    tone === "onColor"
+      ? "text-white hover:opacity-70 disabled:opacity-40 transition-opacity px-0.5"
+      : "text-[#588157] hover:opacity-70 disabled:opacity-40 transition-opacity px-0.5";
+  const cancelClass =
+    tone === "onColor"
+      ? "text-white/90 hover:opacity-70 disabled:opacity-40 transition-opacity px-0.5"
+      : "hover:opacity-70 disabled:opacity-40 transition-opacity px-0.5";
   return (
     <span
       className={[
@@ -222,7 +253,7 @@ export function InlineConfirm({
         type="button"
         onClick={onConfirm}
         disabled={disabled}
-        className="text-[#588157] hover:opacity-70 disabled:opacity-40 transition-opacity px-0.5"
+        className={confirmClass}
         title="Confirm"
         tabIndex={show ? 0 : -1}
       >
@@ -232,7 +263,7 @@ export function InlineConfirm({
         type="button"
         onClick={onCancel}
         disabled={disabled}
-        className="hover:opacity-70 disabled:opacity-40 transition-opacity px-0.5"
+        className={cancelClass}
         title="Cancel"
         tabIndex={show ? 0 : -1}
       >
@@ -303,12 +334,15 @@ function StatusPill({
           </span>
         </button>
 
-        {/* Animated confirm controls — slides in when confirming */}
+        {/* Animated confirm controls — slides in when confirming.
+            The pill has white text on a solid status color, so use the white
+            ("onColor") tone — the default green ✓ is invisible on the COMPLETE pill. */}
         <InlineConfirm
           show={confirming}
           onConfirm={onConfirm}
           onCancel={onCancel}
           disabled={isTransitioning}
+          tone="onColor"
         />
       </div>
 
@@ -328,14 +362,13 @@ function StatusPill({
 // ─── DeliverableStatusPopover — portal-based (standalone deliverables) ────────
 
 function DeliverableStatusPopover({
-  deliverableId, current, onClose, anchorEl,
+  current, onSelect, onClose, anchorEl,
 }: {
-  deliverableId: string;
   current: TimelineStatus;
+  onSelect: (s: TimelineStatus) => void;
   onClose: () => void;
   anchorEl: HTMLElement | null;
 }) {
-  const [isPending, startTransition] = useTransition();
   const pos = useAnchorPos(anchorEl);
   useOutsideClose(anchorEl, onClose);
   if (!pos) return null;
@@ -349,12 +382,8 @@ function DeliverableStatusPopover({
         <button
           key={s}
           type="button"
-          disabled={isPending}
-          onClick={() => {
-            if (s === current) { onClose(); return; }
-            startTransition(async () => { await updateDeliverableStatus(deliverableId, s); onClose(); });
-          }}
-          className={`w-full flex items-center gap-2 px-3 py-1.5 hover:bg-muted transition-colors text-left disabled:opacity-50 ${s === current ? "text-primary font-medium" : "text-foreground"}`}
+          onClick={() => onSelect(s)}
+          className={`w-full flex items-center gap-2 px-3 py-1.5 hover:bg-muted transition-colors text-left ${s === current ? "text-primary font-medium" : "text-foreground"}`}
         >
           <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${STATUS_DOT[s]}`} />
           {STATUS_LABELS[s]}
@@ -462,6 +491,127 @@ function AssigneeSearch({
   );
 }
 
+// ─── GroupCombobox — portal picker for the deliverable group (pick or create) ──
+
+function GroupCombobox({
+  groups, current, onSelect, onClose, anchorEl,
+}: {
+  groups: string[];
+  current: string | null;
+  onSelect: (group: string | null) => void;
+  onClose: () => void;
+  anchorEl: HTMLElement | null;
+}) {
+  const [query, setQuery] = useState("");
+  const [activeIndex, setActiveIndex] = useState(0);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const pos = useAnchorPos(anchorEl);
+  useEffect(() => { if (pos) inputRef.current?.focus(); }, [pos]);
+  useOutsideClose(anchorEl, onClose);
+
+  const q = query.trim();
+  const filtered = groups.filter((g) => g.toLowerCase().includes(q.toLowerCase()));
+  const canCreate = q.length > 0 && !groups.some((g) => g.toLowerCase() === q.toLowerCase());
+
+  // Empty query → "Ungrouped" (clear) + all groups. Typing → matches first, then
+  // a "Create '<q>'" option, so Enter matches or creates (never clears).
+  const options: { value: string | null; label: string; create?: boolean }[] =
+    q.length === 0
+      ? [{ value: null, label: "Ungrouped" }, ...groups.map((g) => ({ value: g, label: g }))]
+      : [
+          ...filtered.map((g) => ({ value: g, label: g })),
+          ...(canCreate ? [{ value: q, label: `Create "${q}"`, create: true }] : []),
+        ];
+  useEffect(() => { setActiveIndex(0); }, [query]);
+
+  if (!pos) return null;
+
+  return createPortal(
+    <div
+      style={{ position: "absolute", top: pos.top + 2, left: pos.left, zIndex: 9999, fontFamily: "var(--font-mono)" }}
+      onMouseDown={(e) => e.stopPropagation()}
+      className="w-52 bg-card border border-border rounded-lg shadow-md overflow-hidden"
+      data-testid="group-combobox"
+    >
+      <div className="p-1.5 border-b border-border">
+        <input
+          ref={inputRef}
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "ArrowDown") { e.preventDefault(); setActiveIndex((i) => Math.min(i + 1, options.length - 1)); }
+            else if (e.key === "ArrowUp") { e.preventDefault(); setActiveIndex((i) => Math.max(i - 1, 0)); }
+            else if (e.key === "Enter") { e.preventDefault(); const o = options[activeIndex]; if (o) onSelect(o.value); }
+            else if (e.key === "Escape") { e.preventDefault(); onClose(); }
+          }}
+          placeholder="Filter or type a new group…"
+          className="w-full text-xs bg-transparent outline-none px-1 py-0.5 text-foreground placeholder:text-muted-foreground/60"
+        />
+      </div>
+      <div className="max-h-40 overflow-y-auto py-1">
+        {options.map((opt, idx) => {
+          const isActive = idx === activeIndex;
+          const isCurrent = (opt.value || null) === (current || null) && !opt.create;
+          return (
+            <button
+              key={opt.create ? "__create__" : opt.value ?? "__none__"}
+              type="button"
+              onClick={() => onSelect(opt.value)}
+              onMouseEnter={() => setActiveIndex(idx)}
+              data-active={isActive ? "true" : undefined}
+              className={`w-full flex items-center gap-2 px-3 py-1.5 transition-colors text-left text-xs ${
+                isActive ? "bg-muted" : ""
+              } ${isCurrent ? "text-primary font-medium" : opt.value ? "text-foreground" : "text-muted-foreground"}`}
+            >
+              {opt.label}
+              {isCurrent && <span className="ml-auto">✓</span>}
+            </button>
+          );
+        })}
+      </div>
+    </div>,
+    document.body
+  );
+}
+
+// ─── PriorityMenu — small portal menu (LOW / MEDIUM / HIGH) ───────────────────
+
+function PriorityMenu({
+  current, onSelect, onClose, anchorEl,
+}: {
+  current: DeliverablePriority;
+  onSelect: (p: DeliverablePriority) => void;
+  onClose: () => void;
+  anchorEl: HTMLElement | null;
+}) {
+  const pos = useAnchorPos(anchorEl);
+  useOutsideClose(anchorEl, onClose);
+  if (!pos) return null;
+  return createPortal(
+    <div
+      style={{ position: "absolute", top: pos.top + 2, left: pos.left, zIndex: 9999, fontFamily: "var(--font-mono)" }}
+      onMouseDown={(e) => e.stopPropagation()}
+      className="min-w-[120px] bg-card border border-border rounded-lg shadow-md py-1 text-xs"
+      data-testid="priority-menu"
+    >
+      {ALL_PRIORITIES.map((p) => (
+        <button
+          key={p}
+          type="button"
+          onClick={() => onSelect(p)}
+          className={`w-full flex items-center gap-2 px-3 py-1.5 hover:bg-muted transition-colors text-left ${p === current ? "text-primary font-medium" : "text-foreground"}`}
+        >
+          <span className={`inline-flex items-center text-[10px] font-medium px-1.5 py-0.5 rounded-full ${PRIORITY_META[p].cls}`}>
+            {PRIORITY_META[p].label}
+          </span>
+          {p === current && <span className="ml-auto text-muted-foreground">✓</span>}
+        </button>
+      ))}
+    </div>,
+    document.body
+  );
+}
+
 // ─── Main component ────────────────────────────────────────────────────────────
 
 export function SortableDeliverables({
@@ -473,10 +623,38 @@ export function SortableDeliverables({
   deleteDeliverableAction,
 }: SortableDeliverablesProps) {
   const [sortByStatus, setSortByStatus] = useState(false);
+  const [groupFilter, setGroupFilter] = useState<string>("ALL"); // "ALL" | "UNGROUPED" | <group>
+  const [, startMoveTransition] = useTransition();
   const [confirmingDelete, setConfirmingDelete] = useState<string | null>(null);
 
   // Deliverable status popover (standalone deliverables only)
   const [deliverableStatusMenuFor, setDeliverableStatusMenuFor] = useState<string | null>(null);
+
+  // Pending deliverable status confirm (✓/✗ microinteraction, no-subtask deliverables)
+  const [pendingDeliverableStatus, setPendingDeliverableStatus] = useState<{
+    id: string;
+    status: TimelineStatus;
+  } | null>(null);
+  const [isDelivStatusPending, startDelivStatusTransition] = useTransition();
+
+  // Armed deliverable delete confirm (✓/✗ microinteraction)
+  const [confirmingDeliverableDelete, setConfirmingDeliverableDelete] = useState<string | null>(null);
+  const [isDelivDeletePending, startDelivDeleteTransition] = useTransition();
+
+  // Inline group combobox
+  const [groupMenuFor, setGroupMenuFor] = useState<string | null>(null);
+  const [, startGroupTransition] = useTransition();
+  const deliverableGroupRefs = useRef<Map<string, HTMLButtonElement | null>>(new Map());
+
+  // Deliverable description: click body to expand; inline (md/plain) edit while open
+  const [expandedDeliverableId, setExpandedDeliverableId] = useState<string | null>(null);
+  const [deliverableDescEdit, setDeliverableDescEdit] = useState<{ id: string; value: string } | null>(null);
+  const [isDescPending, startDescTransition] = useTransition();
+
+  // Inline priority menu
+  const [priorityMenuFor, setPriorityMenuFor] = useState<string | null>(null);
+  const [, startPriorityTransition] = useTransition();
+  const deliverablePriorityRefs = useRef<Map<string, HTMLButtonElement | null>>(new Map());
 
   // Pending status-pill confirm (hoisted so other interactions can cancel it)
   const [pendingStatusEdit, setPendingStatusEdit] = useState<{
@@ -498,6 +676,9 @@ export function SortableDeliverables({
 
   // Click a subtask title to expand its description (pushes siblings down)
   const [expandedSubtaskId, setExpandedSubtaskId] = useState<string | null>(null);
+  // Inline-edit the expanded subtask description (Markdown/plain), like deliverables
+  const [subtaskDescEdit, setSubtaskDescEdit] = useState<{ id: string; value: string } | null>(null);
+  const [isSubtaskDescPending, startSubtaskDescTransition] = useTransition();
 
   // Deliverable inline editing
   const [deliverableEdit, setDeliverableEdit] = useState<{
@@ -510,6 +691,53 @@ export function SortableDeliverables({
   const [isDelivEditPending, startDelivEditTransition] = useTransition();
   const [delivEditError, setDelivEditError] = useState<string | null>(null);
   const delivTitleInputRef = useRef<HTMLInputElement | null>(null);
+
+  function confirmDeliverableStatus() {
+    if (!pendingDeliverableStatus || isDelivStatusPending) return;
+    const { id, status } = pendingDeliverableStatus;
+    setPendingDeliverableStatus(null);
+    startDelivStatusTransition(async () => { await updateDeliverableStatus(id, status); });
+  }
+  function cancelDeliverableStatus() {
+    setPendingDeliverableStatus(null);
+  }
+
+  function confirmDeliverableDelete(id: string) {
+    if (isDelivDeletePending) return;
+    startDelivDeleteTransition(async () => {
+      await deleteDeliverableAction(id);
+      setConfirmingDeliverableDelete(null);
+    });
+  }
+
+  // Distinct groups used across this project's deliverables (for the combobox)
+  const allGroups = Array.from(
+    new Set(deliverables.map((d) => d.group).filter((g): g is string => !!g))
+  ).sort((a, b) => a.localeCompare(b));
+
+  function commitGroup(id: string, group: string | null) {
+    setGroupMenuFor(null);
+    startGroupTransition(async () => { await updateDeliverableGroup(id, group); });
+  }
+
+  function commitDescEdit() {
+    if (!deliverableDescEdit || isDescPending) return;
+    const { id, value } = deliverableDescEdit;
+    setDeliverableDescEdit(null);
+    startDescTransition(async () => { await updateDeliverableDescription(id, value || null); });
+  }
+
+  function commitSubtaskDescEdit() {
+    if (!subtaskDescEdit || isSubtaskDescPending) return;
+    const { id, value } = subtaskDescEdit;
+    setSubtaskDescEdit(null);
+    startSubtaskDescTransition(async () => { await updateSubtaskDescription(id, value || null); });
+  }
+
+  function commitPriority(id: string, priority: DeliverablePriority) {
+    setPriorityMenuFor(null);
+    startPriorityTransition(async () => { await updateDeliverablePriority(id, priority); });
+  }
 
   function startDelivEdit(field: "title" | "dates", d: Deliverable) {
     setDeliverableEdit({
@@ -586,11 +814,26 @@ export function SortableDeliverables({
     setPendingStatusEdit(null);
   }
 
-  // ── Sort + group ───────────────────────────────────────────────────────────
+  // ── Filter + sort + group ────────────────────────────────────────────────────
+
+  function moveDeliv(id: string, dir: "up" | "down") {
+    startMoveTransition(async () => { await moveDeliverable(id, dir); });
+  }
+
+  // Default within-group order: priority DESC (HIGH on top), then manual orderIndex.
+  const byPriorityThenOrder = (a: Deliverable, b: Deliverable) =>
+    PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority] || a.orderIndex - b.orderIndex;
+
+  const filteredDeliverables =
+    groupFilter === "ALL"
+      ? deliverables
+      : groupFilter === "UNGROUPED"
+        ? deliverables.filter((d) => !d.group)
+        : deliverables.filter((d) => d.group === groupFilter);
 
   const sorted = sortByStatus
-    ? [...deliverables].sort((a, b) => STATUS_ORDER[a.status] - STATUS_ORDER[b.status])
-    : deliverables;
+    ? [...filteredDeliverables].sort((a, b) => STATUS_ORDER[a.status] - STATUS_ORDER[b.status])
+    : filteredDeliverables;
 
   const useGroups = !sortByStatus && sorted.some((d) => d.group);
 
@@ -604,10 +847,10 @@ export function SortableDeliverables({
     }
     sections = Array.from(groupMap.entries()).map(([label, items]) => ({
       label: label || null,
-      items,
+      items: [...items].sort(byPriorityThenOrder),
     }));
   } else {
-    sections = [{ label: null, items: sorted }];
+    sections = [{ label: null, items: sortByStatus ? sorted : [...sorted].sort(byPriorityThenOrder) }];
   }
 
   // ── Render ─────────────────────────────────────────────────────────────────
@@ -618,6 +861,22 @@ export function SortableDeliverables({
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-sm font-semibold text-foreground">Deliverables</h2>
         <div className="flex items-center gap-3">
+          {allGroups.length > 0 && (
+            <select
+              value={groupFilter}
+              onChange={(e) => setGroupFilter(e.target.value)}
+              className="text-xs bg-transparent border border-border rounded-md px-2 py-1 text-muted-foreground hover:text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
+              style={{ fontFamily: "var(--font-mono)" }}
+              data-testid="group-filter"
+              aria-label="Filter by group"
+            >
+              <option value="ALL">All groups</option>
+              <option value="UNGROUPED">Ungrouped</option>
+              {allGroups.map((g) => (
+                <option key={g} value={g}>{g}</option>
+              ))}
+            </select>
+          )}
           <button
             onClick={() => setSortByStatus((s) => !s)}
             className={`inline-flex items-center gap-1.5 text-xs transition-colors ${
@@ -674,16 +933,30 @@ export function SortableDeliverables({
               )}
 
               <div className="space-y-3">
-                {items.map((deliverable) => {
+                {items.map((deliverable, di) => {
                   const badge = STATUS_BADGE[deliverable.status];
                   const isOverdue = !deliverable.completed && new Date(deliverable.targetDate) < new Date();
+                  // Items are sorted priority-then-orderIndex, so same-priority rows are
+                  // contiguous; a deliverable can move within its priority tier only.
+                  const canMoveUp = !sortByStatus && di > 0 && items[di - 1].priority === deliverable.priority;
+                  const canMoveDown = !sortByStatus && di < items.length - 1 && items[di + 1].priority === deliverable.priority;
                   const hasSubtasks = deliverable.subtasks.length > 0;
 
                   return (
-                    <div key={deliverable.id} className="border border-border rounded-xl overflow-hidden">
-                      {/* Deliverable header */}
-                      {/* eslint-disable-next-line @typescript-eslint/no-unused-vars */}
-                      <div className="flex items-start justify-between gap-4 p-4 bg-card group/deliv">
+                    <div key={deliverable.id} data-deliverable-id={deliverable.id} className="border border-border rounded-xl overflow-hidden">
+                      {/* Deliverable header — click the body (not a control) to expand the description */}
+                      <div
+                        className="flex items-start justify-between gap-4 p-4 bg-card group/deliv cursor-pointer"
+                        role="button"
+                        aria-expanded={expandedDeliverableId === deliverable.id}
+                        data-testid="deliverable-header"
+                        onClick={(e) => {
+                          if ((e.target as HTMLElement).closest(
+                            'button, a, input, select, textarea, [data-no-expand]'
+                          )) return;
+                          setExpandedDeliverableId((cur) => (cur === deliverable.id ? null : deliverable.id));
+                        }}
+                      >
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
                             {/* Inline title edit */}
@@ -752,29 +1025,50 @@ export function SortableDeliverables({
                                 </TooltipContent>
                               </Tooltip>
                             ) : canEdit ? (
-                              <div className="relative">
+                              (() => {
+                                const pending = pendingDeliverableStatus?.id === deliverable.id
+                                  ? pendingDeliverableStatus.status
+                                  : null;
+                                const dispBadge = STATUS_BADGE[pending ?? deliverable.status];
+                                return (
+                              <div className="relative inline-flex items-center gap-1">
                                 <button
                                   ref={(el) => { deliverableDotRefs.current.set(deliverable.id, el); }}
                                   type="button"
-                                  onClick={() =>
+                                  onClick={() => {
+                                    if (pending) return;
                                     setDeliverableStatusMenuFor(
                                       deliverableStatusMenuFor === deliverable.id ? null : deliverable.id
-                                    )
-                                  }
-                                  className={`inline-flex items-center text-[10px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded-full hover:opacity-80 transition-opacity cursor-pointer ${badge.bg} ${badge.text}`}
-                                  title="Change status"
+                                    );
+                                  }}
+                                  className={`inline-flex items-center text-[10px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded-full transition-opacity ${pending ? "" : "hover:opacity-80 cursor-pointer"} ${dispBadge.bg} ${dispBadge.text}`}
+                                  title={pending ? undefined : "Change status"}
+                                  data-testid="deliverable-status-badge"
                                 >
-                                  {badge.label}
+                                  {dispBadge.label}
                                 </button>
+                                <span data-testid="deliv-status-confirm">
+                                  <InlineConfirm
+                                    show={pending !== null}
+                                    onConfirm={confirmDeliverableStatus}
+                                    onCancel={cancelDeliverableStatus}
+                                    disabled={isDelivStatusPending}
+                                  />
+                                </span>
                                 {deliverableStatusMenuFor === deliverable.id && (
                                   <DeliverableStatusPopover
-                                    deliverableId={deliverable.id}
                                     current={deliverable.status}
+                                    onSelect={(s) => {
+                                      setPendingDeliverableStatus({ id: deliverable.id, status: s });
+                                      setDeliverableStatusMenuFor(null);
+                                    }}
                                     onClose={() => setDeliverableStatusMenuFor(null)}
                                     anchorEl={deliverableDotRefs.current.get(deliverable.id) ?? null}
                                   />
                                 )}
                               </div>
+                                );
+                              })()
                             ) : (
                               <span
                                 className={`inline-flex items-center text-[10px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded-full ${badge.bg} ${badge.text}`}
@@ -782,12 +1076,86 @@ export function SortableDeliverables({
                                 {badge.label}
                               </span>
                             )}
+
+                            {/* Inline priority chip / menu */}
+                            {canEdit ? (
+                              <div className="relative inline-flex">
+                                <button
+                                  ref={(el) => { deliverablePriorityRefs.current.set(deliverable.id, el); }}
+                                  type="button"
+                                  onClick={() =>
+                                    setPriorityMenuFor(priorityMenuFor === deliverable.id ? null : deliverable.id)
+                                  }
+                                  className={`inline-flex items-center text-[10px] font-medium px-1.5 py-0.5 rounded-full transition-opacity hover:opacity-80 ${PRIORITY_META[deliverable.priority].cls}`}
+                                  style={{ fontFamily: "var(--font-mono)" }}
+                                  title="Set priority"
+                                  data-testid="deliverable-priority"
+                                >
+                                  {PRIORITY_META[deliverable.priority].label}
+                                </button>
+                                {priorityMenuFor === deliverable.id && (
+                                  <PriorityMenu
+                                    current={deliverable.priority}
+                                    onSelect={(p) => commitPriority(deliverable.id, p)}
+                                    onClose={() => setPriorityMenuFor(null)}
+                                    anchorEl={deliverablePriorityRefs.current.get(deliverable.id) ?? null}
+                                  />
+                                )}
+                              </div>
+                            ) : (
+                              <span
+                                className={`inline-flex items-center text-[10px] font-medium px-1.5 py-0.5 rounded-full ${PRIORITY_META[deliverable.priority].cls}`}
+                                style={{ fontFamily: "var(--font-mono)" }}
+                              >
+                                {PRIORITY_META[deliverable.priority].label}
+                              </span>
+                            )}
+
+                            {/* Inline group chip / combobox */}
+                            {canEdit ? (
+                              <div className="relative inline-flex">
+                                <button
+                                  ref={(el) => { deliverableGroupRefs.current.set(deliverable.id, el); }}
+                                  type="button"
+                                  onClick={() =>
+                                    setGroupMenuFor(groupMenuFor === deliverable.id ? null : deliverable.id)
+                                  }
+                                  className={`inline-flex items-center text-[10px] font-medium px-1.5 py-0.5 rounded-full transition-colors ${
+                                    deliverable.group
+                                      ? "bg-muted text-muted-foreground hover:text-foreground"
+                                      : "text-muted-foreground/60 hover:text-foreground"
+                                  }`}
+                                  style={{ fontFamily: "var(--font-mono)" }}
+                                  title="Edit group"
+                                  data-testid="deliverable-group"
+                                >
+                                  {deliverable.group ?? "+ Group"}
+                                </button>
+                                {groupMenuFor === deliverable.id && (
+                                  <GroupCombobox
+                                    groups={allGroups}
+                                    current={deliverable.group}
+                                    onSelect={(g) => commitGroup(deliverable.id, g)}
+                                    onClose={() => setGroupMenuFor(null)}
+                                    anchorEl={deliverableGroupRefs.current.get(deliverable.id) ?? null}
+                                  />
+                                )}
+                              </div>
+                            ) : deliverable.group ? (
+                              <span
+                                className="inline-flex items-center text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground"
+                                style={{ fontFamily: "var(--font-mono)" }}
+                              >
+                                {deliverable.group}
+                              </span>
+                            ) : null}
                           </div>
                           {/* Inline dates edit */}
                           {deliverableEdit?.id === deliverable.id && deliverableEdit.field === "dates" ? (
                             <div
                               className="flex flex-wrap items-center gap-2 mt-1 text-xs"
                               style={{ fontFamily: "var(--font-mono)" }}
+                              data-testid="deliv-dates-edit"
                             >
                               <span className="text-muted-foreground">Start:</span>
                               <input
@@ -854,25 +1222,133 @@ export function SortableDeliverables({
                         </div>
                         {canManage && (
                           <div className="flex items-center gap-2 flex-shrink-0">
-                            <Link
-                              href={`/projects/${projectId}/deliverables/${deliverable.id}/edit`}
-                              className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-                              style={{ fontFamily: "var(--font-mono)" }}
-                            >
-                              Edit
-                            </Link>
-                            <form action={async () => { await deleteDeliverableAction(deliverable.id); }}>
+                            {(canMoveUp || canMoveDown) && (
+                              <div className="flex flex-col -my-1" data-testid="deliverable-reorder">
+                                <button
+                                  type="button"
+                                  onClick={() => moveDeliv(deliverable.id, "up")}
+                                  disabled={!canMoveUp}
+                                  className="text-muted-foreground hover:text-foreground disabled:opacity-30 disabled:pointer-events-none transition-colors"
+                                  title="Move up"
+                                  data-testid="deliverable-move-up"
+                                >
+                                  <CaretUp size={11} weight="bold" />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => moveDeliv(deliverable.id, "down")}
+                                  disabled={!canMoveDown}
+                                  className="text-muted-foreground hover:text-foreground disabled:opacity-30 disabled:pointer-events-none transition-colors"
+                                  title="Move down"
+                                  data-testid="deliverable-move-down"
+                                >
+                                  <CaretDown size={11} weight="bold" />
+                                </button>
+                              </div>
+                            )}
+                            <DeliverableModal
+                              deliverable={{
+                                id: deliverable.id,
+                                title: deliverable.title,
+                                description: deliverable.description,
+                                status: deliverable.status,
+                                priority: deliverable.priority,
+                                group: deliverable.group,
+                                startDate: deliverable.startDate,
+                                targetDate: deliverable.targetDate,
+                              }}
+                              groups={allGroups}
+                              hasSubtasks={deliverable.subtasks.length > 0}
+                              trigger={
+                                <button
+                                  type="button"
+                                  className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                                  style={{ fontFamily: "var(--font-mono)" }}
+                                  data-testid="deliverable-edit"
+                                >
+                                  Edit
+                                </button>
+                              }
+                            />
+                            {confirmingDeliverableDelete === deliverable.id ? (
+                              <span
+                                className="inline-flex items-center gap-1 text-xs text-muted-foreground"
+                                style={{ fontFamily: "var(--font-mono)" }}
+                                data-testid="deliv-delete-confirm"
+                              >
+                                Delete?
+                                <InlineConfirm
+                                  show
+                                  onConfirm={() => confirmDeliverableDelete(deliverable.id)}
+                                  onCancel={() => setConfirmingDeliverableDelete(null)}
+                                  disabled={isDelivDeletePending}
+                                />
+                              </span>
+                            ) : (
                               <button
-                                type="submit"
+                                type="button"
+                                onClick={() => setConfirmingDeliverableDelete(deliverable.id)}
                                 className="text-xs text-muted-foreground hover:text-[#A4503C] transition-colors"
                                 style={{ fontFamily: "var(--font-mono)" }}
+                                data-testid="deliverable-delete"
                               >
                                 Delete
                               </button>
-                            </form>
+                            )}
                           </div>
                         )}
                       </div>
+
+                      {/* Expanded description — read + inline (md/plain) edit, no modal */}
+                      {expandedDeliverableId === deliverable.id && (
+                        <div
+                          className="px-4 pb-3 border-t border-border bg-card text-xs text-muted-foreground"
+                          data-testid="deliverable-description"
+                        >
+                          {deliverableDescEdit?.id === deliverable.id ? (
+                            <div className="pt-3 space-y-2">
+                              <MarkdownEditor
+                                value={deliverableDescEdit.value}
+                                onChange={(v) => setDeliverableDescEdit({ id: deliverable.id, value: v })}
+                                rows={4}
+                                placeholder="Describe this deliverable… (Markdown supported)"
+                                textareaTestId="deliverable-desc-input"
+                              />
+                              <div className="flex justify-end">
+                                <InlineConfirm
+                                  show
+                                  onConfirm={commitDescEdit}
+                                  onCancel={() => setDeliverableDescEdit(null)}
+                                  disabled={isDescPending}
+                                />
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="pt-3 flex items-start justify-between gap-2 group/deliv-desc">
+                              <div className="flex-1 min-w-0">
+                                {deliverable.description ? (
+                                  <MarkdownView>{deliverable.description}</MarkdownView>
+                                ) : (
+                                  <p className="italic opacity-60">No description</p>
+                                )}
+                              </div>
+                              {canEdit && (
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    setDeliverableDescEdit({ id: deliverable.id, value: deliverable.description ?? "" })
+                                  }
+                                  className="flex-shrink-0 text-muted-foreground hover:text-foreground transition-colors"
+                                  title="Edit description"
+                                  data-testid="deliverable-desc-edit"
+                                >
+                                  <PencilSimple size={12} />
+                                </button>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      )}
 
                       {/* Subtask rows */}
                       {deliverable.subtasks.length > 0 && (
@@ -1225,10 +1701,47 @@ export function SortableDeliverables({
                                   className="px-4 pb-3 pl-[1.375rem] text-xs text-muted-foreground"
                                   data-testid="subtask-description"
                                 >
-                                  {subtask.description ? (
-                                    <MarkdownView>{subtask.description}</MarkdownView>
+                                  {subtaskDescEdit?.id === subtask.id ? (
+                                    <div className="space-y-2">
+                                      <MarkdownEditor
+                                        value={subtaskDescEdit.value}
+                                        onChange={(v) => setSubtaskDescEdit({ id: subtask.id, value: v })}
+                                        rows={3}
+                                        placeholder="Describe this subtask… (Markdown supported)"
+                                        textareaTestId="subtask-desc-input"
+                                      />
+                                      <div className="flex justify-end">
+                                        <InlineConfirm
+                                          show
+                                          onConfirm={commitSubtaskDescEdit}
+                                          onCancel={() => setSubtaskDescEdit(null)}
+                                          disabled={isSubtaskDescPending}
+                                        />
+                                      </div>
+                                    </div>
                                   ) : (
-                                    <p className="italic opacity-60">No description</p>
+                                    <div className="flex items-start justify-between gap-2 group/subtask-desc">
+                                      <div className="flex-1 min-w-0">
+                                        {subtask.description ? (
+                                          <MarkdownView>{subtask.description}</MarkdownView>
+                                        ) : (
+                                          <p className="italic opacity-60">No description</p>
+                                        )}
+                                      </div>
+                                      {canEdit && (
+                                        <button
+                                          type="button"
+                                          onClick={() =>
+                                            setSubtaskDescEdit({ id: subtask.id, value: subtask.description ?? "" })
+                                          }
+                                          className="flex-shrink-0 text-muted-foreground hover:text-foreground transition-colors"
+                                          title="Edit description"
+                                          data-testid="subtask-desc-edit"
+                                        >
+                                          <PencilSimple size={11} />
+                                        </button>
+                                      )}
+                                    </div>
                                   )}
                                 </div>
                               )}
