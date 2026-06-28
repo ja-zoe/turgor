@@ -485,6 +485,9 @@ export function SortableDeliverables({
   // doesn't cancel the pending selection before ✓ is clicked
   const [assigneePickerOpen, setAssigneePickerOpen] = useState(false);
 
+  // Click a subtask title to expand its description (pushes siblings down)
+  const [expandedSubtaskId, setExpandedSubtaskId] = useState<string | null>(null);
+
   // Deliverable inline editing
   const [deliverableEdit, setDeliverableEdit] = useState<{
     id: string;
@@ -895,9 +898,10 @@ export function SortableDeliverables({
                             return (
                               <div
                                 key={subtask.id}
-                                className="group/subtask flex items-center justify-between px-4 py-2.5 bg-background/50"
+                                className="group/subtask bg-background/50"
                                 data-testid="subtask-row"
                               >
+                              <div className="flex items-center justify-between px-4 py-2.5">
                                 {/* ── Far-left status bullet (visual only, glows on hover/edit) ── */}
                                 <span
                                   aria-hidden
@@ -940,7 +944,20 @@ export function SortableDeliverables({
                                       </>
                                     ) : (
                                       <>
-                                        <span className="text-xs text-foreground truncate">{subtask.title}</span>
+                                        <button
+                                          type="button"
+                                          onClick={() =>
+                                            setExpandedSubtaskId((cur) =>
+                                              cur === subtask.id ? null : subtask.id
+                                            )
+                                          }
+                                          aria-expanded={expandedSubtaskId === subtask.id}
+                                          className="text-xs text-foreground truncate text-left hover:text-primary transition-colors"
+                                          data-testid="subtask-title-toggle"
+                                          title="Show description"
+                                        >
+                                          {subtask.title}
+                                        </button>
                                         {canEdit && (
                                           <button
                                             type="button"
@@ -1173,6 +1190,21 @@ export function SortableDeliverables({
                                     </div>
                                   )}
                                 </div>
+                              </div>
+
+                              {/* Expanded description — pushes following rows down */}
+                              {expandedSubtaskId === subtask.id && (
+                                <div
+                                  className="px-4 pb-3 pl-[1.375rem] text-xs text-muted-foreground"
+                                  data-testid="subtask-description"
+                                >
+                                  {subtask.description ? (
+                                    <p className="whitespace-pre-wrap">{subtask.description}</p>
+                                  ) : (
+                                    <p className="italic opacity-60">No description</p>
+                                  )}
+                                </div>
+                              )}
                               </div>
                             );
                           })}
