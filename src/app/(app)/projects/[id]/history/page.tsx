@@ -4,6 +4,7 @@ import { requireAuth, getUserPermissions, getProjectMembership } from "@/lib/per
 import { prisma } from "@/lib/prisma";
 import { Permission } from "@/generated/prisma";
 import { ProjectStatusBadge } from "@/components/status-badge";
+import { MeetingRecordControls } from "@/components/meeting-record-controls";
 import { ArrowLeft, ClipboardText, CalendarCheck, Clock } from "@phosphor-icons/react/dist/ssr";
 import { getDisplayName } from "@/lib/utils";
 
@@ -18,6 +19,7 @@ export default async function ProjectHistoryPage({
   const canViewAll =
     permissions.includes(Permission.VIEW_ALL_PROJECTS) ||
     permissions.includes(Permission.MANAGE_PROJECTS);
+  const canManageMeetingRecords = permissions.includes(Permission.MANAGE_MEETING_RECORDS);
 
   const project = await prisma.project.findUnique({
     where: { id },
@@ -215,6 +217,11 @@ export default async function ProjectHistoryPage({
                       >
                         by {getDisplayName(m.recordedBy)}
                       </span>
+                      {canManageMeetingRecords && (
+                        <span className="ml-auto">
+                          <MeetingRecordControls recordId={m.id} />
+                        </span>
+                      )}
                     </div>
 
                     <div className="flex items-center gap-3 mb-2 flex-wrap">
