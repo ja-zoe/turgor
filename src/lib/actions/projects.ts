@@ -68,6 +68,16 @@ export async function deleteProject(projectId: string) {
   redirect("/projects");
 }
 
+export async function deleteProjects(ids: string[]) {
+  await requirePermission(Permission.MANAGE_PROJECTS);
+
+  if (!ids || ids.length === 0) return;
+
+  await prisma.project.deleteMany({ where: { id: { in: ids } } });
+
+  revalidatePath("/projects");
+}
+
 export async function overrideProjectStatus(
   projectId: string,
   status: ProjectStatus,
