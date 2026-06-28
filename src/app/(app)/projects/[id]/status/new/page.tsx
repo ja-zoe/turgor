@@ -2,6 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import { requireAuth, getProjectMembership } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { submitStatusUpdate } from "@/lib/actions/status-updates";
+import { SubmitButton } from "@/components/submit-button";
 import { ArrowLeft } from "@phosphor-icons/react/dist/ssr";
 import Link from "next/link";
 
@@ -124,12 +125,11 @@ export default async function SubmitStatusUpdatePage({
         </div>
 
         <div className="flex items-center gap-3 pt-2">
-          <button
-            type="submit"
-            className="rounded-md bg-primary text-primary-foreground text-sm font-medium px-5 py-2.5 hover:bg-primary/80 transition-colors"
-          >
-            Submit Update
-          </button>
+          <SubmitButton
+            label="Submit Update"
+            pendingLabel="Submitting…"
+            className="rounded-md bg-primary text-primary-foreground text-sm font-medium px-5 py-2.5 hover:bg-primary/80 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          />
           <Link
             href={`/projects/${id}`}
             className="text-sm text-muted-foreground hover:text-foreground transition-colors"
