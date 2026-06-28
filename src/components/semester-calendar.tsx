@@ -16,6 +16,7 @@ import {
   GridFour,
 } from "@phosphor-icons/react";
 import { createEvent, updateEvent, deleteEvent } from "@/lib/actions/calendar";
+import { googleCalendarUrl } from "@/lib/calendar-export";
 
 type EventType = "PROJECT_MEETING" | "NON_PROJECT_EVENT" | "LEAD_MEETING" | "EBOARD_MEETING";
 
@@ -176,6 +177,30 @@ function EventEditor({ event, defaultDate, semester, projects, canEdit, onClose 
             </p>
             {event.location && <p className="text-xs text-muted-foreground">{event.location}</p>}
             {event.description && <p className="text-sm text-foreground">{event.description}</p>}
+          </div>
+        )}
+
+        {/* Per-event "Add to Google Calendar" — for any viewer of an existing event */}
+        {event && !isNew && (
+          <div className="px-5 pt-3">
+            <a
+              href={googleCalendarUrl({
+                id: event.id,
+                title: event.title,
+                startsAt: new Date(event.startsAt),
+                endsAt: event.endsAt ? new Date(event.endsAt) : null,
+                allDay: event.allDay,
+                location: event.location,
+                description: event.description,
+              })}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 text-xs text-primary hover:underline"
+              style={{ fontFamily: "var(--font-mono)" }}
+              data-testid="add-to-google"
+            >
+              <CalendarBlank size={12} /> Add to Google Calendar
+            </a>
           </div>
         )}
 
@@ -652,6 +677,15 @@ export function SemesterCalendar({ events, canEdit, semester, allSemesters, proj
               Agenda
             </button>
           </div>
+
+          <a
+            href={`/api/calendar/ics${semester ? `?semester=${encodeURIComponent(semester)}` : ""}`}
+            className="inline-flex items-center gap-1.5 rounded-md border border-border bg-card text-sm font-medium px-3 py-2 text-muted-foreground hover:text-foreground transition-colors"
+            data-testid="export-ics"
+          >
+            <CalendarBlank size={14} />
+            Export .ics
+          </a>
 
           {canEdit && (
             <button
