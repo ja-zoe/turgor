@@ -24,3 +24,18 @@ export async function getActiveLeadMeeting(projectId: string) {
   if (!meeting) return null;
   return { meeting, isLate: now > meeting.startsAt };
 }
+
+/**
+ * Whether the "Submit Update" affordance should appear for a project: there is an
+ * active lead meeting (inside its submit window) AND no update has been submitted
+ * for that meeting yet. Hidden once submitted or outside the window.
+ */
+export async function getStatusSubmissionState(projectId: string) {
+  const active = await getActiveLeadMeeting(projectId);
+  if (!active) return { active: null, submitted: false, canSubmit: false };
+  const existing = await prisma.statusUpdate.findFirst({
+    where: { projectId, calendarEventId: active.meeting.id },
+    select: { id: true },
+  });
+  return { active, submitted: !!existing, canSubmit: !existing };
+}

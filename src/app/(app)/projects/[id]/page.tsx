@@ -7,7 +7,7 @@ import { ProjectStatusBadge } from "@/components/status-badge";
 import { SortableDeliverables } from "@/components/sortable-deliverables";
 import { ProjectModal } from "@/components/project-modal";
 import { StatusUpdateControls } from "@/components/status-update-controls";
-import { getActiveLeadMeeting } from "@/lib/lead-meeting";
+import { getStatusSubmissionState } from "@/lib/lead-meeting";
 import {
   ArrowLeft,
   Plus,
@@ -89,11 +89,12 @@ export default async function ProjectDetailPage({
   const canViewAll = permissions.includes(Permission.VIEW_ALL_PROJECTS) || canManage;
   if (!membership && !canViewAll) notFound();
 
-  const activeLeadMeeting = await getActiveLeadMeeting(id);
+  const submissionState = await getStatusSubmissionState(id);
   const canManageStatusUpdates = permissions.includes(Permission.MANAGE_STATUS_UPDATES);
   const isLeadHere = membership?.role === "LEAD" || membership?.role === "SUBLEAD";
-  // "Submit Update" only appears when the project's lead meeting is open for submission.
-  const canSubmitStatus = isLeadHere && activeLeadMeeting !== null;
+  // "Submit Update" only appears for a lead when the project's lead meeting is open
+  // for submission AND nothing has been submitted for it yet.
+  const canSubmitStatus = isLeadHere && submissionState.canSubmit;
 
   // Per-update edit/delete gate: privileged any time, or own update before its meeting.
   const canModifyStatusUpdate = (u: { submittedById: string; meetingDate: Date; calendarEvent: { startsAt: Date } | null }) =>

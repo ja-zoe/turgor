@@ -66,25 +66,6 @@ export default async function SettingsPage() {
                 className="block text-xs text-muted-foreground mb-1"
                 style={{ fontFamily: "var(--font-mono)" }}
               >
-                Submission deadline (hours before meeting)
-              </label>
-              <input
-                type="number"
-                name="submissionDeadlineHours"
-                defaultValue={settings?.submissionDeadlineHours ?? 24}
-                min={1}
-                max={168}
-                className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
-              />
-              <p className="text-xs text-muted-foreground mt-1">
-                Submissions after this window are marked late.
-              </p>
-            </div>
-            <div>
-              <label
-                className="block text-xs text-muted-foreground mb-1"
-                style={{ fontFamily: "var(--font-mono)" }}
-              >
                 Status submit window (days before a lead meeting)
               </label>
               <input
