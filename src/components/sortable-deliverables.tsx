@@ -8,6 +8,7 @@ import {
   PencilSimple, CalendarBlank, UserCircle, CheckFat, LockSimple, NotePencil,
 } from "@phosphor-icons/react";
 import { SubtaskModal } from "@/components/subtask-modal";
+import { MarkdownView } from "@/components/markdown-view";
 import {
   deleteSubtask,
   updateSubtaskStatus,
@@ -911,7 +912,21 @@ export function SortableDeliverables({
                                 className="group/subtask bg-background/50"
                                 data-testid="subtask-row"
                               >
-                              <div className="flex items-center justify-between px-4 py-2.5">
+                              <div
+                                className="flex items-center justify-between px-4 py-2.5 cursor-pointer"
+                                role="button"
+                                aria-expanded={expandedSubtaskId === subtask.id}
+                                data-testid="subtask-row-body"
+                                onClick={(e) => {
+                                  // Toggle the description unless the click landed on an interactive control.
+                                  // (All inline controls are real <button>/<input> elements; the row's own
+                                  //  role="button" is a <div>, so closest('button') never self-matches.)
+                                  if ((e.target as HTMLElement).closest(
+                                    'button, a, input, select, textarea, [data-no-expand]'
+                                  )) return;
+                                  setExpandedSubtaskId((cur) => (cur === subtask.id ? null : subtask.id));
+                                }}
+                              >
                                 {/* ── Far-left status bullet (visual only, glows on hover/edit) ── */}
                                 <span
                                   aria-hidden
@@ -1211,7 +1226,7 @@ export function SortableDeliverables({
                                   data-testid="subtask-description"
                                 >
                                   {subtask.description ? (
-                                    <p className="whitespace-pre-wrap">{subtask.description}</p>
+                                    <MarkdownView>{subtask.description}</MarkdownView>
                                   ) : (
                                     <p className="italic opacity-60">No description</p>
                                   )}
