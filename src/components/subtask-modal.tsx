@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/dialog";
 import { createSubtask, updateSubtask } from "@/lib/actions/deliverables";
 import { getDisplayName } from "@/lib/utils";
+import { MarkdownEditor } from "@/components/markdown-editor";
 
 type TimelineStatus = "NOT_STARTED" | "IN_PROGRESS" | "BLOCKED" | "COMPLETE";
 
@@ -147,13 +148,12 @@ export function SubtaskModal({
             <label className={labelClass} style={{ fontFamily: "var(--font-mono)" }}>
               Description
             </label>
-            <textarea
+            <MarkdownEditor
               value={description}
-              onChange={(e) => setDescription(e.target.value)}
+              onChange={setDescription}
               rows={3}
-              placeholder="Optional details…"
-              className={`${inputClass} resize-none`}
-              data-testid="subtask-modal-description"
+              placeholder="Optional details… (Markdown supported)"
+              textareaTestId="subtask-modal-description"
             />
           </div>
 
