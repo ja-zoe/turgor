@@ -1130,6 +1130,7 @@ export function SortableDeliverables({
                             <div
                               className="flex flex-wrap items-center gap-2 mt-1 text-xs"
                               style={{ fontFamily: "var(--font-mono)" }}
+                              data-testid="deliv-dates-edit"
                             >
                               <span className="text-muted-foreground">Start:</span>
                               <input
