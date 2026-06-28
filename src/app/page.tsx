@@ -21,7 +21,7 @@ const features = [
   {
     icon: CalendarCheck,
     title: "Weekly check-ins",
-    body: "Leads submit structured status updates before each meeting. Timestamped, always allowed — visibly marked late if past the window.",
+    body: "Leads submit structured project standings before each meeting. Timestamped, always allowed — visibly marked late if past the window.",
   },
   {
     icon: Warning,

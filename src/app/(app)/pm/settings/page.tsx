@@ -5,7 +5,7 @@ import { updateSettings, createNotificationRule, toggleNotificationRule, deleteN
 import { Bell, Gauge, Trash } from "@phosphor-icons/react/dist/ssr";
 
 const TRIGGER_LABELS: Record<TriggerType, string> = {
-  MISSING_SUBMISSION: "Missing Status Submission",
+  MISSING_SUBMISSION: "Missing Project Standing",
   PROJECT_BEHIND: "Project Behind",
   ACTION_ITEM_DUE: "Action Item Due",
   GOAL_MISSED: "Weekly Goal Missed",
@@ -78,7 +78,7 @@ export default async function SettingsPage() {
                 data-testid="status-submit-window"
               />
               <p className="text-xs text-muted-foreground mt-1">
-                The &ldquo;Submit Update&rdquo; button appears this many days before a project&apos;s lead meeting.
+                The &ldquo;Submit Project Standing&rdquo; button appears this many days before a project&apos;s lead meeting.
               </p>
             </div>
             <div>

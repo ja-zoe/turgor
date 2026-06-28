@@ -92,7 +92,7 @@ export default async function ProjectDetailPage({
   const submissionState = await getStatusSubmissionState(id);
   const canManageStatusUpdates = permissions.includes(Permission.MANAGE_STATUS_UPDATES);
   const isLeadHere = membership?.role === "LEAD" || membership?.role === "SUBLEAD";
-  // "Submit Update" only appears for a lead when the project's lead meeting is open
+  // "Submit Project Standing" only appears for a lead when the project's lead meeting is open
   // for submission AND nothing has been submitted for it yet.
   const canSubmitStatus = isLeadHere && submissionState.canSubmit;
 
@@ -199,7 +199,7 @@ export default async function ProjectDetailPage({
                 className="inline-flex items-center gap-1.5 rounded-md border border-border bg-card text-sm font-medium px-3 py-2 hover:bg-muted transition-colors"
               >
                 <ClipboardText size={14} />
-                Submit Update
+                Submit Project Standing
               </Link>
             )}
             {canPostMeeting && (
@@ -503,14 +503,14 @@ export default async function ProjectDetailPage({
           className="text-xs text-muted-foreground hover:text-foreground transition-colors"
           style={{ fontFamily: "var(--font-mono)" }}
         >
-          Submission history →
+          Project Standing History →
         </Link>
       </div>
 
-      {/* Recent Status Updates */}
+      {/* Recent Project Standings */}
       {project.statusUpdates.length > 0 && (
         <section>
-          <h2 className="text-sm font-semibold text-foreground mb-4">Recent Status Updates</h2>
+          <h2 className="text-sm font-semibold text-foreground mb-4">Recent Project Standings</h2>
           <div className="space-y-3">
             {project.statusUpdates.map((update) => (
               <div key={update.id} className="p-4 bg-card border border-border rounded-xl">

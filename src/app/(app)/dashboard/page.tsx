@@ -400,7 +400,7 @@ export default async function DashboardPage() {
                       <div className="flex items-center gap-2 text-xs">
                         <ClipboardText size={12} className="text-[#C99846]" weight="fill" />
                         <span className="text-[#C99846]" style={{ fontFamily: "var(--font-mono)" }}>
-                          Status update due
+                          Project standing due
                         </span>
                       </div>
                       <Link
@@ -408,7 +408,7 @@ export default async function DashboardPage() {
                         className="text-xs font-medium text-[#C99846] hover:text-[#A4503C] transition-colors"
                         style={{ fontFamily: "var(--font-mono)" }}
                       >
-                        Submit update →
+                        Submit Project Standing →
                       </Link>
                     </div>
                   )}

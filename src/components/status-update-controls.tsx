@@ -56,7 +56,7 @@ function EditModal({ update, trigger }: { update: StatusUpdateData; trigger: Rea
       <DialogTrigger render={trigger} />
       <DialogContent className="bg-card max-w-lg" showCloseButton>
         <DialogHeader>
-          <DialogTitle>Edit status update</DialogTitle>
+          <DialogTitle>Edit project standing</DialogTitle>
         </DialogHeader>
         <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-1">
           {FIELDS.map(({ name, label }) => (

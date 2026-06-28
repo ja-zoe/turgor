@@ -1,15 +1,23 @@
 import { prisma } from "@/lib/prisma";
 
 /**
- * The project's "active" lead meeting for status submission, or null.
+ * The "active" lead meeting whose submission window is open for a project, or null.
  *
- * A LEAD_MEETING's submission window opens `statusSubmitWindowDays` before it. We
- * pick the **latest** lead meeting whose window has opened (`startsAt - window <= now`),
- * which is the upcoming one once we're inside its window, or the most recent past one
- * (so late submissions are still allowed until the next meeting's window opens).
- * `isLate` is true once we're past the meeting's start time.
+ * Lead meetings are **global per semester** (the PM schedules them on the calendar for
+ * all leads — they are not tied to a single project). For a project we look at lead
+ * meetings in the **same semester**. A meeting's window opens `statusSubmitWindowDays`
+ * before it; we pick the **latest** meeting whose window has opened
+ * (`startsAt - window <= now`), so when the PM schedules meetings on consecutive days
+ * the windows overlap into one continuous submission period. `isLate` is true once
+ * we're past that meeting's start time.
  */
 export async function getActiveLeadMeeting(projectId: string) {
+  const project = await prisma.project.findUnique({
+    where: { id: projectId },
+    select: { semester: true },
+  });
+  if (!project) return null;
+
   const settings = await prisma.settings.findUnique({ where: { id: "singleton" } });
   const windowDays = settings?.statusSubmitWindowDays ?? 3;
   const now = new Date();
@@ -17,7 +25,7 @@ export async function getActiveLeadMeeting(projectId: string) {
   const windowEnd = new Date(now.getTime() + windowDays * 86_400_000);
 
   const meeting = await prisma.calendarEvent.findFirst({
-    where: { projectId, type: "LEAD_MEETING", startsAt: { lte: windowEnd } },
+    where: { type: "LEAD_MEETING", semester: project.semester, startsAt: { lte: windowEnd } },
     orderBy: { startsAt: "desc" },
     select: { id: true, title: true, startsAt: true },
   });

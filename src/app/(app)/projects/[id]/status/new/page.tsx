@@ -48,7 +48,7 @@ export default async function SubmitStatusUpdatePage({
           className="text-xs text-muted-foreground uppercase tracking-widest mb-1"
           style={{ fontFamily: "var(--font-mono)" }}
         >
-          Status Update
+          Project Standing
         </p>
         <h1
           className="text-3xl text-foreground"
@@ -115,7 +115,7 @@ export default async function SubmitStatusUpdatePage({
 
         <div className="flex items-center gap-3 pt-2">
           <SubmitButton
-            label="Submit Update"
+            label="Submit Project Standing"
             pendingLabel="Submitting…"
             className="rounded-md bg-primary text-primary-foreground text-sm font-medium px-5 py-2.5 hover:bg-primary/80 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           />

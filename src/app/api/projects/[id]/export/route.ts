@@ -106,8 +106,8 @@ export async function GET(
     }
   }
 
-  // ── Sheet 2: Status Updates ───────────────────────────────────────────────
-  const suSheet = workbook.addWorksheet("Status Updates");
+  // ── Sheet 2: Project Standings ───────────────────────────────────────────────
+  const suSheet = workbook.addWorksheet("Project Standings");
   suSheet.columns = [
     { header: "Meeting Date", key: "meetingDate", width: 14 },
     { header: "Submitted By", key: "submittedBy", width: 22 },
