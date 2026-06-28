@@ -2,7 +2,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { requirePermission, requireAuth, getProjectMembership } from "@/lib/permissions";
-import { Permission, TimelineStatus } from "@/generated/prisma";
+import { Permission, TimelineStatus, Priority } from "@/generated/prisma";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
@@ -404,6 +404,25 @@ export async function updateDeliverableGroup(deliverableId: string, group: strin
   await prisma.deliverable.update({
     where: { id: deliverableId },
     data: { group: trimmed },
+  });
+
+  revalidatePath(`/projects/${deliverable.projectId}`);
+}
+
+export async function updateDeliverablePriority(deliverableId: string, priority: Priority) {
+  const user = await requireAuth();
+
+  const deliverable = await prisma.deliverable.findUniqueOrThrow({
+    where: { id: deliverableId },
+    select: { projectId: true },
+  });
+
+  const membership = await getProjectMembership(user.id, deliverable.projectId);
+  if (!membership) await requirePermission(Permission.MANAGE_MILESTONES);
+
+  await prisma.deliverable.update({
+    where: { id: deliverableId },
+    data: { priority },
   });
 
   revalidatePath(`/projects/${deliverable.projectId}`);
