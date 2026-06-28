@@ -21,6 +21,7 @@ import {
   updateDeliverableDates,
   updateDeliverableGroup,
   updateDeliverableDescription,
+  updateDeliverablePriority,
 } from "@/lib/actions/deliverables";
 import { getDisplayName } from "@/lib/utils";
 import {
@@ -28,6 +29,15 @@ import {
 } from "@/components/ui/tooltip";
 
 type TimelineStatus = "NOT_STARTED" | "IN_PROGRESS" | "BLOCKED" | "COMPLETE";
+type DeliverablePriority = "LOW" | "MEDIUM" | "HIGH";
+
+const PRIORITY_ORDER: Record<DeliverablePriority, number> = { HIGH: 0, MEDIUM: 1, LOW: 2 };
+const PRIORITY_META: Record<DeliverablePriority, { label: string; cls: string }> = {
+  HIGH: { label: "High", cls: "bg-[#FDEBEC] text-[#A4503C]" },
+  MEDIUM: { label: "Med", cls: "bg-[#FBF3DB] text-[#C99846]" },
+  LOW: { label: "Low", cls: "bg-muted text-muted-foreground" },
+};
+const ALL_PRIORITIES: DeliverablePriority[] = ["HIGH", "MEDIUM", "LOW"];
 
 interface Member {
   id: string;
@@ -51,6 +61,7 @@ interface Deliverable {
   title: string;
   description: string | null;
   status: TimelineStatus;
+  priority: DeliverablePriority;
   group: string | null;
   targetDate: string;
   startDate: string | null;
@@ -544,6 +555,44 @@ function GroupCombobox({
   );
 }
 
+// ─── PriorityMenu — small portal menu (LOW / MEDIUM / HIGH) ───────────────────
+
+function PriorityMenu({
+  current, onSelect, onClose, anchorEl,
+}: {
+  current: DeliverablePriority;
+  onSelect: (p: DeliverablePriority) => void;
+  onClose: () => void;
+  anchorEl: HTMLElement | null;
+}) {
+  const pos = useAnchorPos(anchorEl);
+  useOutsideClose(anchorEl, onClose);
+  if (!pos) return null;
+  return createPortal(
+    <div
+      style={{ position: "absolute", top: pos.top + 2, left: pos.left, zIndex: 9999, fontFamily: "var(--font-mono)" }}
+      onMouseDown={(e) => e.stopPropagation()}
+      className="min-w-[120px] bg-card border border-border rounded-lg shadow-md py-1 text-xs"
+      data-testid="priority-menu"
+    >
+      {ALL_PRIORITIES.map((p) => (
+        <button
+          key={p}
+          type="button"
+          onClick={() => onSelect(p)}
+          className={`w-full flex items-center gap-2 px-3 py-1.5 hover:bg-muted transition-colors text-left ${p === current ? "text-primary font-medium" : "text-foreground"}`}
+        >
+          <span className={`inline-flex items-center text-[10px] font-medium px-1.5 py-0.5 rounded-full ${PRIORITY_META[p].cls}`}>
+            {PRIORITY_META[p].label}
+          </span>
+          {p === current && <span className="ml-auto text-muted-foreground">✓</span>}
+        </button>
+      ))}
+    </div>,
+    document.body
+  );
+}
+
 // ─── Main component ────────────────────────────────────────────────────────────
 
 export function SortableDeliverables({
@@ -580,6 +629,11 @@ export function SortableDeliverables({
   const [expandedDeliverableId, setExpandedDeliverableId] = useState<string | null>(null);
   const [deliverableDescEdit, setDeliverableDescEdit] = useState<{ id: string; value: string } | null>(null);
   const [isDescPending, startDescTransition] = useTransition();
+
+  // Inline priority menu
+  const [priorityMenuFor, setPriorityMenuFor] = useState<string | null>(null);
+  const [, startPriorityTransition] = useTransition();
+  const deliverablePriorityRefs = useRef<Map<string, HTMLButtonElement | null>>(new Map());
 
   // Pending status-pill confirm (hoisted so other interactions can cancel it)
   const [pendingStatusEdit, setPendingStatusEdit] = useState<{
@@ -647,6 +701,11 @@ export function SortableDeliverables({
     const { id, value } = deliverableDescEdit;
     setDeliverableDescEdit(null);
     startDescTransition(async () => { await updateDeliverableDescription(id, value || null); });
+  }
+
+  function commitPriority(id: string, priority: DeliverablePriority) {
+    setPriorityMenuFor(null);
+    startPriorityTransition(async () => { await updateDeliverablePriority(id, priority); });
   }
 
   function startDelivEdit(field: "title" | "dates", d: Deliverable) {
@@ -949,6 +1008,40 @@ export function SortableDeliverables({
                                 className={`inline-flex items-center text-[10px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded-full ${badge.bg} ${badge.text}`}
                               >
                                 {badge.label}
+                              </span>
+                            )}
+
+                            {/* Inline priority chip / menu */}
+                            {canEdit ? (
+                              <div className="relative inline-flex">
+                                <button
+                                  ref={(el) => { deliverablePriorityRefs.current.set(deliverable.id, el); }}
+                                  type="button"
+                                  onClick={() =>
+                                    setPriorityMenuFor(priorityMenuFor === deliverable.id ? null : deliverable.id)
+                                  }
+                                  className={`inline-flex items-center text-[10px] font-medium px-1.5 py-0.5 rounded-full transition-opacity hover:opacity-80 ${PRIORITY_META[deliverable.priority].cls}`}
+                                  style={{ fontFamily: "var(--font-mono)" }}
+                                  title="Set priority"
+                                  data-testid="deliverable-priority"
+                                >
+                                  {PRIORITY_META[deliverable.priority].label}
+                                </button>
+                                {priorityMenuFor === deliverable.id && (
+                                  <PriorityMenu
+                                    current={deliverable.priority}
+                                    onSelect={(p) => commitPriority(deliverable.id, p)}
+                                    onClose={() => setPriorityMenuFor(null)}
+                                    anchorEl={deliverablePriorityRefs.current.get(deliverable.id) ?? null}
+                                  />
+                                )}
+                              </div>
+                            ) : (
+                              <span
+                                className={`inline-flex items-center text-[10px] font-medium px-1.5 py-0.5 rounded-full ${PRIORITY_META[deliverable.priority].cls}`}
+                                style={{ fontFamily: "var(--font-mono)" }}
+                              >
+                                {PRIORITY_META[deliverable.priority].label}
                               </span>
                             )}
 
