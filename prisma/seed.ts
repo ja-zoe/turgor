@@ -21,6 +21,7 @@ const PM_PERMISSIONS: Permission[] = [
   Permission.MANAGE_ROLES,
   Permission.MANAGE_CALENDAR,
   Permission.VIEW_LEAD_MEETINGS,
+  Permission.MANAGE_STATUS_UPDATES,
 ];
 
 const LEAD_PERMISSIONS: Permission[] = [
@@ -45,6 +46,7 @@ const EBOARD_PERMISSIONS: Permission[] = [
   Permission.VIEW_MONTHLY_REVIEW,
   Permission.MANAGE_CALENDAR,
   Permission.VIEW_LEAD_MEETINGS,
+  Permission.MANAGE_STATUS_UPDATES,
 ];
 
 async function main() {

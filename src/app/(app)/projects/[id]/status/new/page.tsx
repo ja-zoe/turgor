@@ -2,6 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import { requireAuth, getProjectMembership } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { submitStatusUpdate } from "@/lib/actions/status-updates";
+import { getActiveLeadMeeting } from "@/lib/lead-meeting";
 import { SubmitButton } from "@/components/submit-button";
 import { ArrowLeft } from "@phosphor-icons/react/dist/ssr";
 import Link from "next/link";
@@ -23,13 +24,9 @@ export default async function SubmitStatusUpdatePage({
   });
   if (!project) notFound();
 
-  // Default meeting date: next Monday (or today if it's Monday)
-  const now = new Date();
-  const dayOfWeek = now.getDay();
-  const daysUntilMonday = dayOfWeek === 0 ? 1 : dayOfWeek === 1 ? 0 : 8 - dayOfWeek;
-  const nextMeeting = new Date(now);
-  nextMeeting.setDate(now.getDate() + daysUntilMonday);
-  const defaultMeetingDate = nextMeeting.toISOString().split("T")[0];
+  // The update corresponds to the project's active lead meeting (R10.2).
+  const active = await getActiveLeadMeeting(id);
+  if (!active) redirect(`/projects/${id}`); // no open lead meeting → nothing to submit
 
   async function handleSubmit(formData: FormData) {
     "use server";
@@ -66,21 +63,13 @@ export default async function SubmitStatusUpdatePage({
       </div>
 
       <form action={handleSubmit} className="space-y-6">
-        <div>
-          <label className="block text-xs font-medium text-muted-foreground uppercase tracking-widest mb-2" style={{ fontFamily: "var(--font-mono)" }}>
-            Meeting Date *
-          </label>
-          <input
-            name="meetingDate"
-            type="date"
-            required
-            defaultValue={defaultMeetingDate}
-            className="w-full rounded-md border border-border bg-card px-3 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-colors"
-            style={{ fontFamily: "var(--font-mono)" }}
-          />
-          <p className="text-xs text-muted-foreground mt-1">
-            Submissions after 24h before this date are marked late.
-          </p>
+        <div
+          className={`p-3 rounded-md border text-sm ${active.isLate ? "bg-[#FDEBEC] border-[#A4503C]/20 text-[#A4503C]" : "bg-card border-border text-muted-foreground"}`}
+          data-testid="status-meeting-notice"
+        >
+          For lead meeting <strong className="text-foreground">{active.meeting.title}</strong> on{" "}
+          {active.meeting.startsAt.toLocaleString("en-US", { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}
+          {active.isLate && <> &middot; <strong>this submission will be marked late</strong></>}
         </div>
 
         {[

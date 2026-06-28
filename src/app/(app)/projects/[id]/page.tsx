@@ -6,6 +6,8 @@ import { Permission } from "@/generated/prisma";
 import { ProjectStatusBadge } from "@/components/status-badge";
 import { SortableDeliverables } from "@/components/sortable-deliverables";
 import { ProjectModal } from "@/components/project-modal";
+import { StatusUpdateControls } from "@/components/status-update-controls";
+import { getActiveLeadMeeting } from "@/lib/lead-meeting";
 import {
   ArrowLeft,
   Plus,
@@ -62,6 +64,7 @@ export default async function ProjectDetailPage({
         take: 5,
         include: {
           submittedBy: { select: { firstName: true, nickname: true, name: true, email: true } },
+          calendarEvent: { select: { startsAt: true } },
         },
       },
       meetingRecords: {
@@ -86,8 +89,17 @@ export default async function ProjectDetailPage({
   const canViewAll = permissions.includes(Permission.VIEW_ALL_PROJECTS) || canManage;
   if (!membership && !canViewAll) notFound();
 
-  const canSubmitStatus =
-    membership?.role === "LEAD" || membership?.role === "SUBLEAD";
+  const activeLeadMeeting = await getActiveLeadMeeting(id);
+  const canManageStatusUpdates = permissions.includes(Permission.MANAGE_STATUS_UPDATES);
+  const isLeadHere = membership?.role === "LEAD" || membership?.role === "SUBLEAD";
+  // "Submit Update" only appears when the project's lead meeting is open for submission.
+  const canSubmitStatus = isLeadHere && activeLeadMeeting !== null;
+
+  // Per-update edit/delete gate: privileged any time, or own update before its meeting.
+  const canModifyStatusUpdate = (u: { submittedById: string; meetingDate: Date; calendarEvent: { startsAt: Date } | null }) =>
+    canManageStatusUpdates ||
+    (u.submittedById === user.id && isLeadHere &&
+      new Date() <= new Date(u.calendarEvent?.startsAt ?? u.meetingDate));
   const canEditProject =
     canManage || membership?.role === "LEAD" || membership?.role === "SUBLEAD";
   const canCreateActionItem =
@@ -520,6 +532,19 @@ export default async function ProjectDetailPage({
                     >
                       Late
                     </span>
+                  )}
+                  {canModifyStatusUpdate(update) && (
+                    <StatusUpdateControls
+                      update={{
+                        id: update.id,
+                        plannedWork: update.plannedWork,
+                        actualProgress: update.actualProgress,
+                        blockers: update.blockers,
+                        nextWeekGoals: update.nextWeekGoals,
+                        needsHelp: update.needsHelp,
+                        helpNeeded: update.helpNeeded,
+                      }}
+                    />
                   )}
                 </div>
                 <div className="grid grid-cols-2 gap-3">
