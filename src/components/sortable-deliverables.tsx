@@ -18,6 +18,7 @@ import {
   updateSubtaskTitle,
   updateSubtaskAssignee,
   updateSubtaskDueDate,
+  updateSubtaskDescription,
   updateDeliverableStatus,
   updateDeliverableTitle,
   updateDeliverableDates,
@@ -675,6 +676,9 @@ export function SortableDeliverables({
 
   // Click a subtask title to expand its description (pushes siblings down)
   const [expandedSubtaskId, setExpandedSubtaskId] = useState<string | null>(null);
+  // Inline-edit the expanded subtask description (Markdown/plain), like deliverables
+  const [subtaskDescEdit, setSubtaskDescEdit] = useState<{ id: string; value: string } | null>(null);
+  const [isSubtaskDescPending, startSubtaskDescTransition] = useTransition();
 
   // Deliverable inline editing
   const [deliverableEdit, setDeliverableEdit] = useState<{
@@ -721,6 +725,13 @@ export function SortableDeliverables({
     const { id, value } = deliverableDescEdit;
     setDeliverableDescEdit(null);
     startDescTransition(async () => { await updateDeliverableDescription(id, value || null); });
+  }
+
+  function commitSubtaskDescEdit() {
+    if (!subtaskDescEdit || isSubtaskDescPending) return;
+    const { id, value } = subtaskDescEdit;
+    setSubtaskDescEdit(null);
+    startSubtaskDescTransition(async () => { await updateSubtaskDescription(id, value || null); });
   }
 
   function commitPriority(id: string, priority: DeliverablePriority) {
@@ -1690,10 +1701,47 @@ export function SortableDeliverables({
                                   className="px-4 pb-3 pl-[1.375rem] text-xs text-muted-foreground"
                                   data-testid="subtask-description"
                                 >
-                                  {subtask.description ? (
-                                    <MarkdownView>{subtask.description}</MarkdownView>
+                                  {subtaskDescEdit?.id === subtask.id ? (
+                                    <div className="space-y-2">
+                                      <MarkdownEditor
+                                        value={subtaskDescEdit.value}
+                                        onChange={(v) => setSubtaskDescEdit({ id: subtask.id, value: v })}
+                                        rows={3}
+                                        placeholder="Describe this subtask… (Markdown supported)"
+                                        textareaTestId="subtask-desc-input"
+                                      />
+                                      <div className="flex justify-end">
+                                        <InlineConfirm
+                                          show
+                                          onConfirm={commitSubtaskDescEdit}
+                                          onCancel={() => setSubtaskDescEdit(null)}
+                                          disabled={isSubtaskDescPending}
+                                        />
+                                      </div>
+                                    </div>
                                   ) : (
-                                    <p className="italic opacity-60">No description</p>
+                                    <div className="flex items-start justify-between gap-2 group/subtask-desc">
+                                      <div className="flex-1 min-w-0">
+                                        {subtask.description ? (
+                                          <MarkdownView>{subtask.description}</MarkdownView>
+                                        ) : (
+                                          <p className="italic opacity-60">No description</p>
+                                        )}
+                                      </div>
+                                      {canEdit && (
+                                        <button
+                                          type="button"
+                                          onClick={() =>
+                                            setSubtaskDescEdit({ id: subtask.id, value: subtask.description ?? "" })
+                                          }
+                                          className="flex-shrink-0 text-muted-foreground hover:text-foreground transition-colors"
+                                          title="Edit description"
+                                          data-testid="subtask-desc-edit"
+                                        >
+                                          <PencilSimple size={11} />
+                                        </button>
+                                      )}
+                                    </div>
                                   )}
                                 </div>
                               )}
