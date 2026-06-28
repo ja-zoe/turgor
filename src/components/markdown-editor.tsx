@@ -5,23 +5,38 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
 interface MarkdownEditorProps {
-  name: string;
+  /** Field name for `<form>` submission (uncontrolled usage). Optional when controlled. */
+  name?: string;
   defaultValue?: string;
+  /** Controlled value — when provided, the editor is controlled and calls `onChange`. */
+  value?: string;
+  onChange?: (value: string) => void;
   placeholder?: string;
   rows?: number;
   required?: boolean;
   allowToggle?: boolean;
+  /** Optional test id applied to the inner textarea. */
+  textareaTestId?: string;
 }
 
 export function MarkdownEditor({
   name,
   defaultValue = "",
+  value: controlledValue,
+  onChange,
   placeholder = "Write Markdown here…",
   rows = 6,
   required,
   allowToggle = true,
+  textareaTestId,
 }: MarkdownEditorProps) {
-  const [value, setValue] = useState(defaultValue);
+  const isControlled = controlledValue !== undefined;
+  const [internalValue, setInternalValue] = useState(defaultValue);
+  const value = isControlled ? controlledValue : internalValue;
+  const setValue = (v: string) => {
+    if (isControlled) onChange?.(v);
+    else setInternalValue(v);
+  };
   const [preview, setPreview] = useState(false);
   const [mode, setMode] = useState<"md" | "plain">("md");
 
@@ -113,6 +128,7 @@ export function MarkdownEditor({
       ) : (
         <textarea
           name={name}
+          data-testid={textareaTestId}
           value={value}
           onChange={(e) => setValue(e.target.value)}
           placeholder={
