@@ -1,6 +1,6 @@
 import { requireAuth, getUserPermissions } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
-import { Permission } from "@/generated/prisma";
+import { Permission, type CalendarEventType } from "@/generated/prisma";
 import { SemesterCalendar } from "@/components/semester-calendar";
 
 export default async function CalendarPage({
@@ -12,6 +12,11 @@ export default async function CalendarPage({
   const user = await requireAuth();
   const permissions = await getUserPermissions(user.roleId);
   const canEdit = permissions.includes(Permission.MANAGE_CALENDAR);
+  // Only leads / eboard / PM (VIEW_LEAD_MEETINGS) may see lead + eboard meetings.
+  const canSeeRestrictedMeetings = permissions.includes(Permission.VIEW_LEAD_MEETINGS);
+  const restrictedFilter = canSeeRestrictedMeetings
+    ? {}
+    : { type: { notIn: ["LEAD_MEETING", "EBOARD_MEETING"] as CalendarEventType[] } };
 
   // Collect all known semesters from both Projects and CalendarEvents
   const [projectSemesters, eventSemesters] = await Promise.all([
@@ -29,7 +34,8 @@ export default async function CalendarPage({
 
   const events = activeSemester
     ? await prisma.calendarEvent.findMany({
-        where: { semester: activeSemester },
+        // A lead/eboard meeting pinned to several semesters shows in each of them.
+        where: { semesters: { has: activeSemester }, ...restrictedFilter },
         orderBy: { startsAt: "asc" },
         include: { project: { select: { name: true } } },
       })
@@ -46,6 +52,7 @@ export default async function CalendarPage({
         id: e.id,
         title: e.title,
         semester: e.semester,
+        semesters: e.semesters,
         type: e.type,
         startsAt: e.startsAt.toISOString(),
         endsAt: e.endsAt?.toISOString() ?? null,

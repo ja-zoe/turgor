@@ -148,7 +148,7 @@ const TOOLS = [
   // ── Status updates ────────────────────────────────────────────────────────
   {
     name: "create_status_update",
-    description: "Submit a weekly status update for a project.",
+    description: "Submit a weekly project standing for a project.",
     inputSchema: {
       type: "object",
       properties: {

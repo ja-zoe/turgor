@@ -2,6 +2,7 @@ import Link from "next/link";
 import { requireAuth, getUserPermissions, getProjectMembership } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { Permission } from "@/generated/prisma";
+import { getStatusSubmissionState } from "@/lib/lead-meeting";
 import { getDisplayName } from "@/lib/utils";
 import { ProjectStatusBadge } from "@/components/status-badge";
 import { DeliverableProgress } from "@/components/charts/deliverable-progress";
@@ -56,9 +57,13 @@ export default async function DashboardPage() {
 
   const myProjects = assignments.map((a) => a.project);
 
+  // A lead/sublead may submit; the CTA also needs the project's submission state.
+  const roleByProject = new Map(assignments.map((a) => [a.project.id, a.role]));
+
   // Most recent status update + chart data per my project
   type ProjectChartData = {
     lastSubmitted: Date | null;
+    canSubmit: boolean; // active lead meeting in window + not yet submitted + user is a lead
     goalData: { week: string; goalMet: boolean | null }[];
     deliverableStats: {
       id: string;
@@ -70,12 +75,13 @@ export default async function DashboardPage() {
   };
   const projectData: Record<string, ProjectChartData> = {};
   for (const p of myProjects) {
-    const [latest, meetingRecords, deliverables] = await Promise.all([
+    const [latest, submissionState, meetingRecords, deliverables] = await Promise.all([
       prisma.statusUpdate.findFirst({
         where: { projectId: p.id, submittedById: user.id },
         orderBy: { submittedAt: "desc" },
         select: { submittedAt: true },
       }),
+      getStatusSubmissionState(p.id),
       prisma.meetingRecord.findMany({
         where: { projectId: p.id },
         orderBy: { meetingDate: "asc" },
@@ -93,8 +99,10 @@ export default async function DashboardPage() {
         },
       }),
     ]);
+    const role = roleByProject.get(p.id);
     projectData[p.id] = {
       lastSubmitted: latest?.submittedAt ?? null,
+      canSubmit: submissionState.canSubmit && (role === "LEAD" || role === "SUBLEAD"),
       goalData: meetingRecords.map((r) => ({
         week: r.meetingDate.toLocaleDateString("en-US", { month: "short", day: "numeric" }),
         goalMet: r.goalMet,
@@ -385,34 +393,25 @@ export default async function DashboardPage() {
                     </div>
                   </div>
 
-                  {/* Submit update CTA */}
-                  <div className="flex items-center justify-between px-4 py-2.5 border-t border-border bg-[#FBF3DB]/40">
-                    <div className="flex items-center gap-2 text-xs">
-                      <ClipboardText size={12} className="text-[#C99846]" weight="fill" />
-                      {data.lastSubmitted ? (
-                        <span
-                          className="text-muted-foreground"
-                          style={{ fontFamily: "var(--font-mono)" }}
-                        >
-                          Last update {data.lastSubmitted.toLocaleDateString()}
+                  {/* Submit update CTA — only when a lead meeting is open and nothing
+                      has been submitted for it yet (hidden once submitted or out of window). */}
+                  {data.canSubmit && (
+                    <div className="flex items-center justify-between px-4 py-2.5 border-t border-border bg-[#FBF3DB]/40">
+                      <div className="flex items-center gap-2 text-xs">
+                        <ClipboardText size={12} className="text-[#C99846]" weight="fill" />
+                        <span className="text-[#C99846]" style={{ fontFamily: "var(--font-mono)" }}>
+                          Project standing due
                         </span>
-                      ) : (
-                        <span
-                          className="text-[#C99846]"
-                          style={{ fontFamily: "var(--font-mono)" }}
-                        >
-                          No update submitted yet
-                        </span>
-                      )}
+                      </div>
+                      <Link
+                        href={`/projects/${project.id}/status/new`}
+                        className="text-xs font-medium text-[#C99846] hover:text-[#A4503C] transition-colors"
+                        style={{ fontFamily: "var(--font-mono)" }}
+                      >
+                        Submit Project Standing →
+                      </Link>
                     </div>
-                    <Link
-                      href={`/projects/${project.id}/status/new`}
-                      className="text-xs font-medium text-[#C99846] hover:text-[#A4503C] transition-colors"
-                      style={{ fontFamily: "var(--font-mono)" }}
-                    >
-                      Submit update →
-                    </Link>
-                  </div>
+                  )}
                 </div>
               );
             })}

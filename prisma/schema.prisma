@@ -24,6 +24,8 @@ enum Permission {
   MANAGE_USERS
   MANAGE_ROLES
   MANAGE_CALENDAR
+  VIEW_LEAD_MEETINGS
+  MANAGE_STATUS_UPDATES
 }
 
 enum UserStatus {
@@ -258,9 +260,11 @@ model StatusUpdate {
   helpNeeded     String?  @db.Text
   submittedAt    DateTime @default(now())
   isLate         Boolean  @default(false)
+  calendarEventId String?
 
-  project     Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  submittedBy User    @relation(fields: [submittedById], references: [id])
+  project       Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  submittedBy   User           @relation(fields: [submittedById], references: [id])
+  calendarEvent CalendarEvent? @relation(fields: [calendarEventId], references: [id], onDelete: SetNull)
 }
 
 model MeetingRecord {
@@ -333,6 +337,7 @@ model Settings {
   missedGoalsInARow       Int     @default(2)
   requireBoth             Boolean @default(false)
   submissionDeadlineHours Int     @default(24)
+  statusSubmitWindowDays  Int     @default(3)
 
   updatedAt DateTime @updatedAt
 }
@@ -340,12 +345,18 @@ model Settings {
 enum CalendarEventType {
   PROJECT_MEETING
   NON_PROJECT_EVENT
+  LEAD_MEETING
+  EBOARD_MEETING
 }
 
 model CalendarEvent {
   id          String            @id @default(cuid())
   title       String
   semester    String
+  // Lead/eboard meetings can be pinned to multiple semesters (they govern Project
+  // Standing submissions for every project in any of these). For other event types
+  // this is just [semester]. Always includes `semester`.
+  semesters   String[]          @default([])
   type        CalendarEventType @default(PROJECT_MEETING)
   startsAt    DateTime
   endsAt      DateTime?
@@ -354,6 +365,7 @@ model CalendarEvent {
   description String?           @db.Text
   projectId   String?
   project     Project?          @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  statusUpdates StatusUpdate[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

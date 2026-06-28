@@ -148,8 +148,8 @@ export async function runNotificationEngine(): Promise<{ fired: number; errors: 
             ...recipientIds.map((userId) => ({
               userId,
               type: NotificationType.REMINDER,
-              title: `Status update missing: ${project.name}`,
-              body: `No status update has been submitted for ${project.name} in the last ${windowHours} hours.`,
+              title: `Project standing missing: ${project.name}`,
+              body: `No project standing has been submitted for ${project.name} in the last ${windowHours} hours.`,
               link: `/projects/${project.id}/status/new`,
             }))
           );

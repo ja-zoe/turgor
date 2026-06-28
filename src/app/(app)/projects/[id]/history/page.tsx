@@ -82,7 +82,7 @@ export default async function ProjectHistoryPage({
             lineHeight: 1.1,
           }}
         >
-          Submission History
+          Project Standing History
         </h1>
         <p
           className="text-xs text-muted-foreground mt-1"
@@ -126,7 +126,7 @@ export default async function ProjectHistoryPage({
                           className="text-xs px-1.5 py-0.5 rounded bg-[#E1F3FE] text-[#1F6C9F]"
                           style={{ fontFamily: "var(--font-mono)" }}
                         >
-                          Status Update
+                          Project Standing
                         </span>
                         <span
                           className="text-xs text-muted-foreground"

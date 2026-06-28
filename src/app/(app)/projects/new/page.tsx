@@ -1,10 +1,18 @@
-import { redirect } from "next/navigation";
 import { requirePermission } from "@/lib/permissions";
 import { Permission } from "@/generated/prisma";
+import { prisma } from "@/lib/prisma";
 import { createProject } from "@/lib/actions/projects";
+import { SemesterFormField } from "@/components/semester-field";
 
 export default async function NewProjectPage() {
   await requirePermission(Permission.MANAGE_PROJECTS);
+
+  const existing = await prisma.project.findMany({
+    select: { semester: true },
+    distinct: ["semester"],
+    orderBy: { semester: "desc" },
+  });
+  const semesters = existing.map((p) => p.semester).filter(Boolean);
 
   return (
     <div className="max-w-xl">
@@ -44,13 +52,7 @@ export default async function NewProjectPage() {
           <label className="block text-xs font-medium text-muted-foreground uppercase tracking-widest mb-2" style={{ fontFamily: "var(--font-mono)" }}>
             Semester *
           </label>
-          <input
-            name="semester"
-            type="text"
-            required
-            placeholder="e.g. Fall 2026"
-            className="w-full rounded-md border border-border bg-card px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-colors"
-          />
+          <SemesterFormField name="semester" options={semesters} testId="project-semester" />
         </div>
 
         <div>

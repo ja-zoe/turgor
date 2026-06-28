@@ -11,17 +11,20 @@ export async function updateSettings(formData: FormData) {
   const weeksBehindMilestone = parseInt(formData.get("weeksBehindMilestone") as string, 10);
   const missedGoalsInARow = parseInt(formData.get("missedGoalsInARow") as string, 10);
   const requireBoth = formData.get("requireBoth") === "on";
-  const submissionDeadlineHours = parseInt(formData.get("submissionDeadlineHours") as string, 10);
+  const statusSubmitWindowDaysRaw = parseInt(formData.get("statusSubmitWindowDays") as string, 10);
+  const statusSubmitWindowDays = Number.isFinite(statusSubmitWindowDaysRaw) && statusSubmitWindowDaysRaw > 0
+    ? statusSubmitWindowDaysRaw
+    : 3;
 
   await prisma.settings.upsert({
     where: { id: "singleton" },
-    update: { weeksBehindMilestone, missedGoalsInARow, requireBoth, submissionDeadlineHours },
+    update: { weeksBehindMilestone, missedGoalsInARow, requireBoth, statusSubmitWindowDays },
     create: {
       id: "singleton",
       weeksBehindMilestone,
       missedGoalsInARow,
       requireBoth,
-      submissionDeadlineHours,
+      statusSubmitWindowDays,
     },
   });
 

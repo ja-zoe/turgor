@@ -5,7 +5,7 @@ import { updateSettings, createNotificationRule, toggleNotificationRule, deleteN
 import { Bell, Gauge, Trash } from "@phosphor-icons/react/dist/ssr";
 
 const TRIGGER_LABELS: Record<TriggerType, string> = {
-  MISSING_SUBMISSION: "Missing Status Submission",
+  MISSING_SUBMISSION: "Missing Project Standing",
   PROJECT_BEHIND: "Project Behind",
   ACTION_ITEM_DUE: "Action Item Due",
   GOAL_MISSED: "Weekly Goal Missed",
@@ -66,18 +66,19 @@ export default async function SettingsPage() {
                 className="block text-xs text-muted-foreground mb-1"
                 style={{ fontFamily: "var(--font-mono)" }}
               >
-                Submission deadline (hours before meeting)
+                Status submit window (days before a lead meeting)
               </label>
               <input
                 type="number"
-                name="submissionDeadlineHours"
-                defaultValue={settings?.submissionDeadlineHours ?? 24}
+                name="statusSubmitWindowDays"
+                defaultValue={settings?.statusSubmitWindowDays ?? 3}
                 min={1}
-                max={168}
+                max={30}
                 className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
+                data-testid="status-submit-window"
               />
               <p className="text-xs text-muted-foreground mt-1">
-                Submissions after this window are marked late.
+                The &ldquo;Submit Project Standing&rdquo; button appears this many days before a project&apos;s lead meeting.
               </p>
             </div>
             <div>
