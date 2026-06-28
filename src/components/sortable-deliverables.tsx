@@ -18,6 +18,7 @@ import {
   updateDeliverableStatus,
   updateDeliverableTitle,
   updateDeliverableDates,
+  updateDeliverableGroup,
 } from "@/lib/actions/deliverables";
 import { getDisplayName } from "@/lib/utils";
 import {
@@ -457,6 +458,89 @@ function AssigneeSearch({
   );
 }
 
+// ─── GroupCombobox — portal picker for the deliverable group (pick or create) ──
+
+function GroupCombobox({
+  groups, current, onSelect, onClose, anchorEl,
+}: {
+  groups: string[];
+  current: string | null;
+  onSelect: (group: string | null) => void;
+  onClose: () => void;
+  anchorEl: HTMLElement | null;
+}) {
+  const [query, setQuery] = useState("");
+  const [activeIndex, setActiveIndex] = useState(0);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const pos = useAnchorPos(anchorEl);
+  useEffect(() => { if (pos) inputRef.current?.focus(); }, [pos]);
+  useOutsideClose(anchorEl, onClose);
+
+  const q = query.trim();
+  const filtered = groups.filter((g) => g.toLowerCase().includes(q.toLowerCase()));
+  const canCreate = q.length > 0 && !groups.some((g) => g.toLowerCase() === q.toLowerCase());
+
+  // Empty query → "Ungrouped" (clear) + all groups. Typing → matches first, then
+  // a "Create '<q>'" option, so Enter matches or creates (never clears).
+  const options: { value: string | null; label: string; create?: boolean }[] =
+    q.length === 0
+      ? [{ value: null, label: "Ungrouped" }, ...groups.map((g) => ({ value: g, label: g }))]
+      : [
+          ...filtered.map((g) => ({ value: g, label: g })),
+          ...(canCreate ? [{ value: q, label: `Create "${q}"`, create: true }] : []),
+        ];
+  useEffect(() => { setActiveIndex(0); }, [query]);
+
+  if (!pos) return null;
+
+  return createPortal(
+    <div
+      style={{ position: "absolute", top: pos.top + 2, left: pos.left, zIndex: 9999, fontFamily: "var(--font-mono)" }}
+      onMouseDown={(e) => e.stopPropagation()}
+      className="w-52 bg-card border border-border rounded-lg shadow-md overflow-hidden"
+      data-testid="group-combobox"
+    >
+      <div className="p-1.5 border-b border-border">
+        <input
+          ref={inputRef}
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "ArrowDown") { e.preventDefault(); setActiveIndex((i) => Math.min(i + 1, options.length - 1)); }
+            else if (e.key === "ArrowUp") { e.preventDefault(); setActiveIndex((i) => Math.max(i - 1, 0)); }
+            else if (e.key === "Enter") { e.preventDefault(); const o = options[activeIndex]; if (o) onSelect(o.value); }
+            else if (e.key === "Escape") { e.preventDefault(); onClose(); }
+          }}
+          placeholder="Filter or type a new group…"
+          className="w-full text-xs bg-transparent outline-none px-1 py-0.5 text-foreground placeholder:text-muted-foreground/60"
+        />
+      </div>
+      <div className="max-h-40 overflow-y-auto py-1">
+        {options.map((opt, idx) => {
+          const isActive = idx === activeIndex;
+          const isCurrent = (opt.value || null) === (current || null) && !opt.create;
+          return (
+            <button
+              key={opt.create ? "__create__" : opt.value ?? "__none__"}
+              type="button"
+              onClick={() => onSelect(opt.value)}
+              onMouseEnter={() => setActiveIndex(idx)}
+              data-active={isActive ? "true" : undefined}
+              className={`w-full flex items-center gap-2 px-3 py-1.5 transition-colors text-left text-xs ${
+                isActive ? "bg-muted" : ""
+              } ${isCurrent ? "text-primary font-medium" : opt.value ? "text-foreground" : "text-muted-foreground"}`}
+            >
+              {opt.label}
+              {isCurrent && <span className="ml-auto">✓</span>}
+            </button>
+          );
+        })}
+      </div>
+    </div>,
+    document.body
+  );
+}
+
 // ─── Main component ────────────────────────────────────────────────────────────
 
 export function SortableDeliverables({
@@ -483,6 +567,11 @@ export function SortableDeliverables({
   // Armed deliverable delete confirm (✓/✗ microinteraction)
   const [confirmingDeliverableDelete, setConfirmingDeliverableDelete] = useState<string | null>(null);
   const [isDelivDeletePending, startDelivDeleteTransition] = useTransition();
+
+  // Inline group combobox
+  const [groupMenuFor, setGroupMenuFor] = useState<string | null>(null);
+  const [, startGroupTransition] = useTransition();
+  const deliverableGroupRefs = useRef<Map<string, HTMLButtonElement | null>>(new Map());
 
   // Pending status-pill confirm (hoisted so other interactions can cancel it)
   const [pendingStatusEdit, setPendingStatusEdit] = useState<{
@@ -533,6 +622,16 @@ export function SortableDeliverables({
       await deleteDeliverableAction(id);
       setConfirmingDeliverableDelete(null);
     });
+  }
+
+  // Distinct groups used across this project's deliverables (for the combobox)
+  const allGroups = Array.from(
+    new Set(deliverables.map((d) => d.group).filter((g): g is string => !!g))
+  ).sort((a, b) => a.localeCompare(b));
+
+  function commitGroup(id: string, group: string | null) {
+    setGroupMenuFor(null);
+    startGroupTransition(async () => { await updateDeliverableGroup(id, group); });
   }
 
   function startDelivEdit(field: "title" | "dates", d: Deliverable) {
@@ -827,6 +926,45 @@ export function SortableDeliverables({
                                 {badge.label}
                               </span>
                             )}
+
+                            {/* Inline group chip / combobox */}
+                            {canEdit ? (
+                              <div className="relative inline-flex">
+                                <button
+                                  ref={(el) => { deliverableGroupRefs.current.set(deliverable.id, el); }}
+                                  type="button"
+                                  onClick={() =>
+                                    setGroupMenuFor(groupMenuFor === deliverable.id ? null : deliverable.id)
+                                  }
+                                  className={`inline-flex items-center text-[10px] font-medium px-1.5 py-0.5 rounded-full transition-colors ${
+                                    deliverable.group
+                                      ? "bg-muted text-muted-foreground hover:text-foreground"
+                                      : "text-muted-foreground/60 hover:text-foreground"
+                                  }`}
+                                  style={{ fontFamily: "var(--font-mono)" }}
+                                  title="Edit group"
+                                  data-testid="deliverable-group"
+                                >
+                                  {deliverable.group ?? "+ Group"}
+                                </button>
+                                {groupMenuFor === deliverable.id && (
+                                  <GroupCombobox
+                                    groups={allGroups}
+                                    current={deliverable.group}
+                                    onSelect={(g) => commitGroup(deliverable.id, g)}
+                                    onClose={() => setGroupMenuFor(null)}
+                                    anchorEl={deliverableGroupRefs.current.get(deliverable.id) ?? null}
+                                  />
+                                )}
+                              </div>
+                            ) : deliverable.group ? (
+                              <span
+                                className="inline-flex items-center text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground"
+                                style={{ fontFamily: "var(--font-mono)" }}
+                              >
+                                {deliverable.group}
+                              </span>
+                            ) : null}
                           </div>
                           {/* Inline dates edit */}
                           {deliverableEdit?.id === deliverable.id && deliverableEdit.field === "dates" ? (

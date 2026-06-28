@@ -388,6 +388,27 @@ export async function updateDeliverableTitle(deliverableId: string, title: strin
   revalidatePath(`/projects/${deliverable.projectId}`);
 }
 
+export async function updateDeliverableGroup(deliverableId: string, group: string | null) {
+  const user = await requireAuth();
+
+  const deliverable = await prisma.deliverable.findUniqueOrThrow({
+    where: { id: deliverableId },
+    select: { projectId: true },
+  });
+
+  const membership = await getProjectMembership(user.id, deliverable.projectId);
+  if (!membership) await requirePermission(Permission.MANAGE_MILESTONES);
+
+  const trimmed = group?.trim() || null;
+
+  await prisma.deliverable.update({
+    where: { id: deliverableId },
+    data: { group: trimmed },
+  });
+
+  revalidatePath(`/projects/${deliverable.projectId}`);
+}
+
 export async function updateDeliverableDates(
   deliverableId: string,
   startDate: string | null,
