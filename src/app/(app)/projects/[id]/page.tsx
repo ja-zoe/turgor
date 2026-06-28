@@ -220,6 +220,7 @@ export default async function ProjectDetailPage({
           deliverables={project.deliverables.map((d) => ({
             id: d.id,
             title: d.title,
+            description: d.description ?? null,
             status: d.status as "NOT_STARTED" | "IN_PROGRESS" | "BLOCKED" | "COMPLETE",
             group: d.group,
             targetDate: d.targetDate.toISOString(),

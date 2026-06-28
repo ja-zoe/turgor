@@ -9,6 +9,7 @@ import {
 } from "@phosphor-icons/react";
 import { SubtaskModal } from "@/components/subtask-modal";
 import { MarkdownView } from "@/components/markdown-view";
+import { MarkdownEditor } from "@/components/markdown-editor";
 import {
   deleteSubtask,
   updateSubtaskStatus,
@@ -19,6 +20,7 @@ import {
   updateDeliverableTitle,
   updateDeliverableDates,
   updateDeliverableGroup,
+  updateDeliverableDescription,
 } from "@/lib/actions/deliverables";
 import { getDisplayName } from "@/lib/utils";
 import {
@@ -47,6 +49,7 @@ interface Subtask {
 interface Deliverable {
   id: string;
   title: string;
+  description: string | null;
   status: TimelineStatus;
   group: string | null;
   targetDate: string;
@@ -573,6 +576,11 @@ export function SortableDeliverables({
   const [, startGroupTransition] = useTransition();
   const deliverableGroupRefs = useRef<Map<string, HTMLButtonElement | null>>(new Map());
 
+  // Deliverable description: click body to expand; inline (md/plain) edit while open
+  const [expandedDeliverableId, setExpandedDeliverableId] = useState<string | null>(null);
+  const [deliverableDescEdit, setDeliverableDescEdit] = useState<{ id: string; value: string } | null>(null);
+  const [isDescPending, startDescTransition] = useTransition();
+
   // Pending status-pill confirm (hoisted so other interactions can cancel it)
   const [pendingStatusEdit, setPendingStatusEdit] = useState<{
     subtaskId: string;
@@ -632,6 +640,13 @@ export function SortableDeliverables({
   function commitGroup(id: string, group: string | null) {
     setGroupMenuFor(null);
     startGroupTransition(async () => { await updateDeliverableGroup(id, group); });
+  }
+
+  function commitDescEdit() {
+    if (!deliverableDescEdit || isDescPending) return;
+    const { id, value } = deliverableDescEdit;
+    setDeliverableDescEdit(null);
+    startDescTransition(async () => { await updateDeliverableDescription(id, value || null); });
   }
 
   function startDelivEdit(field: "title" | "dates", d: Deliverable) {
@@ -804,9 +819,19 @@ export function SortableDeliverables({
 
                   return (
                     <div key={deliverable.id} className="border border-border rounded-xl overflow-hidden">
-                      {/* Deliverable header */}
-                      {/* eslint-disable-next-line @typescript-eslint/no-unused-vars */}
-                      <div className="flex items-start justify-between gap-4 p-4 bg-card group/deliv">
+                      {/* Deliverable header — click the body (not a control) to expand the description */}
+                      <div
+                        className="flex items-start justify-between gap-4 p-4 bg-card group/deliv cursor-pointer"
+                        role="button"
+                        aria-expanded={expandedDeliverableId === deliverable.id}
+                        data-testid="deliverable-header"
+                        onClick={(e) => {
+                          if ((e.target as HTMLElement).closest(
+                            'button, a, input, select, textarea, [data-no-expand]'
+                          )) return;
+                          setExpandedDeliverableId((cur) => (cur === deliverable.id ? null : deliverable.id));
+                        }}
+                      >
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
                             {/* Inline title edit */}
@@ -1072,6 +1097,57 @@ export function SortableDeliverables({
                           </div>
                         )}
                       </div>
+
+                      {/* Expanded description — read + inline (md/plain) edit, no modal */}
+                      {expandedDeliverableId === deliverable.id && (
+                        <div
+                          className="px-4 pb-3 border-t border-border bg-card text-xs text-muted-foreground"
+                          data-testid="deliverable-description"
+                        >
+                          {deliverableDescEdit?.id === deliverable.id ? (
+                            <div className="pt-3 space-y-2">
+                              <MarkdownEditor
+                                value={deliverableDescEdit.value}
+                                onChange={(v) => setDeliverableDescEdit({ id: deliverable.id, value: v })}
+                                rows={4}
+                                placeholder="Describe this deliverable… (Markdown supported)"
+                                textareaTestId="deliverable-desc-input"
+                              />
+                              <div className="flex justify-end">
+                                <InlineConfirm
+                                  show
+                                  onConfirm={commitDescEdit}
+                                  onCancel={() => setDeliverableDescEdit(null)}
+                                  disabled={isDescPending}
+                                />
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="pt-3 flex items-start justify-between gap-2 group/deliv-desc">
+                              <div className="flex-1 min-w-0">
+                                {deliverable.description ? (
+                                  <MarkdownView>{deliverable.description}</MarkdownView>
+                                ) : (
+                                  <p className="italic opacity-60">No description</p>
+                                )}
+                              </div>
+                              {canEdit && (
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    setDeliverableDescEdit({ id: deliverable.id, value: deliverable.description ?? "" })
+                                  }
+                                  className="flex-shrink-0 text-muted-foreground hover:text-foreground transition-colors"
+                                  title="Edit description"
+                                  data-testid="deliverable-desc-edit"
+                                >
+                                  <PencilSimple size={12} />
+                                </button>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      )}
 
                       {/* Subtask rows */}
                       {deliverable.subtasks.length > 0 && (
