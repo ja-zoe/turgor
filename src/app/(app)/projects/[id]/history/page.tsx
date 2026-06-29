@@ -6,7 +6,7 @@ import { Permission } from "@/generated/prisma";
 import { ProjectStatusBadge } from "@/components/status-badge";
 import { MeetingRecordControls } from "@/components/meeting-record-controls";
 import { ArrowLeft, ClipboardText, CalendarCheck, Clock } from "@phosphor-icons/react/dist/ssr";
-import { getDisplayName } from "@/lib/utils";
+import { getDisplayName, formatDateOnly } from "@/lib/utils";
 
 export default async function ProjectHistoryPage({
   params,
@@ -106,12 +106,13 @@ export default async function ProjectHistoryPage({
 
           <div className="space-y-3 pl-10">
             {events.map((event) => {
-              const dateLabel = event.date.toLocaleDateString("en-US", {
-                weekday: "short",
-                month: "short",
-                day: "numeric",
-                year: "numeric",
-              });
+              // Meeting-record dates are date-only (UTC midnight) → format in UTC; status-update
+              // dates derive from the lead meeting's real datetime → format local.
+              const dateOpts = { weekday: "short", month: "short", day: "numeric", year: "numeric" } as const;
+              const dateLabel =
+                event.kind === "meeting"
+                  ? formatDateOnly(event.date, dateOpts)
+                  : event.date.toLocaleDateString("en-US", dateOpts);
 
               if (event.kind === "status") {
                 const s = event.data;

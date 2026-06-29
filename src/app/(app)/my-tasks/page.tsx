@@ -4,6 +4,7 @@ import { TimelineStatusBadge } from "@/components/status-badge";
 import Link from "next/link";
 import { CheckSquare, ListChecks, Check } from "@phosphor-icons/react/dist/ssr";
 import { closeActionItem } from "@/lib/actions/action-items";
+import { formatDateOnly } from "@/lib/utils";
 
 export default async function MyTasksPage() {
   const user = await requireAuth();
@@ -96,11 +97,7 @@ export default async function MyTasksPage() {
                             }`}
                             style={{ fontFamily: "var(--font-mono)" }}
                           >
-                            due{" "}
-                            {item.deadline.toLocaleDateString("en-US", {
-                              month: "short",
-                              day: "numeric",
-                            })}
+                            due {formatDateOnly(item.deadline)}
                           </span>
                         )}
                         {item.carriedOver && (
@@ -163,10 +160,7 @@ export default async function MyTasksPage() {
                           className="text-xs text-muted-foreground"
                           style={{ fontFamily: "var(--font-mono)" }}
                         >
-                          {subtask.dueDate.toLocaleDateString("en-US", {
-                            month: "short",
-                            day: "numeric",
-                          })}
+                          {formatDateOnly(subtask.dueDate)}
                         </span>
                       )}
                       <TimelineStatusBadge status={subtask.status} />
