@@ -20,7 +20,25 @@ const ALL_PERMISSIONS: { value: Permission; label: string }[] = [
   { value: Permission.CONFIGURE_NOTIFICATIONS, label: "Configure notifications" },
   { value: Permission.MANAGE_USERS, label: "Manage users" },
   { value: Permission.MANAGE_ROLES, label: "Manage roles" },
+  { value: Permission.MANAGE_CALENDAR, label: "Manage calendar" },
+  { value: Permission.VIEW_LEAD_MEETINGS, label: "View lead / eboard meetings" },
+  { value: Permission.MANAGE_STATUS_UPDATES, label: "Manage status updates" },
+  { value: Permission.MANAGE_MEETING_RECORDS, label: "Manage meeting records" },
 ];
+
+// Completeness guard: every Permission must have a Role-Builder checkbox, otherwise
+// saving a role silently strips the unlisted ones (parsePermissions in roles.ts keeps
+// only submitted checkboxes). Fail loudly in dev if a future enum value lacks a label.
+if (process.env.NODE_ENV !== "production") {
+  const listed = new Set(ALL_PERMISSIONS.map((p) => p.value));
+  const missing = Object.values(Permission).filter((p) => !listed.has(p));
+  if (missing.length > 0) {
+    throw new Error(
+      `Role Builder is missing checkboxes for: ${missing.join(", ")}. Add them to ALL_PERMISSIONS — ` +
+        `otherwise editing a role drops these permissions.`
+    );
+  }
+}
 
 export default async function UsersPage() {
   const me = await requirePermission(Permission.MANAGE_USERS);
