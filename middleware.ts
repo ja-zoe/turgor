@@ -5,8 +5,21 @@ import type { NextAuthRequest } from "next-auth";
 
 const { auth } = NextAuth(authConfig);
 
-// Routes that don't require authentication
-const PUBLIC_PATHS = ["/", "/dev-login", "/pending", "/cas", "/api/cas", "/api/auth", "/auth"];
+// Routes that don't require authentication.
+// `/api/mcp` does its own Bearer-token auth and must return its 401 + WWW-Authenticate (not
+// a CAS redirect) so OAuth/MCP clients (ChatGPT) can discover the auth server. `/.well-known`
+// (OAuth protected-resource metadata + JWKS) must be world-readable for discovery.
+const PUBLIC_PATHS = [
+  "/",
+  "/dev-login",
+  "/pending",
+  "/cas",
+  "/api/cas",
+  "/api/auth",
+  "/auth",
+  "/api/mcp",
+  "/.well-known",
+];
 
 function isPublic(pathname: string): boolean {
   return PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(p + "/"));
