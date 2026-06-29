@@ -1,12 +1,13 @@
 import { requireAuth } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { MpcTokenSection } from "./mcp-token-section";
+import { ProfileSettingsForm } from "@/components/profile-settings-form";
 
 export default async function AccountPage() {
   const user = await requireAuth();
   const dbUser = await prisma.user.findUnique({
     where: { id: user.id },
-    select: { mcpToken: true },
+    select: { mcpToken: true, firstName: true, lastName: true, nickname: true, email: true },
   });
 
   const appUrl =
@@ -29,9 +30,16 @@ export default async function AccountPage() {
             lineHeight: 1.1,
           }}
         >
-          AI Integrations
+          Settings
         </h1>
       </div>
+
+      <ProfileSettingsForm
+        firstName={dbUser?.firstName ?? ""}
+        lastName={dbUser?.lastName ?? ""}
+        nickname={dbUser?.nickname ?? ""}
+        email={dbUser?.email ?? user.email}
+      />
 
       <MpcTokenSection hasToken={!!dbUser?.mcpToken} appUrl={appUrl} />
     </div>
