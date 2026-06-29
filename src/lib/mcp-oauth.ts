@@ -47,21 +47,43 @@ export async function verifyOAuthAccessToken(token: string): Promise<McpUser | n
   if (!sx) return null;
 
   let email: string | null = null;
+  let subject: string | null = null;
   try {
     const claims = await sx.idp.introspectTokenLocal(token);
-    // Trusted Auth Token Profile is configured to pass the CAS email through as a custom
-    // claim; accept the common shapes.
-    const cc = claims.custom_claims ?? {};
-    email = (cc.email as string | undefined) ?? (cc["https://seed/email"] as string | undefined) ?? null;
-  } catch {
+    const cc = (claims.custom_claims ?? {}) as Record<string, unknown>;
+    subject = claims.subject ?? null;
+    // The CAS email may surface as a top-level or custom claim depending on Stytch token
+    // config — try the common shapes.
+    email =
+      ((claims as Record<string, unknown>).email as string | undefined) ??
+      (cc.email as string | undefined) ??
+      (cc["https://seed/email"] as string | undefined) ??
+      null;
+    // Diagnostic (server logs only; email masked): shows what ChatGPT's token carries so we
+    // can map it to a SEED user. Remove once the mapping is confirmed.
+    console.log("[mcp-oauth] introspected access token", {
+      subject,
+      scope: claims.scope,
+      top_level_keys: Object.keys(claims as Record<string, unknown>),
+      custom_claim_keys: Object.keys(cc),
+      resolved_email: email ? email.replace(/(.{2}).*(@.*)/, "$1***$2") : null,
+    });
+  } catch (e) {
+    console.error("[mcp-oauth] introspect failed:", (e as Error)?.message);
     return null;
   }
-  if (!email) return null;
+  if (!email) {
+    console.warn("[mcp-oauth] no email claim on the access token (subject=" + subject + ") — cannot map to a SEED user");
+    return null;
+  }
 
   const user = await prisma.user.findUnique({
     where: { email },
     select: { id: true, email: true, roleId: true, status: true },
   });
-  if (!user || user.status !== "ACTIVE") return null;
+  if (!user || user.status !== "ACTIVE") {
+    console.warn("[mcp-oauth] no ACTIVE SEED user for the token's email");
+    return null;
+  }
   return { id: user.id, email: user.email, roleId: user.roleId };
 }
