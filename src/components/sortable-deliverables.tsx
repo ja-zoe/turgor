@@ -123,21 +123,23 @@ const LOCK_REASON: Record<TimelineStatus, string> = {
   NOT_STARTED: "Status is locked — it follows subtask progress.",
 };
 
+// Deliverable/subtask dates are date-only (UTC midnight from `type="date"` inputs);
+// format in UTC so they don't shift a day for sub-UTC viewers (US Eastern).
 function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
 }
 
 function formatDateShort(iso: string) {
-  return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
 }
 
 // Like formatDateShort, but includes the year when it isn't the current year.
 function formatDueDate(iso: string) {
   const d = new Date(iso);
   const opts: Intl.DateTimeFormatOptions =
-    d.getFullYear() === new Date().getFullYear()
-      ? { month: "short", day: "numeric" }
-      : { month: "short", day: "numeric", year: "numeric" };
+    d.getUTCFullYear() === new Date().getUTCFullYear()
+      ? { month: "short", day: "numeric", timeZone: "UTC" }
+      : { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" };
   return d.toLocaleDateString("en-US", opts);
 }
 

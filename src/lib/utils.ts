@@ -26,6 +26,20 @@ export function projectDuration(start: Date, end: Date | null): string {
   return `${months} mo`;
 }
 
+/**
+ * Format a **date-only** value (stored as UTC-midnight because it came from a
+ * `type="date"` input) without shifting it into the viewer's timezone. Using the local
+ * zone would render the previous day for sub-UTC users (the user base is US Eastern).
+ * Use this for deadlines, due dates, target/start dates, project dates, and meeting-record
+ * dates — NOT for true datetimes (createdAt, calendar event times, etc.).
+ */
+export function formatDateOnly(
+  d: Date | string,
+  opts: Intl.DateTimeFormatOptions = { month: "short", day: "numeric" }
+): string {
+  return new Date(d).toLocaleDateString("en-US", { ...opts, timeZone: "UTC" });
+}
+
 export function formatProjectDate(d: Date): string {
-  return d.toLocaleDateString("en-US", { month: "short", year: "numeric" });
+  return formatDateOnly(d, { month: "short", year: "numeric" });
 }
