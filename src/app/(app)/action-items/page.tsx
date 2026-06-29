@@ -2,8 +2,9 @@ import Link from "next/link";
 import { requireAuth, getUserPermissions } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { Permission } from "@/generated/prisma";
-import { Check, ListChecks, ArrowClockwise } from "@phosphor-icons/react/dist/ssr";
+import { Check, ListChecks, ArrowClockwise, PencilSimple } from "@phosphor-icons/react/dist/ssr";
 import { closeActionItem, reopenActionItem } from "@/lib/actions/action-items";
+import { ActionItemModal } from "@/components/action-item-modal";
 import { getDisplayName } from "@/lib/utils";
 
 export default async function AllActionItemsPage() {
@@ -11,6 +12,7 @@ export default async function AllActionItemsPage() {
   const permissions = await getUserPermissions(user.roleId);
   const canManage = permissions.includes(Permission.MANAGE_PROJECTS);
   const canCloseAll = permissions.includes(Permission.CLOSE_ACTION_ITEMS);
+  const canAssign = permissions.includes(Permission.ASSIGN_ACTION_ITEMS);
 
   // PM sees all; others see only items they own or are on their projects
   const items = await prisma.actionItem.findMany({
@@ -35,6 +37,20 @@ export default async function AllActionItemsPage() {
 
   const openItems = items.filter((i) => i.status === "OPEN");
   const doneItems = items.filter((i) => i.status === "DONE");
+
+  // Owner options for the edit modal, per project (only needed when the user can edit).
+  const projectIds = [...new Set(items.map((i) => i.project.id))];
+  const assignments =
+    canAssign && projectIds.length
+      ? await prisma.projectAssignment.findMany({
+          where: { projectId: { in: projectIds } },
+          include: { user: { select: { id: true, name: true, firstName: true, nickname: true, email: true } } },
+        })
+      : [];
+  const assigneesByProject: Record<string, { id: string; name: string }[]> = {};
+  for (const a of assignments) {
+    (assigneesByProject[a.projectId] ??= []).push({ id: a.userId, name: getDisplayName(a.user) });
+  }
 
   return (
     <div className="space-y-8">
@@ -120,22 +136,47 @@ export default async function AllActionItemsPage() {
                         )}
                       </div>
                     </div>
-                    {(canCloseAll || item.ownerId === user.id) && (
-                      <form
-                        action={async () => {
-                          "use server";
-                          await closeActionItem(item.id);
-                        }}
-                      >
-                        <button
-                          type="submit"
-                          title="Mark done"
-                          className="flex-shrink-0 w-6 h-6 rounded border border-border hover:border-[#588157] hover:bg-[#EDF3EC] transition-colors flex items-center justify-center text-muted-foreground hover:text-[#588157]"
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      {canAssign && (
+                        <ActionItemModal
+                          mode="edit"
+                          projectId={item.project.id}
+                          assignees={assigneesByProject[item.project.id] ?? []}
+                          item={{
+                            id: item.id,
+                            description: item.description,
+                            ownerId: item.ownerId,
+                            deadline: item.deadline?.toISOString() ?? null,
+                          }}
+                          trigger={
+                            <button
+                              type="button"
+                              title="Edit"
+                              data-testid="action-item-edit"
+                              className="text-muted-foreground hover:text-foreground transition-colors"
+                            >
+                              <PencilSimple size={12} />
+                            </button>
+                          }
+                        />
+                      )}
+                      {(canCloseAll || item.ownerId === user.id) && (
+                        <form
+                          action={async () => {
+                            "use server";
+                            await closeActionItem(item.id);
+                          }}
                         >
-                          <Check size={12} />
-                        </button>
-                      </form>
-                    )}
+                          <button
+                            type="submit"
+                            title="Mark done"
+                            className="flex-shrink-0 w-6 h-6 rounded border border-border hover:border-[#588157] hover:bg-[#EDF3EC] transition-colors flex items-center justify-center text-muted-foreground hover:text-[#588157]"
+                          >
+                            <Check size={12} />
+                          </button>
+                        </form>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>

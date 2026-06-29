@@ -11,20 +11,17 @@ import { MeetingRecordControls } from "@/components/meeting-record-controls";
 import { getStatusSubmissionState } from "@/lib/lead-meeting";
 import {
   ArrowLeft,
-  Plus,
   ClipboardText,
   CalendarCheck,
   Users,
   Warning,
-  Check,
-  ArrowClockwise,
   ListChecks,
   PencilSimple,
   CalendarBlank,
 } from "@phosphor-icons/react/dist/ssr";
+import { ActionItemsSection } from "@/components/action-items-section";
 import { deleteDeliverable } from "@/lib/actions/deliverables";
 import { removeMember } from "@/lib/actions/projects";
-import { createActionItem, closeActionItem, reopenActionItem } from "@/lib/actions/action-items";
 import { getDisplayName, projectDuration, formatProjectDate } from "@/lib/utils";
 
 export default async function ProjectDetailPage({
@@ -304,163 +301,22 @@ export default async function ProjectDetailPage({
           </h2>
         </div>
 
-        {/* Create action item inline form */}
-        {canCreateActionItem && (
-          <form
-            action={async (formData: FormData) => {
-              "use server";
-              await createActionItem(id, formData);
-            }}
-            className="flex items-start gap-2 mb-4"
-          >
-            <input
-              name="description"
-              type="text"
-              placeholder="New action item…"
-              required
-              className="flex-1 rounded-md border border-border bg-card px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-colors"
-            />
-            <select
-              name="ownerId"
-              className="rounded-md border border-border bg-card px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-colors"
-              style={{ fontFamily: "var(--font-mono)" }}
-            >
-              <option value="">No owner</option>
-              {project.assignments.map((a) => (
-                <option key={a.userId} value={a.userId}>
-                  {getDisplayName(a.user)}
-                </option>
-              ))}
-            </select>
-            <input
-              name="deadline"
-              type="date"
-              className="rounded-md border border-border bg-card px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-colors"
-              style={{ fontFamily: "var(--font-mono)" }}
-            />
-            <button
-              type="submit"
-              className="rounded-md bg-primary text-primary-foreground text-sm font-medium px-4 py-2 hover:bg-primary/80 transition-colors flex-shrink-0"
-            >
-              <Plus size={14} />
-            </button>
-          </form>
-        )}
-
-        {project.actionItems.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No action items yet.</p>
-        ) : (
-          <div className="space-y-2">
-            {openItems.map((item) => (
-              <div
-                key={item.id}
-                className="flex items-start justify-between gap-3 px-4 py-3 bg-card border border-border rounded-lg"
-              >
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm text-foreground">{item.description}</p>
-                  <div className="flex items-center gap-2 mt-1 flex-wrap">
-                    {item.owner && (
-                      <span
-                        className="text-xs text-muted-foreground"
-                        style={{ fontFamily: "var(--font-mono)" }}
-                      >
-                        {getDisplayName(item.owner)}
-                      </span>
-                    )}
-                    {item.deadline && (
-                      <span
-                        className={`text-xs ${
-                          item.deadline < new Date()
-                            ? "text-[#A4503C]"
-                            : "text-muted-foreground"
-                        }`}
-                        style={{ fontFamily: "var(--font-mono)" }}
-                      >
-                        due{" "}
-                        {item.deadline.toLocaleDateString("en-US", {
-                          month: "short",
-                          day: "numeric",
-                        })}
-                      </span>
-                    )}
-                    {item.carriedOver && (
-                      <span
-                        className="text-xs text-[#C99846] bg-[#FBF3DB] px-1.5 py-0.5 rounded"
-                        style={{ fontFamily: "var(--font-mono)" }}
-                      >
-                        carried over
-                      </span>
-                    )}
-                  </div>
-                </div>
-                <div className="flex items-center gap-2 flex-shrink-0">
-                  {(canCreateActionItem) && (
-                    <Link
-                      href={`/projects/${id}/action-items/${item.id}/edit`}
-                      className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-                      style={{ fontFamily: "var(--font-mono)" }}
-                    >
-                      <PencilSimple size={12} />
-                    </Link>
-                  )}
-                  {(canCloseActionItems || item.ownerId === user.id) && (
-                    <form
-                      action={async () => {
-                        "use server";
-                        await closeActionItem(item.id);
-                      }}
-                    >
-                      <button
-                        type="submit"
-                        title="Mark done"
-                        className="flex-shrink-0 w-6 h-6 rounded border border-border hover:border-[#588157] hover:bg-[#EDF3EC] transition-colors flex items-center justify-center text-muted-foreground hover:text-[#588157]"
-                      >
-                        <Check size={12} />
-                      </button>
-                    </form>
-                  )}
-                </div>
-              </div>
-            ))}
-
-            {doneItems.length > 0 && (
-              <details className="mt-2">
-                <summary
-                  className="cursor-pointer text-xs text-muted-foreground hover:text-foreground transition-colors"
-                  style={{ fontFamily: "var(--font-mono)" }}
-                >
-                  {doneItems.length} completed item{doneItems.length !== 1 ? "s" : ""}
-                </summary>
-                <div className="mt-2 space-y-2">
-                  {doneItems.map((item) => (
-                    <div
-                      key={item.id}
-                      className="flex items-center justify-between gap-3 px-4 py-2.5 bg-card border border-border rounded-lg opacity-60"
-                    >
-                      <p className="text-sm text-foreground line-through">{item.description}</p>
-                      {canCloseActionItems && (
-                        <form
-                          action={async () => {
-                            "use server";
-                            await reopenActionItem(item.id);
-                          }}
-                        >
-                          <button
-                            type="submit"
-                            title="Re-open"
-                            className="text-muted-foreground hover:text-foreground transition-colors"
-                          >
-                            <ArrowClockwise size={12} />
-                          </button>
-                        </form>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </details>
-            )}
-          </div>
-        )}
+        <ActionItemsSection
+          projectId={id}
+          items={project.actionItems.map((item) => ({
+            id: item.id,
+            description: item.description,
+            ownerId: item.ownerId,
+            ownerName: item.owner ? getDisplayName(item.owner) : null,
+            deadline: item.deadline?.toISOString() ?? null,
+            status: item.status,
+            carriedOver: item.carriedOver,
+          }))}
+          assignees={project.assignments.map((a) => ({ id: a.userId, name: getDisplayName(a.user) }))}
+          canCreate={canCreateActionItem}
+          canClose={canCloseActionItems}
+          currentUserId={user.id}
+        />
       </section>
 
       {/* Team */}
