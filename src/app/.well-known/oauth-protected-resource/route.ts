@@ -13,6 +13,9 @@ export function GET(req: NextRequest) {
     resource: `${base}/api/mcp`,
     authorization_servers: authServer ? [authServer] : [],
     bearer_methods_supported: ["header"],
-    scopes_supported: ["mcp"],
+    // Stytch's built-in OIDC scopes (no custom RBAC policy needed). A custom `mcp` scope
+    // would require defining Resources/Permissions in Stytch RBAC; we don't need it —
+    // access is enforced server-side per the resolved SEED user. offline_access → refresh.
+    scopes_supported: ["openid", "email", "offline_access"],
   });
 }
