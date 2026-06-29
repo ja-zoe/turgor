@@ -4,6 +4,7 @@ import { getUserPermissions } from "@/lib/permissions";
 import { Permission, TimelineStatus, ActionItemStatus, CalendarEventType, ProjectStatus } from "@/generated/prisma";
 import { carryOverActionItems } from "@/lib/actions/action-items";
 import { runRedFlagDetection } from "@/lib/red-flag";
+import { verifyOAuthAccessToken, looksLikeJwt, type McpUser } from "@/lib/mcp-oauth";
 
 // Lead/eboard meetings are hidden from users without VIEW_LEAD_MEETINGS — mirrors
 // calendar/page.tsx and api/calendar/ics/route.ts.
@@ -12,7 +13,6 @@ const RESTRICTED_EVENT_TYPES: CalendarEventType[] = [
   CalendarEventType.EBOARD_MEETING,
 ];
 
-type McpUser = { id: string; email: string; roleId: string | null };
 
 const TOOLS = [
   // ── Read ──────────────────────────────────────────────────────────────────
@@ -408,12 +408,21 @@ async function authenticate(req: NextRequest): Promise<McpUser | null> {
   if (!auth?.startsWith("Bearer ")) return null;
   const token = auth.slice(7).trim();
   if (!token) return null;
-  const user = await prisma.user.findUnique({
-    where: { mcpToken: token },
-    select: { id: true, email: true, roleId: true, status: true },
-  });
-  if (!user || user.status !== "ACTIVE") return null;
-  return { id: user.id, email: user.email, roleId: user.roleId };
+
+  // (1) Static personal token from /account — local clients (Claude Code, Cursor, Codex).
+  if (!looksLikeJwt(token)) {
+    const user = await prisma.user.findUnique({
+      where: { mcpToken: token },
+      select: { id: true, email: true, roleId: true, status: true },
+    });
+    if (user && user.status === "ACTIVE") {
+      return { id: user.id, email: user.email, roleId: user.roleId };
+    }
+    return null;
+  }
+
+  // (2) Stytch-issued OAuth access token — ChatGPT / remote MCP hosts (R17.2).
+  return verifyOAuthAccessToken(token);
 }
 
 async function getProjectMembership(userId: string, projectId: string) {
@@ -1142,7 +1151,17 @@ async function executeTool(
 export async function POST(req: NextRequest) {
   const user = await authenticate(req);
   if (!user) {
-    return Response.json({ error: "Unauthorized — provide a valid Bearer token" }, { status: 401 });
+    // RFC 9728 discovery: point OAuth clients (ChatGPT) at the protected-resource metadata.
+    const base = (process.env.AUTH_URL ?? process.env.NEXTAUTH_URL ?? new URL(req.url).origin).replace(/\/$/, "");
+    return Response.json(
+      { error: "Unauthorized — provide a valid Bearer token" },
+      {
+        status: 401,
+        headers: {
+          "WWW-Authenticate": `Bearer resource_metadata="${base}/.well-known/oauth-protected-resource"`,
+        },
+      }
+    );
   }
 
   let body: { jsonrpc: string; id?: unknown; method: string; params?: Record<string, unknown> };
