@@ -48,6 +48,15 @@ export function StytchAuthorize({
         authTokenParams={{ trustedAuthToken, tokenProfileID }}
         callbacks={{
           onError: (e) => {
+            // The IDP consent screen fires NoCurrentSessionError on initial mount whenever
+            // there's no pre-existing Stytch session — which is always the case here, since we
+            // establish the session via trusted-token attestation that runs a beat later. It's
+            // a benign race in the SDK, not a real failure, so swallow it. Genuine attestation
+            // failures arrive with a different error name and still surface below.
+            if ((e as { name?: string })?.name === "NoCurrentSessionError") {
+              console.debug("[mcp-oauth] ignoring transient NoCurrentSessionError (pre-attest)");
+              return;
+            }
             console.error("[mcp-oauth] Stytch error", e);
             try {
               setErr(JSON.stringify(e, Object.getOwnPropertyNames(e), 2));
