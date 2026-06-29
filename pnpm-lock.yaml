@@ -29,6 +29,12 @@ importers:
       '@prisma/client-runtime-utils':
         specifier: ^7.8.0
         version: 7.8.0
+      '@stytch/nextjs':
+        specifier: ^22.0.11
+        version: 22.0.11(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      '@stytch/vanilla-js':
+        specifier: ^6.0.11
+        version: 6.0.11
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1
@@ -953,6 +959,15 @@ packages:
 
   '@standard-schema/utils@0.3.0':
     resolution: {integrity: sha512-e7Mew686owMaPJVNNLs55PUvgz371nKgwsc4vxE49zsODpJEnxgxRo2y/OKrqueavXgZNMDVj3DdHFlaSAeU8g==}
+
+  '@stytch/nextjs@22.0.11':
+    resolution: {integrity: sha512-OQN7T2S4+ufGdJMcnqVGS7ZIzWkrRL+YyTl14f1P2IFbnjDfPzemaS+rDocvC50rK5yDtzdSwc4l/EEz7DVfzQ==}
+    peerDependencies:
+      react: '>= 17.0.2'
+      react-dom: '>= 17.0.2'
+
+  '@stytch/vanilla-js@6.0.11':
+    resolution: {integrity: sha512-EpFCwCeevzxZIzJSQ0JHH8JFtUz0XzF8sy4rtuL95QflMSrdLVf1BWC1JdQtZGKpYw9IpBkRlLDONzzSveye7Q==}
 
   '@swc/helpers@0.5.15':
     resolution: {integrity: sha512-JQ5TuMi45Owi4/BIMAJBoSQoOJu12oOk/gADqlcUL9JEdHB8vyjUSsxqeNXnmXHjYKMi2WcYtezGEEhqUI/E2g==}
@@ -4106,6 +4121,13 @@ snapshots:
   '@standard-schema/spec@1.1.0': {}
 
   '@standard-schema/utils@0.3.0': {}
+
+  '@stytch/nextjs@22.0.11(react-dom@19.2.4(react@19.2.4))(react@19.2.4)':
+    dependencies:
+      react: 19.2.4
+      react-dom: 19.2.4(react@19.2.4)
+
+  '@stytch/vanilla-js@6.0.11': {}
 
   '@swc/helpers@0.5.15':
     dependencies:
