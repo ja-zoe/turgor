@@ -9,6 +9,8 @@ import { createStytchUIClient, StytchProvider, IdentityProvider } from "@stytch/
  * OAuth authorization flow self-contained — it reads the OAuth request params (client_id,
  * redirect_uri, scope, state, PKCE) from the URL and redirects back to the client (ChatGPT)
  * with an auth code. The Stytch browser client is created client-side only (mount guard).
+ * Any Stytch error is surfaced on the page (and logged) to make a misconfig diagnosable
+ * without DevTools.
  */
 export function StytchAuthorize({
   publicToken,
@@ -20,6 +22,7 @@ export function StytchAuthorize({
   trustedAuthToken: string;
 }) {
   const [mounted, setMounted] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
   useEffect(() => setMounted(true), []);
 
   const stytch = useMemo(
@@ -33,7 +36,27 @@ export function StytchAuthorize({
 
   return (
     <StytchProvider stytch={stytch}>
-      <IdentityProvider authTokenParams={{ trustedAuthToken, tokenProfileID }} />
+      {err && (
+        <pre
+          data-testid="stytch-error"
+          className="mb-4 whitespace-pre-wrap break-all rounded-md border border-[#A4503C]/20 bg-[#FDEBEC] p-3 text-xs text-[#A4503C]"
+        >
+          {err}
+        </pre>
+      )}
+      <IdentityProvider
+        authTokenParams={{ trustedAuthToken, tokenProfileID }}
+        callbacks={{
+          onError: (e) => {
+            console.error("[mcp-oauth] Stytch error", e);
+            try {
+              setErr(JSON.stringify(e, Object.getOwnPropertyNames(e), 2));
+            } catch {
+              setErr(String((e as { message?: string })?.message ?? e));
+            }
+          },
+        }}
+      />
     </StytchProvider>
   );
 }
