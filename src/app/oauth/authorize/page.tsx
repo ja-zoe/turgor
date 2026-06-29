@@ -17,6 +17,18 @@ export default async function AuthorizePage() {
   const publicToken = process.env.STYTCH_PUBLIC_TOKEN;
   const tokenProfileID = process.env.STYTCH_TRUSTED_TOKEN_PROFILE_ID;
 
+  // Names (not values) of the env vars needed for the OAuth flow that are unset on this
+  // server — shown to the authenticated user so a misconfigured deploy is self-diagnosing.
+  const missing = [
+    ["MCP_OAUTH_PRIVATE_KEY", process.env.MCP_OAUTH_PRIVATE_KEY],
+    ["AUTH_URL (or NEXTAUTH_URL)", process.env.AUTH_URL ?? process.env.NEXTAUTH_URL],
+    ["STYTCH_PROJECT_ID", process.env.STYTCH_PROJECT_ID],
+    ["STYTCH_PUBLIC_TOKEN", publicToken],
+    ["STYTCH_TRUSTED_TOKEN_PROFILE_ID", tokenProfileID],
+  ]
+    .filter(([, v]) => !v)
+    .map(([name]) => name);
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-background px-6 py-16">
       <div className="w-full max-w-md">
@@ -32,6 +44,11 @@ export default async function AuthorizePage() {
               MCP OAuth isn&apos;t fully configured on this server. Use a personal access token from your
               Account page with a local client instead.
             </p>
+            {missing.length > 0 && (
+              <p className="mt-3 text-xs text-[#A4503C]" style={{ fontFamily: "var(--font-mono)" }}>
+                Missing server config: {missing.join(", ")}
+              </p>
+            )}
           </div>
         ) : (
           <StytchAuthorize
