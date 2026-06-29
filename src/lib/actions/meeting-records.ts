@@ -53,3 +53,24 @@ export async function createMeetingRecord(projectId: string, formData: FormData)
   revalidatePath("/projects");
   redirect(`/projects/${projectId}?meeting=${record.id}`);
 }
+
+export async function deleteMeetingRecord(meetingRecordId: string) {
+  await requirePermission(Permission.MANAGE_MEETING_RECORDS);
+
+  const record = await prisma.meetingRecord.findUnique({
+    where: { id: meetingRecordId },
+    select: { id: true, projectId: true },
+  });
+  if (!record) return;
+
+  // Action items carried at this meeting are preserved — ActionItem.meetingId is an
+  // optional FK (onDelete: SetNull), so deleting the record nulls their meetingId.
+  await prisma.meetingRecord.delete({ where: { id: meetingRecordId } });
+
+  // History changed — let red-flag auto-detection re-evaluate (respects statusOverride).
+  await runRedFlagDetection(record.projectId);
+
+  revalidatePath(`/projects/${record.projectId}`);
+  revalidatePath(`/projects/${record.projectId}/history`);
+  revalidatePath("/projects");
+}

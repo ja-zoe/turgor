@@ -7,6 +7,7 @@ import { ProjectStatusBadge } from "@/components/status-badge";
 import { SortableDeliverables } from "@/components/sortable-deliverables";
 import { ProjectModal } from "@/components/project-modal";
 import { StatusUpdateControls } from "@/components/status-update-controls";
+import { MeetingRecordControls } from "@/components/meeting-record-controls";
 import { getStatusSubmissionState } from "@/lib/lead-meeting";
 import {
   ArrowLeft,
@@ -100,6 +101,7 @@ export default async function ProjectDetailPage({
     .map((p) => p.semester)
     .filter(Boolean);
   const canManageStatusUpdates = permissions.includes(Permission.MANAGE_STATUS_UPDATES);
+  const canManageMeetingRecords = permissions.includes(Permission.MANAGE_MEETING_RECORDS);
   const isLeadHere = membership?.role === "LEAD" || membership?.role === "SUBLEAD";
   // "Submit Project Standing" only appears for a lead when the project's lead meeting is open
   // for submission AND nothing has been submitted for it yet.
@@ -621,6 +623,9 @@ export default async function ProjectDetailPage({
                       </span>
                     )}
                     <ProjectStatusBadge status={record.status} />
+                    {canManageMeetingRecords && (
+                      <MeetingRecordControls recordId={record.id} />
+                    )}
                   </div>
                 </div>
                 {record.keyBlockers && (
