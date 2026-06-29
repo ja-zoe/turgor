@@ -4,7 +4,6 @@ import { prisma } from "@/lib/prisma";
 import { requireAuth, requirePermission, getProjectMembership } from "@/lib/permissions";
 import { Permission } from "@/generated/prisma";
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 
 export async function createActionItem(projectId: string, formData: FormData) {
   const user = await requireAuth();
@@ -100,9 +99,9 @@ export async function updateActionItem(actionItemId: string, formData: FormData)
     data: { description, ownerId: ownerId || null, deadline },
   });
 
+  // No redirect — edits now happen in a modal / inline; just revalidate in place.
   revalidatePath(`/projects/${item.projectId}`);
   revalidatePath("/action-items");
-  redirect(`/projects/${item.projectId}`);
 }
 
 /** Marks all OPEN action items on a project as carriedOver = true. */

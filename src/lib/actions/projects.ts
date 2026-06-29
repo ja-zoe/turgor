@@ -109,6 +109,22 @@ export async function assignMember(
   revalidatePath(`/projects/${projectId}`);
 }
 
+export async function updateMemberRole(
+  projectId: string,
+  userId: string,
+  role: ProjectMemberRole
+) {
+  await requirePermission(Permission.MANAGE_PROJECTS);
+
+  await prisma.projectAssignment.update({
+    where: { projectId_userId: { projectId, userId } },
+    data: { role },
+  });
+
+  revalidatePath(`/projects/${projectId}`);
+  revalidatePath(`/projects/${projectId}/members`);
+}
+
 export async function removeMember(projectId: string, userId: string) {
   await requirePermission(Permission.MANAGE_PROJECTS);
 
