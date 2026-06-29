@@ -207,9 +207,12 @@ export default async function ProjectDetailPage({
               <Link
                 href={`/projects/${id}/status/new`}
                 className="inline-flex items-center gap-1.5 rounded-md border border-border bg-card text-sm font-medium px-3 py-2 hover:bg-muted transition-colors"
+                data-testid="submit-standing-link"
               >
                 <ClipboardText size={14} />
-                Submit Project Standing
+                {submissionState.count > 1
+                  ? `You have ${submissionState.count} Project Standing Updates to submit`
+                  : "Submit Project Standing"}
               </Link>
             )}
             {canPostMeeting && (

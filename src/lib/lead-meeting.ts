@@ -1,54 +1,62 @@
 import { prisma } from "@/lib/prisma";
 
+export type PendingLeadMeeting = {
+  meeting: { id: string; title: string; startsAt: Date };
+  /** True once we're past the meeting's start time — the submission is late but still allowed. */
+  isLate: boolean;
+};
+
 /**
- * The "active" lead meeting whose submission window is open for a project, or null.
+ * Every lead meeting a project currently owes a status update for, soonest-first.
  *
  * Lead meetings are **global per semester** (the PM schedules them on the calendar for
- * all leads — they are not tied to a single project). A lead meeting is **pinned to a
- * set of semesters** (`CalendarEvent.semesters`); it governs every project whose
- * `semester` is in that set. A meeting's window opens `statusSubmitWindowDays`
- * before it; we pick the **latest** meeting whose window has opened
- * (`startsAt - window <= now`), so when the PM schedules meetings on consecutive days
- * the windows overlap into one continuous submission period. `isLate` is true once
- * we're past that meeting's start time.
+ * all leads — not tied to a single project). A meeting is **pinned to a set of semesters**
+ * (`CalendarEvent.semesters`) and governs every project whose `semester` is in that set.
+ *
+ * A meeting is **pending** for a project when its submission window is open and no update
+ * has been submitted for it yet. The window runs from `statusSubmitWindowDays` *before*
+ * the meeting (on-time) until `statusLateWindowDays` *after* it (late, but still allowed);
+ * outside that range the meeting is either not yet open or considered missed and drops off.
+ * Several meetings can be pending at once — they are all returned.
  */
-export async function getActiveLeadMeeting(projectId: string) {
+export async function getPendingLeadMeetings(projectId: string): Promise<PendingLeadMeeting[]> {
   const project = await prisma.project.findUnique({
     where: { id: projectId },
     select: { semester: true },
   });
-  if (!project) return null;
+  if (!project) return [];
 
   const settings = await prisma.settings.findUnique({ where: { id: "singleton" } });
-  const windowDays = settings?.statusSubmitWindowDays ?? 3;
+  const submitWindowDays = settings?.statusSubmitWindowDays ?? 3;
+  const lateWindowDays = settings?.statusLateWindowDays ?? 3;
   const now = new Date();
-  // window has opened  ⇔  startsAt - windowDays <= now  ⇔  startsAt <= now + windowDays
-  const windowEnd = new Date(now.getTime() + windowDays * 86_400_000);
+  // window open  ⇔  startsAt - submitWindow <= now <= startsAt + lateWindow
+  //            ⇔  now - lateWindow <= startsAt <= now + submitWindow
+  const earliestStart = new Date(now.getTime() - lateWindowDays * 86_400_000);
+  const latestStart = new Date(now.getTime() + submitWindowDays * 86_400_000);
 
-  const meeting = await prisma.calendarEvent.findFirst({
+  const meetings = await prisma.calendarEvent.findMany({
     where: {
       type: "LEAD_MEETING",
       semesters: { has: project.semester },
-      startsAt: { lte: windowEnd },
+      startsAt: { gte: earliestStart, lte: latestStart },
+      // not yet submitted for this project
+      statusUpdates: { none: { projectId } },
     },
-    orderBy: { startsAt: "desc" },
+    orderBy: { startsAt: "asc" },
     select: { id: true, title: true, startsAt: true },
   });
-  if (!meeting) return null;
-  return { meeting, isLate: now > meeting.startsAt };
+
+  return meetings.map((meeting) => ({ meeting, isLate: now > meeting.startsAt }));
 }
 
 /**
- * Whether the "Submit Update" affordance should appear for a project: there is an
- * active lead meeting (inside its submit window) AND no update has been submitted
- * for that meeting yet. Hidden once submitted or outside the window.
+ * Submission state for a project's "Submit Project Standing" affordance:
+ *  - `pending`  — the full list of lead meetings awaiting a status update (soonest-first),
+ *  - `count`    — how many,
+ *  - `canSubmit`— whether any are pending.
  */
 export async function getStatusSubmissionState(projectId: string) {
-  const active = await getActiveLeadMeeting(projectId);
-  if (!active) return { active: null, submitted: false, canSubmit: false };
-  const existing = await prisma.statusUpdate.findFirst({
-    where: { projectId, calendarEventId: active.meeting.id },
-    select: { id: true },
-  });
-  return { active, submitted: !!existing, canSubmit: !existing };
+  const pending = await getPendingLeadMeetings(projectId);
+  return { pending, count: pending.length, canSubmit: pending.length > 0 };
 }
