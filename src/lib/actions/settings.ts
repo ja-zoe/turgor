@@ -15,16 +15,21 @@ export async function updateSettings(formData: FormData) {
   const statusSubmitWindowDays = Number.isFinite(statusSubmitWindowDaysRaw) && statusSubmitWindowDaysRaw > 0
     ? statusSubmitWindowDaysRaw
     : 3;
+  const statusLateWindowDaysRaw = parseInt(formData.get("statusLateWindowDays") as string, 10);
+  const statusLateWindowDays = Number.isFinite(statusLateWindowDaysRaw) && statusLateWindowDaysRaw >= 0
+    ? statusLateWindowDaysRaw
+    : 3;
 
   await prisma.settings.upsert({
     where: { id: "singleton" },
-    update: { weeksBehindMilestone, missedGoalsInARow, requireBoth, statusSubmitWindowDays },
+    update: { weeksBehindMilestone, missedGoalsInARow, requireBoth, statusSubmitWindowDays, statusLateWindowDays },
     create: {
       id: "singleton",
       weeksBehindMilestone,
       missedGoalsInARow,
       requireBoth,
       statusSubmitWindowDays,
+      statusLateWindowDays,
     },
   });
 

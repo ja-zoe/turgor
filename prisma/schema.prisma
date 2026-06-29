@@ -339,6 +339,7 @@ model Settings {
   requireBoth             Boolean @default(false)
   submissionDeadlineHours Int     @default(24)
   statusSubmitWindowDays  Int     @default(3)
+  statusLateWindowDays    Int     @default(3)
 
   updatedAt DateTime @updatedAt
 }

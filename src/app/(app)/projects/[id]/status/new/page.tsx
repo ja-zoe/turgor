@@ -2,8 +2,8 @@ import { notFound, redirect } from "next/navigation";
 import { requireAuth, getProjectMembership } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { submitStatusUpdate } from "@/lib/actions/status-updates";
-import { getActiveLeadMeeting } from "@/lib/lead-meeting";
-import { SubmitButton } from "@/components/submit-button";
+import { getPendingLeadMeetings } from "@/lib/lead-meeting";
+import { StatusSubmitSwitcher } from "@/components/status-submit-switcher";
 import { ArrowLeft } from "@phosphor-icons/react/dist/ssr";
 import Link from "next/link";
 
@@ -24,14 +24,22 @@ export default async function SubmitStatusUpdatePage({
   });
   if (!project) notFound();
 
-  // The update corresponds to the project's active lead meeting (R10.2).
-  const active = await getActiveLeadMeeting(id);
-  if (!active) redirect(`/projects/${id}`); // no open lead meeting → nothing to submit
+  // All lead meetings this project currently owes a standing update for (R12.2). The
+  // submitter picks which one in the switcher; submitting one returns here until none remain.
+  const pending = await getPendingLeadMeetings(id);
+  if (pending.length === 0) redirect(`/projects/${id}`); // nothing left to submit
 
   async function handleSubmit(formData: FormData) {
     "use server";
     await submitStatusUpdate(id, formData);
   }
+
+  const pendingDTO = pending.map((p) => ({
+    id: p.meeting.id,
+    title: p.meeting.title,
+    startsAt: p.meeting.startsAt.toISOString(),
+    isLate: p.isLate,
+  }));
 
   return (
     <div className="max-w-2xl">
@@ -62,71 +70,7 @@ export default async function SubmitStatusUpdatePage({
         <p className="text-sm text-muted-foreground mt-1">{project.semester}</p>
       </div>
 
-      <form action={handleSubmit} className="space-y-6">
-        <div
-          className={`p-3 rounded-md border text-sm ${active.isLate ? "bg-[#FDEBEC] border-[#A4503C]/20 text-[#A4503C]" : "bg-card border-border text-muted-foreground"}`}
-          data-testid="status-meeting-notice"
-        >
-          For lead meeting <strong className="text-foreground">{active.meeting.title}</strong> on{" "}
-          {active.meeting.startsAt.toLocaleString("en-US", { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}
-          {active.isLate && <> &middot; <strong>this submission will be marked late</strong></>}
-        </div>
-
-        {[
-          { name: "plannedWork", label: "Planned Work for This Week", placeholder: "What did you plan to accomplish this week?" },
-          { name: "actualProgress", label: "Actual Progress", placeholder: "What did you actually complete? What didn't happen?" },
-          { name: "blockers", label: "Blockers", placeholder: "What is slowing you down? (Write 'None' if no blockers)" },
-          { name: "nextWeekGoals", label: "Next Week's Goals", placeholder: "What will you commit to for next week?" },
-        ].map(({ name, label, placeholder }) => (
-          <div key={name}>
-            <label className="block text-xs font-medium text-muted-foreground uppercase tracking-widest mb-2" style={{ fontFamily: "var(--font-mono)" }}>
-              {label} *
-            </label>
-            <textarea
-              name={name}
-              rows={3}
-              required
-              placeholder={placeholder}
-              className="w-full rounded-md border border-border bg-card px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-colors resize-none"
-            />
-          </div>
-        ))}
-
-        {/* Help needed toggle */}
-        <div className="p-4 bg-card border border-border rounded-xl">
-          <div className="flex items-center gap-3 mb-3">
-            <input
-              type="checkbox"
-              id="needsHelp"
-              name="needsHelp"
-              className="w-4 h-4 accent-primary"
-            />
-            <label htmlFor="needsHelp" className="text-sm font-medium text-foreground">
-              I need help from the PM
-            </label>
-          </div>
-          <textarea
-            name="helpNeeded"
-            rows={2}
-            placeholder="Describe what help you need…"
-            className="w-full rounded-md border border-border bg-card px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-colors resize-none"
-          />
-        </div>
-
-        <div className="flex items-center gap-3 pt-2">
-          <SubmitButton
-            label="Submit Project Standing"
-            pendingLabel="Submitting…"
-            className="rounded-md bg-primary text-primary-foreground text-sm font-medium px-5 py-2.5 hover:bg-primary/80 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          />
-          <Link
-            href={`/projects/${id}`}
-            className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-          >
-            Cancel
-          </Link>
-        </div>
-      </form>
+      <StatusSubmitSwitcher projectId={id} pending={pendingDTO} action={handleSubmit} />
     </div>
   );
 }

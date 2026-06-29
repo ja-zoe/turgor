@@ -86,6 +86,26 @@ export default async function SettingsPage() {
                 className="block text-xs text-muted-foreground mb-1"
                 style={{ fontFamily: "var(--font-mono)" }}
               >
+                Late submission window (days after a lead meeting)
+              </label>
+              <input
+                type="number"
+                name="statusLateWindowDays"
+                defaultValue={settings?.statusLateWindowDays ?? 3}
+                min={0}
+                max={30}
+                className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
+                data-testid="status-late-window"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                After a lead meeting, a standing can still be submitted (marked late) for this many days before it&apos;s considered missed.
+              </p>
+            </div>
+            <div>
+              <label
+                className="block text-xs text-muted-foreground mb-1"
+                style={{ fontFamily: "var(--font-mono)" }}
+              >
                 Weeks behind milestone to flag
               </label>
               <input
