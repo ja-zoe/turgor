@@ -50,12 +50,13 @@ export async function verifyOAuthAccessToken(token: string): Promise<McpUser | n
   let subject: string | null = null;
   try {
     const claims = await sx.idp.introspectTokenLocal(token);
+    const claimsRecord = claims as unknown as Record<string, unknown>;
     const cc = (claims.custom_claims ?? {}) as Record<string, unknown>;
     subject = claims.subject ?? null;
     // The CAS email may surface as a top-level or custom claim depending on Stytch token
     // config — try the common shapes.
     email =
-      ((claims as Record<string, unknown>).email as string | undefined) ??
+      (claimsRecord.email as string | undefined) ??
       (cc.email as string | undefined) ??
       (cc["https://seed/email"] as string | undefined) ??
       null;
@@ -64,7 +65,7 @@ export async function verifyOAuthAccessToken(token: string): Promise<McpUser | n
     console.log("[mcp-oauth] introspected access token", {
       subject,
       scope: claims.scope,
-      top_level_keys: Object.keys(claims as Record<string, unknown>),
+      top_level_keys: Object.keys(claimsRecord),
       custom_claim_keys: Object.keys(cc),
       resolved_email: email ? email.replace(/(.{2}).*(@.*)/, "$1***$2") : null,
     });
