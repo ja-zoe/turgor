@@ -164,7 +164,7 @@ function EventEditor({ event, defaultDate, semester, allSemesters, projects, can
       onClick={handleClose}
     >
       <div
-        className="bg-card border border-border rounded-xl shadow-lg w-full max-w-md max-h-[90vh] overflow-y-auto"
+        className="bg-card border border-border rounded-xl w-full max-w-md max-h-[90vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between px-5 py-4 border-b border-border">

@@ -198,7 +198,7 @@ function StatusDropdown({
     <div
       style={{ position: "absolute", top: pos.top, left: pos.left, zIndex: 9999, fontFamily: "var(--font-mono)" }}
       onMouseDown={(e) => e.stopPropagation()}
-      className="min-w-[160px] bg-card border border-border rounded-lg shadow-md py-1 text-xs"
+      className="min-w-[160px] bg-card border border-border rounded-lg shadow-xs py-1 text-xs"
     >
       {ALL_STATUSES.map((s) => (
         <button
@@ -378,7 +378,7 @@ function DeliverableStatusPopover({
     <div
       style={{ position: "absolute", top: pos.top, left: pos.left, zIndex: 9999, fontFamily: "var(--font-mono)" }}
       onMouseDown={(e) => e.stopPropagation()}
-      className="min-w-[160px] bg-card border border-border rounded-lg shadow-md py-1 text-xs"
+      className="min-w-[160px] bg-card border border-border rounded-lg shadow-xs py-1 text-xs"
     >
       {ALL_STATUSES.map((s) => (
         <button
@@ -435,7 +435,7 @@ function AssigneeSearch({
     <div
       style={{ position: "absolute", top: pos.top + 2, left: pos.left, zIndex: 9999, fontFamily: "var(--font-mono)" }}
       onMouseDown={(e) => e.stopPropagation()}
-      className="w-52 bg-card border border-border rounded-lg shadow-md overflow-hidden"
+      className="w-52 bg-card border border-border rounded-lg shadow-xs overflow-hidden"
       data-testid="assignee-picker"
     >
       <div className="p-1.5 border-b border-border">
@@ -532,7 +532,7 @@ function GroupCombobox({
     <div
       style={{ position: "absolute", top: pos.top + 2, left: pos.left, zIndex: 9999, fontFamily: "var(--font-mono)" }}
       onMouseDown={(e) => e.stopPropagation()}
-      className="w-52 bg-card border border-border rounded-lg shadow-md overflow-hidden"
+      className="w-52 bg-card border border-border rounded-lg shadow-xs overflow-hidden"
       data-testid="group-combobox"
     >
       <div className="p-1.5 border-b border-border">
@@ -593,7 +593,7 @@ function PriorityMenu({
     <div
       style={{ position: "absolute", top: pos.top + 2, left: pos.left, zIndex: 9999, fontFamily: "var(--font-mono)" }}
       onMouseDown={(e) => e.stopPropagation()}
-      className="min-w-[120px] bg-card border border-border rounded-lg shadow-md py-1 text-xs"
+      className="min-w-[120px] bg-card border border-border rounded-lg shadow-xs py-1 text-xs"
       data-testid="priority-menu"
     >
       {ALL_PRIORITIES.map((p) => (
