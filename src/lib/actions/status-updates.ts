@@ -3,7 +3,7 @@
 import { prisma } from "@/lib/prisma";
 import { requireAuth, getProjectMembership, getUserPermissions } from "@/lib/permissions";
 import { Permission } from "@/generated/prisma";
-import { getActiveLeadMeeting } from "@/lib/lead-meeting";
+import { getPendingLeadMeetings } from "@/lib/lead-meeting";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
@@ -15,10 +15,15 @@ export async function submitStatusUpdate(projectId: string, formData: FormData) 
     throw new Error("Only project leads and subleads can submit status updates");
   }
 
-  // The update corresponds to the project's active lead meeting (R10.2).
-  const active = await getActiveLeadMeeting(projectId);
-  if (!active) {
-    throw new Error("There is no lead meeting open for submission for this project");
+  // The update is submitted for a specific pending lead meeting (chosen in the switcher).
+  // Validate it's actually one of this project's currently-pending meetings.
+  const pending = await getPendingLeadMeetings(projectId);
+  const calendarEventId = (formData.get("calendarEventId") as string | null)?.trim() || null;
+  const target = calendarEventId
+    ? pending.find((p) => p.meeting.id === calendarEventId)
+    : pending[0]; // no explicit id → the soonest pending meeting
+  if (!target) {
+    throw new Error("That lead meeting is no longer open for submission for this project");
   }
 
   const plannedWork = (formData.get("plannedWork") as string).trim();
@@ -32,20 +37,22 @@ export async function submitStatusUpdate(projectId: string, formData: FormData) 
     data: {
       projectId,
       submittedById: user.id,
-      calendarEventId: active.meeting.id,
-      meetingDate: active.meeting.startsAt, // derived from the lead meeting
+      calendarEventId: target.meeting.id,
+      meetingDate: target.meeting.startsAt, // derived from the lead meeting
       plannedWork,
       actualProgress,
       blockers,
       nextWeekGoals,
       needsHelp,
       helpNeeded: needsHelp ? helpNeeded : null,
-      isLate: active.isLate, // late once past the meeting start time
+      isLate: target.isLate, // late once past the meeting start time
     },
   });
 
   revalidatePath(`/projects/${projectId}`);
-  redirect(`/projects/${projectId}`);
+  // Back to the submit page so any remaining pending meetings surface immediately;
+  // that page redirects to the project once nothing is left to submit.
+  redirect(`/projects/${projectId}/status/new`);
 }
 
 /**
