@@ -3,6 +3,7 @@ import { requirePermission } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { Permission, ProjectMemberRole } from "@/generated/prisma";
 import { assignMember, removeMember } from "@/lib/actions/projects";
+import { MemberRoleControl } from "@/components/member-role-control";
 import { ArrowLeft, Trash } from "@phosphor-icons/react/dist/ssr";
 import Link from "next/link";
 import { getDisplayName } from "@/lib/utils";
@@ -75,10 +76,11 @@ export default async function MembersPage({
                     {getDisplayName(a.user)}
                   </p>
                   <p
-                    className="text-xs text-muted-foreground"
+                    className="text-xs text-muted-foreground flex items-center gap-1"
                     style={{ fontFamily: "var(--font-mono)" }}
                   >
-                    {a.user.email} &middot; {a.role.toLowerCase()}
+                    {a.user.email} &middot;{" "}
+                    <MemberRoleControl projectId={id} userId={a.userId} role={a.role} />
                   </p>
                 </div>
                 <form
