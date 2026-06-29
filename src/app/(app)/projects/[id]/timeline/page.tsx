@@ -18,7 +18,8 @@ import {
 import { getDisplayName } from "@/lib/utils";
 
 function formatWeek(date: Date) {
-  return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  // Deliverable dates are date-only (UTC midnight); format in UTC so they don't shift a day.
+  return date.toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
 }
 
 export default async function ProjectTimelinePage({

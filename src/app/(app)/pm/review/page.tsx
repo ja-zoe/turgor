@@ -5,6 +5,7 @@ import { ProjectStatusBadge } from "@/components/status-badge";
 import { BlockerFrequencyChart } from "@/components/charts/blocker-frequency-chart";
 import { GoalCompletionChart } from "@/components/charts/goal-completion-chart";
 import { extractBlockerFrequency, findConsecutiveMisses } from "@/lib/analytics";
+import { formatDateOnly } from "@/lib/utils";
 import Link from "next/link";
 import {
   Warning,
@@ -84,7 +85,7 @@ export default async function MonthlyReviewPage() {
   const healthGrid = projects.map((p) => {
     const lastRecord = p.meetingRecords[p.meetingRecords.length - 1];
     const goalData = p.meetingRecords.map((r) => ({
-      week: r.meetingDate.toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+      week: formatDateOnly(r.meetingDate),
       goalMet: r.goalMet,
     }));
     const openActionItems = p.actionItems.length;

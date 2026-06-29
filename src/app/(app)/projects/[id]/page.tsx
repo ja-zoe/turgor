@@ -22,7 +22,7 @@ import {
 import { ActionItemsSection } from "@/components/action-items-section";
 import { deleteDeliverable } from "@/lib/actions/deliverables";
 import { removeMember } from "@/lib/actions/projects";
-import { getDisplayName, projectDuration, formatProjectDate } from "@/lib/utils";
+import { getDisplayName, projectDuration, formatProjectDate, formatDateOnly } from "@/lib/utils";
 
 export default async function ProjectDetailPage({
   params,
@@ -459,11 +459,7 @@ export default async function ProjectDetailPage({
                     className="text-xs text-muted-foreground"
                     style={{ fontFamily: "var(--font-mono)" }}
                   >
-                    {record.meetingDate.toLocaleDateString("en-US", {
-                      weekday: "short",
-                      month: "short",
-                      day: "numeric",
-                    })}
+                    {formatDateOnly(record.meetingDate, { weekday: "short", month: "short", day: "numeric" })}
                   </span>
                   <div className="flex items-center gap-2">
                     {record.goalMet !== null && (

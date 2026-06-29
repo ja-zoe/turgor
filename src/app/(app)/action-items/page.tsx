@@ -5,7 +5,7 @@ import { Permission } from "@/generated/prisma";
 import { Check, ListChecks, ArrowClockwise, PencilSimple } from "@phosphor-icons/react/dist/ssr";
 import { closeActionItem, reopenActionItem } from "@/lib/actions/action-items";
 import { ActionItemModal } from "@/components/action-item-modal";
-import { getDisplayName } from "@/lib/utils";
+import { getDisplayName, formatDateOnly } from "@/lib/utils";
 
 export default async function AllActionItemsPage() {
   const user = await requireAuth();
@@ -119,11 +119,7 @@ export default async function AllActionItemsPage() {
                             }`}
                             style={{ fontFamily: "var(--font-mono)" }}
                           >
-                            due{" "}
-                            {item.deadline.toLocaleDateString("en-US", {
-                              month: "short",
-                              day: "numeric",
-                            })}
+                            due {formatDateOnly(item.deadline)}
                           </span>
                         )}
                         {item.carriedOver && (

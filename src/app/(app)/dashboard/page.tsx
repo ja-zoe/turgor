@@ -3,7 +3,7 @@ import { requireAuth, getUserPermissions, getProjectMembership } from "@/lib/per
 import { prisma } from "@/lib/prisma";
 import { Permission } from "@/generated/prisma";
 import { getStatusSubmissionState } from "@/lib/lead-meeting";
-import { getDisplayName } from "@/lib/utils";
+import { getDisplayName, formatDateOnly } from "@/lib/utils";
 import { ProjectStatusBadge } from "@/components/status-badge";
 import { DeliverableProgress } from "@/components/charts/deliverable-progress";
 import { GoalCompletionChart } from "@/components/charts/goal-completion-chart";
@@ -104,7 +104,7 @@ export default async function DashboardPage() {
       lastSubmitted: latest?.submittedAt ?? null,
       canSubmit: submissionState.canSubmit && (role === "LEAD" || role === "SUBLEAD"),
       goalData: meetingRecords.map((r) => ({
-        week: r.meetingDate.toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+        week: formatDateOnly(r.meetingDate),
         goalMet: r.goalMet,
       })),
       deliverableStats: deliverables.map((d) => ({
@@ -311,7 +311,7 @@ export default async function DashboardPage() {
                       className={`text-xs ${item.deadline < new Date() ? "text-[#A4503C]" : "text-muted-foreground"}`}
                       style={{ fontFamily: "var(--font-mono)" }}
                     >
-                      {item.deadline.toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                      {formatDateOnly(item.deadline)}
                     </span>
                   )}
                 </div>
