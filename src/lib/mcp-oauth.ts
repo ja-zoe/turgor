@@ -1,4 +1,5 @@
 import * as stytch from "stytch";
+import * as jose from "jose";
 import { prisma } from "@/lib/prisma";
 
 /**
@@ -40,6 +41,23 @@ export function looksLikeJwt(token: string): boolean {
   return token.split(".").length === 3;
 }
 
+/** Stytch API base for this project (test vs live keyed off the project_id prefix). */
+function stytchApiBase(projectId: string): string {
+  return projectId.startsWith("project-live-") ? "https://api.stytch.com" : "https://test.stytch.com";
+}
+
+let jwks: ReturnType<typeof jose.createRemoteJWKSet> | null = null;
+/** Remote JWK set for this Stytch project — verifies the access token's signature. */
+function getStytchJwks() {
+  if (jwks) return jwks;
+  const projectId = process.env.STYTCH_PROJECT_ID;
+  if (!projectId) return null;
+  jwks = jose.createRemoteJWKSet(
+    new URL(`/v1/sessions/jwks/${projectId}`, stytchApiBase(projectId))
+  );
+  return jwks;
+}
+
 /**
  * Validate a Stytch-issued OAuth access token and resolve it to an ACTIVE SEED user, or
  * null. Never throws — a bad/expired/foreign token just yields null (→ 401).
@@ -48,17 +66,27 @@ export async function verifyOAuthAccessToken(token: string): Promise<McpUser | n
   const sx = getStytch();
   if (!sx) return null;
 
-  let claims;
+  // Verify the access token directly against Stytch's project JWKS. We intentionally do NOT
+  // use `idp.introspectTokenLocal` here: that helper only accepts the *session* JWT issuers
+  // (`stytch.com/<project_id>` or the API base URL), whereas Connected-App OAuth access
+  // tokens carry the IdP issuer — so it rejects a valid token with `unexpected "iss"`. The
+  // project-scoped JWKS still proves the token was minted by *our* Stytch project; jose
+  // enforces the signature + expiry. RBAC is re-checked per-user downstream.
+  const jwkSet = getStytchJwks();
+  if (!jwkSet) return null;
+  let claimsRecord: Record<string, unknown>;
   try {
-    claims = await sx.idp.introspectTokenLocal(token);
+    const { payload } = await jose.jwtVerify(token, jwkSet);
+    claimsRecord = payload as Record<string, unknown>;
   } catch (e) {
-    console.error("[mcp-oauth] introspect failed:", (e as Error)?.message);
+    console.error("[mcp-oauth] token verify failed:", (e as Error)?.message);
     return null;
   }
 
-  const claimsRecord = claims as unknown as Record<string, unknown>;
-  const cc = (claims.custom_claims ?? {}) as Record<string, unknown>;
-  const subject = claims.subject ?? null;
+  // Stytch puts custom claims at the top level of the access token; an SDK-shaped nested
+  // `custom_claims` object is also tolerated.
+  const cc = (claimsRecord.custom_claims ?? {}) as Record<string, unknown>;
+  const subject = (claimsRecord.sub as string | undefined) ?? null;
 
   // The CAS email may ride in the access token as a custom claim, but Stytch's *default*
   // access token does NOT carry email — it only has subject/scope/aud/iss. So try the claim
@@ -85,9 +113,10 @@ export async function verifyOAuthAccessToken(token: string): Promise<McpUser | n
     }
   }
 
-  console.log("[mcp-oauth] introspected access token", {
+  console.log("[mcp-oauth] verified access token", {
     subject,
-    scope: claims.scope,
+    iss: claimsRecord.iss,
+    scope: claimsRecord.scope,
     top_level_keys: Object.keys(claimsRecord),
     custom_claim_keys: Object.keys(cc),
     external_id: externalId,
