@@ -43,3 +43,22 @@ export function formatDateOnly(
 export function formatProjectDate(d: Date): string {
   return formatDateOnly(d, { month: "short", year: "numeric" });
 }
+
+/**
+ * Human-friendly "time ago" for a true datetime (e.g. MCP connection lastSeenAt).
+ * "just now", "5m ago", "3h ago", "5d ago", "2mo ago", "1y ago".
+ */
+export function formatRelative(date: Date | string): string {
+  const d = new Date(date);
+  const sec = Math.floor((Date.now() - d.getTime()) / 1000);
+  if (sec < 45) return "just now";
+  const min = Math.floor(sec / 60);
+  if (min < 60) return `${min}m ago`;
+  const hr = Math.floor(min / 60);
+  if (hr < 24) return `${hr}h ago`;
+  const day = Math.floor(hr / 24);
+  if (day < 30) return `${day}d ago`;
+  const mo = Math.floor(day / 30);
+  if (mo < 12) return `${mo}mo ago`;
+  return `${Math.floor(day / 365)}y ago`;
+}

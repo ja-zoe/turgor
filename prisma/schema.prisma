@@ -27,12 +27,19 @@ enum Permission {
   VIEW_LEAD_MEETINGS
   MANAGE_STATUS_UPDATES
   MANAGE_MEETING_RECORDS
+  DELETE_USERS
 }
 
 enum UserStatus {
   PENDING
   ACTIVE
   SUSPENDED
+  DELETED
+}
+
+enum McpConnectionType {
+  ACCESS_TOKEN
+  OAUTH
 }
 
 enum ProjectStatus {
@@ -169,9 +176,23 @@ model User {
   assignedSubtasks   Subtask[]           @relation("SubtaskAssignee")
   actionItems        ActionItem[]        @relation("ActionItemOwner")
   notifications      Notification[]
+  mcpConnections     McpConnection[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model McpConnection {
+  id         String            @id @default(cuid())
+  userId     String
+  user       User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type       McpConnectionType
+  clientId   String? // OAuth client id (from the token); "personal" sentinel for personal token
+  label      String? // friendly name, e.g. "ChatGPT" or "Personal access token"
+  createdAt  DateTime          @default(now())
+  lastSeenAt DateTime          @default(now())
+
+  @@unique([userId, type, clientId])
 }
 
 model Project {

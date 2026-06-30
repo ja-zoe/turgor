@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getUserPermissions } from "@/lib/permissions";
-import { Permission, TimelineStatus, ActionItemStatus, CalendarEventType, ProjectStatus } from "@/generated/prisma";
+import { Permission, TimelineStatus, ActionItemStatus, CalendarEventType, ProjectStatus, McpConnectionType } from "@/generated/prisma";
 import { carryOverActionItems } from "@/lib/actions/action-items";
 import { runRedFlagDetection } from "@/lib/red-flag";
 import { verifyOAuthAccessToken, looksLikeJwt, type McpUser } from "@/lib/mcp-oauth";
@@ -403,6 +403,41 @@ const TOOLS = [
   },
 ];
 
+// Don't write more than once per this window — keeps multi-call sessions from hammering
+// the DB while still letting `lastSeenAt` advance over time (R18.1).
+const CONNECTION_THROTTLE_MS = 5 * 60 * 1000;
+
+/**
+ * Record (or refresh) an MCP connection for the authenticated user. Best-effort: a write
+ * failure must never 500 a tool call, so everything is wrapped in try/catch. Throttled so
+ * we only bump `lastSeenAt` once per `CONNECTION_THROTTLE_MS`.
+ */
+async function recordMcpConnection(
+  userId: string,
+  type: McpConnectionType,
+  clientId: string,
+  label: string
+): Promise<void> {
+  try {
+    const where = { userId_type_clientId: { userId, type, clientId } };
+    const existing = await prisma.mcpConnection.findUnique({
+      where,
+      select: { lastSeenAt: true },
+    });
+    const now = new Date();
+    if (existing) {
+      if (now.getTime() - existing.lastSeenAt.getTime() < CONNECTION_THROTTLE_MS) return;
+      await prisma.mcpConnection.update({ where, data: { lastSeenAt: now } });
+    } else {
+      await prisma.mcpConnection.create({
+        data: { userId, type, clientId, label, lastSeenAt: now },
+      });
+    }
+  } catch (e) {
+    console.warn("[mcp] connection upsert failed:", (e as Error)?.message);
+  }
+}
+
 async function authenticate(req: NextRequest): Promise<McpUser | null> {
   const auth = req.headers.get("authorization");
   if (!auth?.startsWith("Bearer ")) return null;
@@ -416,13 +451,27 @@ async function authenticate(req: NextRequest): Promise<McpUser | null> {
       select: { id: true, email: true, roleId: true, status: true },
     });
     if (user && user.status === "ACTIVE") {
+      await recordMcpConnection(
+        user.id,
+        McpConnectionType.ACCESS_TOKEN,
+        "personal",
+        "Personal access token"
+      );
       return { id: user.id, email: user.email, roleId: user.roleId };
     }
     return null;
   }
 
   // (2) Stytch-issued OAuth access token — ChatGPT / remote MCP hosts (R17.2).
-  return verifyOAuthAccessToken(token);
+  const result = await verifyOAuthAccessToken(token);
+  if (!result) return null;
+  await recordMcpConnection(
+    result.id,
+    McpConnectionType.OAUTH,
+    result.oauthClientId ?? "oauth",
+    result.oauthClientLabel ?? "OAuth client"
+  );
+  return { id: result.id, email: result.email, roleId: result.roleId };
 }
 
 async function getProjectMembership(userId: string, projectId: string) {

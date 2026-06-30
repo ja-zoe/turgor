@@ -18,6 +18,15 @@ import { prisma } from "@/lib/prisma";
 
 export type McpUser = { id: string; email: string; roleId: string | null };
 
+/**
+ * Result of verifying an OAuth access token: the resolved SEED user plus the token's
+ * OAuth client id/label, used by the MCP route to record an `McpConnection` (R18.1).
+ */
+export type OAuthVerifyResult = McpUser & {
+  oauthClientId: string | null;
+  oauthClientLabel: string | null;
+};
+
 const USER_SELECT = { id: true, email: true, roleId: true, status: true } as const;
 
 let client: stytch.Client | null = null;
@@ -62,7 +71,7 @@ function getStytchJwks() {
  * Validate a Stytch-issued OAuth access token and resolve it to an ACTIVE SEED user, or
  * null. Never throws — a bad/expired/foreign token just yields null (→ 401).
  */
-export async function verifyOAuthAccessToken(token: string): Promise<McpUser | null> {
+export async function verifyOAuthAccessToken(token: string): Promise<OAuthVerifyResult | null> {
   const sx = getStytch();
   if (!sx) return null;
 
@@ -87,6 +96,17 @@ export async function verifyOAuthAccessToken(token: string): Promise<McpUser | n
   // `custom_claims` object is also tolerated.
   const cc = (claimsRecord.custom_claims ?? {}) as Record<string, unknown>;
   const subject = (claimsRecord.sub as string | undefined) ?? null;
+
+  // OAuth client identity for the McpConnection record (R18.1). Connected-App access
+  // tokens carry the client in `client_id`/`azp`/`aud` (R17.2 saw `connected-app-…`).
+  const audClaim = claimsRecord.aud;
+  const oauthClientId =
+    ((claimsRecord.client_id as string | undefined) ??
+      (claimsRecord.azp as string | undefined) ??
+      (Array.isArray(audClaim) ? (audClaim[0] as string | undefined) : (audClaim as string | undefined))) ??
+    null;
+  const oauthClientLabel =
+    ((claimsRecord.client_name as string | undefined) ?? (cc.client_name as string | undefined)) ?? null;
 
   // The CAS email may ride in the access token as a custom claim, but Stytch's *default*
   // access token does NOT carry email — it only has subject/scope/aud/iss. So try the claim
@@ -141,5 +161,5 @@ export async function verifyOAuthAccessToken(token: string): Promise<McpUser | n
     );
     return null;
   }
-  return { id: user.id, email: user.email, roleId: user.roleId };
+  return { id: user.id, email: user.email, roleId: user.roleId, oauthClientId, oauthClientLabel };
 }

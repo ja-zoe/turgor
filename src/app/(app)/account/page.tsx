@@ -5,10 +5,17 @@ import { ProfileSettingsForm } from "@/components/profile-settings-form";
 
 export default async function AccountPage() {
   const user = await requireAuth();
-  const dbUser = await prisma.user.findUnique({
-    where: { id: user.id },
-    select: { mcpToken: true, firstName: true, lastName: true, nickname: true, email: true },
-  });
+  const [dbUser, connections] = await Promise.all([
+    prisma.user.findUnique({
+      where: { id: user.id },
+      select: { mcpToken: true, firstName: true, lastName: true, nickname: true, email: true },
+    }),
+    prisma.mcpConnection.findMany({
+      where: { userId: user.id },
+      orderBy: { lastSeenAt: "desc" },
+      select: { type: true, label: true, lastSeenAt: true },
+    }),
+  ]);
 
   const appUrl =
     process.env.NEXTAUTH_URL ?? process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
@@ -41,7 +48,15 @@ export default async function AccountPage() {
         email={dbUser?.email ?? user.email}
       />
 
-      <MpcTokenSection hasToken={!!dbUser?.mcpToken} appUrl={appUrl} />
+      <MpcTokenSection
+        hasToken={!!dbUser?.mcpToken}
+        appUrl={appUrl}
+        connections={connections.map((c) => ({
+          type: c.type,
+          label: c.label,
+          lastSeenAt: c.lastSeenAt.toISOString(),
+        }))}
+      />
     </div>
   );
 }

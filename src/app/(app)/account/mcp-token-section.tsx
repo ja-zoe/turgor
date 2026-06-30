@@ -1,15 +1,25 @@
 "use client";
 
 import { useState } from "react";
-import { Robot, Copy, Check, ArrowClockwise, Trash } from "@phosphor-icons/react";
+import { Robot, Copy, Check, ArrowClockwise, Trash, Key } from "@phosphor-icons/react";
 import { generateMcpToken, revokeMcpToken } from "@/lib/actions/account";
+import { formatRelative } from "@/lib/utils";
+
+export interface McpConnectionDTO {
+  type: "ACCESS_TOKEN" | "OAUTH";
+  label: string | null;
+  lastSeenAt: string; // ISO
+}
 
 interface Props {
   hasToken: boolean;
   appUrl: string;
+  connections: McpConnectionDTO[];
 }
 
-export function MpcTokenSection({ hasToken, appUrl }: Props) {
+const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
+
+export function MpcTokenSection({ hasToken, appUrl, connections }: Props) {
   const [newToken, setNewToken] = useState<string | null>(null);
   const [tokenExists, setTokenExists] = useState(hasToken);
   const [copied, setCopied] = useState(false);
@@ -82,19 +92,54 @@ export function MpcTokenSection({ hasToken, appUrl }: Props) {
           </p>
         </div>
 
-        {/* Token status */}
-        <div className="flex items-center gap-3">
-          <span
-            className={`text-xs px-2 py-0.5 rounded ${
-              tokenExists
-                ? "bg-[#EDF3EC] text-[#588157]"
-                : "bg-muted text-muted-foreground"
-            }`}
+        {/* Connections — one line per live MCP connection (R18.1) */}
+        <div className="space-y-2">
+          <p
+            className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60"
             style={{ fontFamily: "var(--font-mono)" }}
           >
-            {tokenExists ? "Token active" : "No token"}
-          </span>
+            Connections
+          </p>
+          {connections.length === 0 ? (
+            <p className="text-xs text-muted-foreground" data-testid="mcp-no-connections">
+              No active connections
+            </p>
+          ) : (
+            <ul className="space-y-1.5" data-testid="mcp-connections">
+              {connections.map((c, i) => {
+                const recent = Date.now() - new Date(c.lastSeenAt).getTime() <= SEVEN_DAYS_MS;
+                const Icon = c.type === "OAUTH" ? Robot : Key;
+                const label =
+                  c.label ?? (c.type === "OAUTH" ? "OAuth client" : "Personal access token");
+                return (
+                  <li
+                    key={i}
+                    className="flex items-center gap-2 text-xs"
+                    data-testid="mcp-connection"
+                  >
+                    <span
+                      className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+                        recent ? "bg-[#588157]" : "bg-muted-foreground/40"
+                      }`}
+                      title={recent ? "Active in the last 7 days" : "Idle"}
+                    />
+                    <Icon size={13} className="text-muted-foreground shrink-0" />
+                    <span className="text-foreground">{label}</span>
+                    <span
+                      className="text-muted-foreground"
+                      style={{ fontFamily: "var(--font-mono)" }}
+                    >
+                      last used {formatRelative(c.lastSeenAt)}
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </div>
 
+        {/* Token controls */}
+        <div className="flex items-center gap-3">
           <button
             type="button"
             onClick={handleGenerate}
