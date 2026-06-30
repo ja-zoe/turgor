@@ -23,6 +23,7 @@ const PM_PERMISSIONS: Permission[] = [
   Permission.VIEW_LEAD_MEETINGS,
   Permission.MANAGE_STATUS_UPDATES,
   Permission.MANAGE_MEETING_RECORDS,
+  Permission.DELETE_USERS,
 ];
 
 const LEAD_PERMISSIONS: Permission[] = [

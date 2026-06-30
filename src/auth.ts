@@ -77,7 +77,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             data: { status: UserStatus.ACTIVE, roleId: pmRole?.id ?? user.roleId },
             select: { id: true, email: true, name: true, status: true, roleId: true },
           });
-        } else if (user.status === UserStatus.SUSPENDED) {
+        } else if (
+          user.status === UserStatus.SUSPENDED ||
+          user.status === UserStatus.DELETED
+        ) {
+          // SUSPENDED and DELETED accounts can't sign in. (A deleted user's email was
+          // rewritten, so a returning netId is normally provisioned fresh as PENDING above.)
           return null;
         }
 

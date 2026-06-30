@@ -17,6 +17,8 @@ export async function requireAuth(): Promise<SessionUser> {
   if (!session?.user?.id) redirect("/api/cas/login");
   if (session.user.status === UserStatus.PENDING) redirect("/pending");
   if (session.user.status === UserStatus.SUSPENDED) redirect("/api/cas/login");
+  // A DELETED user is treated as inactive — locked out like a suspended account (R18.2).
+  if (session.user.status === UserStatus.DELETED) redirect("/api/cas/login");
   return session.user as SessionUser;
 }
 

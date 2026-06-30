@@ -5,6 +5,7 @@ import { approveUser, updateUserRole, suspendUser, reactivateUser } from "@/lib/
 import { createRole, updateRole, deleteRole } from "@/lib/actions/roles";
 import { CheckCircle, XCircle, PauseCircle, UserCircle, ShieldCheck } from "@phosphor-icons/react/dist/ssr";
 import { getDisplayName } from "@/lib/utils";
+import { UserRowControls } from "@/components/user-row-controls";
 
 const ALL_PERMISSIONS: { value: Permission; label: string }[] = [
   { value: Permission.VIEW_ALL_PROJECTS, label: "View all projects" },
@@ -24,6 +25,7 @@ const ALL_PERMISSIONS: { value: Permission; label: string }[] = [
   { value: Permission.VIEW_LEAD_MEETINGS, label: "View lead / eboard meetings" },
   { value: Permission.MANAGE_STATUS_UPDATES, label: "Manage status updates" },
   { value: Permission.MANAGE_MEETING_RECORDS, label: "Manage meeting records" },
+  { value: Permission.DELETE_USERS, label: "Delete users" },
 ];
 
 // Completeness guard: every Permission must have a Role-Builder checkbox, otherwise
@@ -44,6 +46,7 @@ export default async function UsersPage() {
   const me = await requirePermission(Permission.MANAGE_USERS);
   const myPermissions = await getUserPermissions(me.roleId);
   const canManageRoles = myPermissions.includes(Permission.MANAGE_ROLES);
+  const canDeleteUsers = myPermissions.includes(Permission.DELETE_USERS);
 
   const [users, roles] = await Promise.all([
     prisma.user.findMany({
@@ -226,6 +229,7 @@ export default async function UsersPage() {
                     </button>
                   </form>
                 )}
+                {canDeleteUsers && u.id !== me.id && <UserRowControls userId={u.id} />}
               </div>
             ))
           )}
