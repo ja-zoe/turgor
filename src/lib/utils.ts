@@ -37,7 +37,9 @@ export function formatDateOnly(
   d: Date | string,
   opts: Intl.DateTimeFormatOptions = { month: "short", day: "numeric" }
 ): string {
-  return new Date(d).toLocaleDateString("en-US", { ...opts, timeZone: "UTC" });
+  const date = new Date(d);
+  if (isNaN(date.getTime())) return "—"; // tolerate a bad/missing value rather than throw
+  return date.toLocaleDateString("en-US", { ...opts, timeZone: "UTC" });
 }
 
 export function formatProjectDate(d: Date): string {

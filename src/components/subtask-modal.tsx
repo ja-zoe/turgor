@@ -9,6 +9,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { createSubtask, updateSubtask } from "@/lib/actions/deliverables";
+import { isValidDateInput } from "@/lib/date";
 import { getDisplayName } from "@/lib/utils";
 import { MarkdownEditor } from "@/components/markdown-editor";
 
@@ -100,6 +101,10 @@ export function SubtaskModal({
       setError("Title is required");
       return;
     }
+    if (!isValidDateInput(dueDate)) {
+      setError("Due date is not a valid date");
+      return;
+    }
     if (dueDate && maxDue && dueDate > maxDue) {
       setError("Due date can't be after the deliverable's target date");
       return;
@@ -112,9 +117,13 @@ export function SubtaskModal({
     if (mode === "edit") fd.set("status", status);
 
     startTransition(async () => {
-      if (mode === "create") await createSubtask(deliverableId, fd);
-      else if (subtask) await updateSubtask(subtask.id, fd);
-      setOpen(false);
+      try {
+        if (mode === "create") await createSubtask(deliverableId, fd);
+        else if (subtask) await updateSubtask(subtask.id, fd);
+        setOpen(false);
+      } catch (e) {
+        setError((e as Error)?.message ?? "Could not save the subtask");
+      }
     });
   }
 

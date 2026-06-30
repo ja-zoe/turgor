@@ -2,6 +2,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/permissions";
+import { parseDateInput, DateInputError } from "@/lib/date";
 import { Permission, CalendarEventType } from "@/generated/prisma";
 import { revalidatePath } from "next/cache";
 
@@ -40,8 +41,9 @@ export async function createEvent(formData: FormData) {
 
   if (!title || !semester || !startsAtRaw) throw new Error("title, semester, and startsAt are required");
 
-  const startsAt = new Date(startsAtRaw);
-  const endsAt = endsAtRaw ? new Date(endsAtRaw) : null;
+  const startsAt = parseDateInput(startsAtRaw);
+  if (!startsAt) throw new DateInputError("Start time is required.");
+  const endsAt = parseDateInput(endsAtRaw);
 
   if (endsAt && endsAt < startsAt) throw new Error("endsAt must be after startsAt");
 
@@ -72,8 +74,8 @@ export async function updateEvent(eventId: string, formData: FormData) {
   const description = (formData.get("description") as string | null)?.trim() || null;
   const projectId = (formData.get("projectId") as string | null)?.trim() || null;
 
-  const startsAt = startsAtRaw ? new Date(startsAtRaw) : undefined;
-  const endsAt = endsAtRaw !== null ? (endsAtRaw ? new Date(endsAtRaw) : null) : undefined;
+  const startsAt = startsAtRaw ? (parseDateInput(startsAtRaw) ?? undefined) : undefined;
+  const endsAt = endsAtRaw !== null ? parseDateInput(endsAtRaw) : undefined;
 
   if (startsAt && endsAt && endsAt < startsAt) throw new Error("endsAt must be after startsAt");
 

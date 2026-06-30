@@ -10,6 +10,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { createActionItem, updateActionItem, deleteActionItem } from "@/lib/actions/action-items";
+import { isValidDateInput } from "@/lib/date";
 import { InlineConfirm } from "@/components/sortable-deliverables";
 
 export interface ActionItemDTO {
@@ -82,15 +83,23 @@ export function ActionItemModal({
       setError("Description is required");
       return;
     }
+    if (!isValidDateInput(deadline)) {
+      setError("Deadline is not a valid date");
+      return;
+    }
     const fd = new FormData();
     fd.set("description", trimmed);
     fd.set("ownerId", ownerId);
     fd.set("deadline", deadline);
 
     startTransition(async () => {
-      if (mode === "create") await createActionItem(projectId, fd);
-      else if (item) await updateActionItem(item.id, fd);
-      setOpen(false);
+      try {
+        if (mode === "create") await createActionItem(projectId, fd);
+        else if (item) await updateActionItem(item.id, fd);
+        setOpen(false);
+      } catch (e) {
+        setError((e as Error)?.message ?? "Could not save the action item");
+      }
     });
   }
 

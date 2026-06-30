@@ -27,6 +27,7 @@ import {
   updateDeliverablePriority,
   moveDeliverable,
 } from "@/lib/actions/deliverables";
+import { isValidDateInput } from "@/lib/date";
 import { getDisplayName } from "@/lib/utils";
 import {
   Tooltip, TooltipTrigger, TooltipContent,
@@ -126,7 +127,9 @@ const LOCK_REASON: Record<TimelineStatus, string> = {
 // Deliverable/subtask dates are date-only (UTC midnight from `type="date"` inputs);
 // format in UTC so they don't shift a day for sub-UTC viewers (US Eastern).
 function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return "—"; // tolerate a bad/missing value rather than throw
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
 }
 
 function formatDateShort(iso: string) {
@@ -756,15 +759,25 @@ export function SortableDeliverables({
   function commitDelivEdit() {
     if (!deliverableEdit || isDelivEditPending) return;
     const { id, field, title, startDate, targetDate } = deliverableEdit;
-    if (field === "dates" && startDate && targetDate && startDate > targetDate) {
-      setDelivEditError("Start must be before target");
-      return;
+    if (field === "dates") {
+      if (!isValidDateInput(targetDate) || !isValidDateInput(startDate)) {
+        setDelivEditError("Enter a valid date");
+        return;
+      }
+      if (startDate && targetDate && startDate > targetDate) {
+        setDelivEditError("Start must be before target");
+        return;
+      }
     }
     setDeliverableEdit(null);
     setDelivEditError(null);
     startDelivEditTransition(async () => {
-      if (field === "title") await updateDeliverableTitle(id, title);
-      else await updateDeliverableDates(id, startDate || null, targetDate);
+      try {
+        if (field === "title") await updateDeliverableTitle(id, title);
+        else await updateDeliverableDates(id, startDate || null, targetDate);
+      } catch {
+        // swallow rather than crash the page; the row reverts to its saved value
+      }
     });
   }
 
@@ -791,12 +804,18 @@ export function SortableDeliverables({
   function commitEdit() {
     if (!pendingEdit || isPendingEdit) return;
     const { subtaskId, field, value } = pendingEdit;
+    // Don't submit an impossible due date (e.g. 06/31) — keep the editor open to fix it.
+    if (field === "dueDate" && !isValidDateInput(value)) return;
     setAssigneePickerOpen(false);
     setPendingEdit(null);
     startEditTransition(async () => {
-      if (field === "title") await updateSubtaskTitle(subtaskId, value);
-      else if (field === "assignee") await updateSubtaskAssignee(subtaskId, value || null);
-      else if (field === "dueDate") await updateSubtaskDueDate(subtaskId, value || null);
+      try {
+        if (field === "title") await updateSubtaskTitle(subtaskId, value);
+        else if (field === "assignee") await updateSubtaskAssignee(subtaskId, value || null);
+        else if (field === "dueDate") await updateSubtaskDueDate(subtaskId, value || null);
+      } catch {
+        // swallow rather than crash the page; the row reverts to its saved value
+      }
     });
   }
 
