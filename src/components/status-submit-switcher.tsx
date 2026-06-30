@@ -56,7 +56,7 @@ export function StatusSubmitSwitcher({
               type="button"
               onClick={() => setIndex((i) => Math.max(0, i - 1))}
               disabled={index === 0}
-              className="inline-flex items-center justify-center w-7 h-7 rounded-md border border-border text-muted-foreground hover:text-foreground hover:bg-muted disabled:opacity-40 transition-colors"
+              className="cursor-pointer inline-flex items-center justify-center w-7 h-7 rounded-md border border-border text-muted-foreground hover:text-foreground hover:bg-muted disabled:opacity-40 disabled:cursor-default transition-colors"
               aria-label="Previous meeting"
               data-testid="switcher-prev"
             >
@@ -69,7 +69,7 @@ export function StatusSubmitSwitcher({
               type="button"
               onClick={() => setIndex((i) => Math.min(pending.length - 1, i + 1))}
               disabled={index === pending.length - 1}
-              className="inline-flex items-center justify-center w-7 h-7 rounded-md border border-border text-muted-foreground hover:text-foreground hover:bg-muted disabled:opacity-40 transition-colors"
+              className="cursor-pointer inline-flex items-center justify-center w-7 h-7 rounded-md border border-border text-muted-foreground hover:text-foreground hover:bg-muted disabled:opacity-40 disabled:cursor-default transition-colors"
               aria-label="Next meeting"
               data-testid="switcher-next"
             >
@@ -149,11 +149,11 @@ export function StatusSubmitSwitcher({
           <SubmitButton
             label="Submit Project Standing"
             pendingLabel="Submitting…"
-            className="rounded-md bg-primary text-primary-foreground text-sm font-medium px-5 py-2.5 hover:bg-primary/80 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="rounded-md cursor-pointer bg-primary text-primary-foreground text-sm font-medium px-5 py-2.5 hover:bg-primary/80 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           />
           <Link
             href={`/projects/${projectId}`}
-            className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+            className="text-sm text-muted-foreground clickable-icon"
           >
             Cancel
           </Link>

@@ -54,7 +54,7 @@ export function MarkdownEditor({
       <button
         type="button"
         onClick={switchToMd}
-        className={`text-xs transition-colors ${
+        className={`cursor-pointer text-xs transition-colors ${
           mode === "md"
             ? "text-foreground bg-muted rounded px-1.5 py-0.5"
             : "text-muted-foreground px-1.5 py-0.5 hover:text-foreground"
@@ -66,7 +66,7 @@ export function MarkdownEditor({
       <button
         type="button"
         onClick={switchToPlain}
-        className={`text-xs transition-colors ${
+        className={`cursor-pointer text-xs transition-colors ${
           mode === "plain"
             ? "text-foreground bg-muted rounded px-1.5 py-0.5"
             : "text-muted-foreground px-1.5 py-0.5 hover:text-foreground"
@@ -87,7 +87,7 @@ export function MarkdownEditor({
             <button
               type="button"
               onClick={() => setPreview(false)}
-              className={`px-4 py-2 text-xs font-medium transition-colors ${
+              className={`cursor-pointer px-4 py-2 text-xs font-medium transition-colors ${
                 !preview
                   ? "text-foreground border-b-2 border-primary"
                   : "text-muted-foreground hover:text-foreground"
@@ -99,7 +99,7 @@ export function MarkdownEditor({
             <button
               type="button"
               onClick={() => setPreview(true)}
-              className={`px-4 py-2 text-xs font-medium transition-colors ${
+              className={`cursor-pointer px-4 py-2 text-xs font-medium transition-colors ${
                 preview
                   ? "text-foreground border-b-2 border-primary"
                   : "text-muted-foreground hover:text-foreground"

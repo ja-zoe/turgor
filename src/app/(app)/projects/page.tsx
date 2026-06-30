@@ -62,7 +62,7 @@ export default async function ProjectsPage() {
         {canManage && (
           <Link
             href="/projects/new"
-            className="inline-flex items-center gap-2 rounded-md bg-primary text-primary-foreground text-sm font-medium px-4 py-2.5 hover:bg-primary/80 transition-colors"
+            className="inline-flex items-center gap-2 rounded-md cursor-pointer bg-primary text-primary-foreground text-sm font-medium px-4 py-2.5 hover:bg-primary/80 transition-colors"
           >
             New Project
           </Link>

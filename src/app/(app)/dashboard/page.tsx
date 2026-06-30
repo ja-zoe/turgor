@@ -242,7 +242,7 @@ export default async function DashboardPage() {
           {canMonthlyReview && (
             <Link
               href="/pm/review"
-              className="inline-flex items-center gap-2 rounded-md bg-primary text-primary-foreground text-sm font-medium px-4 py-2.5 hover:bg-primary/80 transition-colors"
+              className="inline-flex items-center gap-2 rounded-md cursor-pointer bg-primary text-primary-foreground text-sm font-medium px-4 py-2.5 hover:bg-primary/80 transition-colors"
             >
               <ChartBar size={14} />
               Monthly Review
@@ -250,14 +250,14 @@ export default async function DashboardPage() {
           )}
           <Link
             href="/action-items"
-            className="inline-flex items-center gap-2 rounded-md border border-border bg-card text-sm font-medium px-4 py-2.5 hover:bg-muted transition-colors"
+            className="inline-flex items-center gap-2 rounded-md cursor-pointer border border-border bg-card text-sm font-medium px-4 py-2.5 hover:bg-muted transition-colors"
           >
             <ListChecks size={14} />
             All Action Items
           </Link>
           <Link
             href="/projects/new"
-            className="inline-flex items-center gap-2 rounded-md border border-border bg-card text-sm font-medium px-4 py-2.5 hover:bg-muted transition-colors"
+            className="inline-flex items-center gap-2 rounded-md cursor-pointer border border-border bg-card text-sm font-medium px-4 py-2.5 hover:bg-muted transition-colors"
           >
             <Folders size={14} />
             New Project
@@ -275,7 +275,7 @@ export default async function DashboardPage() {
             </h2>
             <Link
               href="/action-items"
-              className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+              className="text-xs text-muted-foreground clickable-icon"
               style={{ fontFamily: "var(--font-mono)" }}
             >
               View all
@@ -356,7 +356,7 @@ export default async function DashboardPage() {
                       <ProjectStatusBadge status={project.status} />
                       <Link
                         href={`/projects/${project.id}/timeline`}
-                        className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                        className="text-xs text-muted-foreground clickable-icon"
                         style={{ fontFamily: "var(--font-mono)" }}
                       >
                         <CalendarBlank size={13} className="inline mr-1" />
@@ -364,7 +364,7 @@ export default async function DashboardPage() {
                       </Link>
                       <Link
                         href={`/projects/${project.id}`}
-                        className="text-muted-foreground hover:text-foreground transition-colors"
+                        className="text-muted-foreground clickable-icon"
                       >
                         <ArrowRight size={14} />
                       </Link>
@@ -405,7 +405,7 @@ export default async function DashboardPage() {
                       </div>
                       <Link
                         href={`/projects/${project.id}/status/new`}
-                        className="text-xs font-medium text-[#C99846] hover:text-[#A4503C] transition-colors"
+                        className="text-xs font-medium text-[#C99846] clickable-danger"
                         style={{ fontFamily: "var(--font-mono)" }}
                       >
                         Submit Project Standing →
@@ -426,7 +426,7 @@ export default async function DashboardPage() {
             <h2 className="text-sm font-semibold text-foreground">All Projects</h2>
             <Link
               href="/projects"
-              className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+              className="text-xs text-muted-foreground clickable-icon"
               style={{ fontFamily: "var(--font-mono)" }}
             >
               View all →
@@ -482,7 +482,7 @@ export default async function DashboardPage() {
                     <ProjectStatusBadge status={project.status} />
                     <Link
                       href={`/projects/${project.id}/timeline`}
-                      className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                      className="text-xs text-muted-foreground clickable-icon"
                       style={{ fontFamily: "var(--font-mono)" }}
                     >
                       Timeline

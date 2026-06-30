@@ -76,7 +76,7 @@ export function NotificationBell() {
     <div ref={ref} className="relative">
       <button
         onClick={() => setOpen((o) => !o)}
-        className="relative w-8 h-8 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+        className="cursor-pointer relative w-8 h-8 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
         aria-label="Notifications"
       >
         <Bell size={16} weight={unreadCount > 0 ? "fill" : "regular"} />
@@ -99,7 +99,7 @@ export function NotificationBell() {
                 <button
                   onClick={markAllRead}
                   disabled={loading}
-                  className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                  className="text-xs text-muted-foreground clickable-icon"
                   style={{ fontFamily: "var(--font-mono)" }}
                 >
                   Mark all read
@@ -107,7 +107,7 @@ export function NotificationBell() {
               )}
               <button
                 onClick={() => setOpen(false)}
-                className="text-muted-foreground hover:text-foreground transition-colors"
+                className="text-muted-foreground clickable-icon"
               >
                 <X size={14} />
               </button>

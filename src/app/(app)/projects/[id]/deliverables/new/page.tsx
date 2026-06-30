@@ -44,7 +44,7 @@ export default async function NewDeliverablePage({
       <div className="mb-8">
         <Link
           href={`/projects/${id}`}
-          className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground mb-4 transition-colors"
+          className="inline-flex items-center gap-1.5 text-xs text-muted-foreground clickable mb-4"
           style={{ fontFamily: "var(--font-mono)" }}
         >
           <ArrowLeft size={12} />
@@ -138,10 +138,10 @@ export default async function NewDeliverablePage({
         </div>
 
         <div className="flex items-center gap-3 pt-2">
-          <SubmitButton label="Add Deliverable" pendingLabel="Adding…" className="rounded-md bg-primary text-primary-foreground text-sm font-medium px-5 py-2.5 hover:bg-primary/80 transition-colors disabled:opacity-50 disabled:cursor-not-allowed" />
+          <SubmitButton label="Add Deliverable" pendingLabel="Adding…" className="rounded-md cursor-pointer bg-primary text-primary-foreground text-sm font-medium px-5 py-2.5 hover:bg-primary/80 transition-colors disabled:opacity-50 disabled:cursor-not-allowed" />
           <Link
             href={`/projects/${id}`}
-            className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+            className="text-sm text-muted-foreground clickable-icon"
           >
             Cancel
           </Link>

@@ -185,7 +185,7 @@ function ActionItemRow({
                 type="button"
                 title="Edit (full)"
                 data-testid="action-item-edit"
-                className="text-muted-foreground hover:text-foreground transition-colors"
+                className="text-muted-foreground clickable-icon"
               >
                 <PencilSimple size={12} />
               </button>
@@ -198,7 +198,7 @@ function ActionItemRow({
             onClick={close}
             disabled={isPending}
             title="Mark done"
-            className="flex-shrink-0 w-6 h-6 rounded border border-border hover:border-[#588157] hover:bg-[#EDF3EC] transition-colors flex items-center justify-center text-muted-foreground hover:text-[#588157] disabled:opacity-50"
+            className="cursor-pointer flex-shrink-0 w-6 h-6 rounded border border-border hover:border-[#588157] hover:bg-[#EDF3EC] transition-colors flex items-center justify-center text-muted-foreground hover:text-[#588157] disabled:opacity-50 disabled:cursor-default"
           >
             <Check size={12} />
           </button>
@@ -243,7 +243,7 @@ export function ActionItemsSection({
               <button
                 type="button"
                 data-testid="action-item-new"
-                className="inline-flex items-center gap-1.5 rounded-md border border-border bg-card text-sm font-medium px-3 py-2 hover:bg-muted transition-colors"
+                className="cursor-pointer inline-flex items-center gap-1.5 rounded-md cursor-pointer border border-border bg-card text-sm font-medium px-3 py-2 hover:bg-muted transition-colors"
               >
                 <Plus size={14} /> New action item
               </button>
@@ -271,7 +271,7 @@ export function ActionItemsSection({
           {doneItems.length > 0 && (
             <details className="mt-2">
               <summary
-                className="cursor-pointer text-xs text-muted-foreground hover:text-foreground transition-colors"
+                className="cursor-pointer text-xs text-muted-foreground clickable-icon"
                 style={{ fontFamily: "var(--font-mono)" }}
               >
                 {doneItems.length} completed item{doneItems.length !== 1 ? "s" : ""}
@@ -289,7 +289,7 @@ export function ActionItemsSection({
                         onClick={() => reopen(item.id)}
                         disabled={isPending}
                         title="Re-open"
-                        className="text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
+                        className="text-muted-foreground clickable-icon disabled:opacity-50"
                       >
                         <ArrowClockwise size={12} />
                       </button>

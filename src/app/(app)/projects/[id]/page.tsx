@@ -123,7 +123,7 @@ export default async function ProjectDetailPage({
       <div>
         <Link
           href="/projects"
-          className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground mb-4 transition-colors"
+          className="inline-flex items-center gap-1.5 text-xs text-muted-foreground clickable mb-4"
           style={{ fontFamily: "var(--font-mono)" }}
         >
           <ArrowLeft size={12} />
@@ -193,7 +193,7 @@ export default async function ProjectDetailPage({
                 trigger={
                   <button
                     type="button"
-                    className="inline-flex items-center gap-1.5 rounded-md border border-border bg-card text-sm font-medium px-3 py-2 hover:bg-muted transition-colors"
+                    className="inline-flex items-center gap-1.5 rounded-md cursor-pointer border border-border bg-card text-sm font-medium px-3 py-2 hover:bg-muted transition-colors"
                     data-testid="edit-project"
                   >
                     <PencilSimple size={14} />
@@ -205,7 +205,7 @@ export default async function ProjectDetailPage({
             {canSubmitStatus && (
               <Link
                 href={`/projects/${id}/status/new`}
-                className="inline-flex items-center gap-1.5 rounded-md border border-border bg-card text-sm font-medium px-3 py-2 hover:bg-muted transition-colors"
+                className="inline-flex items-center gap-1.5 rounded-md cursor-pointer border border-border bg-card text-sm font-medium px-3 py-2 hover:bg-muted transition-colors"
                 data-testid="submit-standing-link"
               >
                 <ClipboardText size={14} />
@@ -217,7 +217,7 @@ export default async function ProjectDetailPage({
             {canPostMeeting && (
               <Link
                 href={`/projects/${id}/meeting/new`}
-                className="inline-flex items-center gap-1.5 rounded-md bg-primary text-primary-foreground text-sm font-medium px-3 py-2 hover:bg-primary/80 transition-colors"
+                className="inline-flex items-center gap-1.5 rounded-md cursor-pointer bg-primary text-primary-foreground text-sm font-medium px-3 py-2 hover:bg-primary/80 transition-colors"
               >
                 <CalendarCheck size={14} />
                 Record Meeting
@@ -364,14 +364,14 @@ export default async function ProjectDetailPage({
       <div className="pt-2 border-t border-border flex items-center gap-6">
         <Link
           href={`/projects/${id}/timeline`}
-          className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+          className="text-xs text-muted-foreground clickable-icon"
           style={{ fontFamily: "var(--font-mono)" }}
         >
           View timeline →
         </Link>
         <Link
           href={`/projects/${id}/history`}
-          className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+          className="text-xs text-muted-foreground clickable-icon"
           style={{ fontFamily: "var(--font-mono)" }}
         >
           Project Standing History →

@@ -30,7 +30,7 @@ export function MeetingRecordControls({ recordId }: { recordId: string }) {
         <button
           type="button"
           onClick={() => setConfirmingDelete(true)}
-          className="text-xs text-muted-foreground hover:text-[#A4503C] transition-colors"
+          className="text-xs text-muted-foreground clickable-danger"
           style={{ fontFamily: "var(--font-mono)" }}
           data-testid="meeting-delete"
         >

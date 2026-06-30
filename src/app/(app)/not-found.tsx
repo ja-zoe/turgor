@@ -24,7 +24,7 @@ export default function AppNotFound() {
         <div className="mt-6 flex items-center justify-center">
           <Link
             href="/dashboard"
-            className="inline-flex items-center gap-1.5 rounded-md bg-primary text-primary-foreground text-sm font-medium px-4 py-2 hover:bg-primary/80 transition-colors"
+            className="inline-flex items-center gap-1.5 rounded-md cursor-pointer bg-primary text-primary-foreground text-sm font-medium px-4 py-2 hover:bg-primary/80 transition-colors"
           >
             Back to dashboard
           </Link>

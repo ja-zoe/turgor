@@ -77,7 +77,7 @@ export function MemberRoleControl({
     <button
       type="button"
       onClick={open}
-      className="cursor-pointer hover:text-foreground transition-colors"
+      className="clickable"
       style={{ fontFamily: "var(--font-mono)" }}
       data-testid="member-role"
       title="Edit role"

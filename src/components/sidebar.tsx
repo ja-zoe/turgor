@@ -140,7 +140,7 @@ export function Sidebar({
         <form action={signOutAction}>
           <button
             type="submit"
-            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-sm text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+            className="cursor-pointer w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-sm text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
           >
             <SignOut size={16} />
             Sign out
@@ -198,7 +198,7 @@ export function Sidebar({
           </Link>
           <button
             onClick={() => setMobileOpen(false)}
-            className="text-muted-foreground hover:text-foreground transition-colors"
+            className="text-muted-foreground clickable-icon"
           >
             <X size={16} />
           </button>

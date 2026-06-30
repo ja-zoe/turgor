@@ -43,13 +43,13 @@ export default function AppError({
           <button
             type="button"
             onClick={reset}
-            className="inline-flex items-center gap-1.5 rounded-md bg-primary text-primary-foreground text-sm font-medium px-4 py-2 hover:bg-primary/80 transition-colors"
+            className="inline-flex items-center gap-1.5 rounded-md cursor-pointer bg-primary text-primary-foreground text-sm font-medium px-4 py-2 hover:bg-primary/80 transition-colors"
           >
             <ArrowClockwise size={14} /> Try again
           </button>
           <Link
             href="/dashboard"
-            className="inline-flex items-center gap-1.5 rounded-md border border-border bg-card text-sm font-medium px-4 py-2 hover:bg-muted transition-colors"
+            className="inline-flex items-center gap-1.5 rounded-md cursor-pointer border border-border bg-card text-sm font-medium px-4 py-2 hover:bg-muted transition-colors"
           >
             <House size={14} /> Dashboard
           </Link>

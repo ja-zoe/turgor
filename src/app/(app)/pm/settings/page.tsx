@@ -153,7 +153,7 @@ export default async function SettingsPage() {
           <div className="pt-2">
             <button
               type="submit"
-              className="rounded-md bg-primary text-primary-foreground text-sm font-medium px-4 py-2 hover:bg-primary/80 transition-colors"
+              className="rounded-md cursor-pointer bg-primary text-primary-foreground text-sm font-medium px-4 py-2 hover:bg-primary/80 transition-colors"
             >
               Save thresholds
             </button>
@@ -199,7 +199,7 @@ export default async function SettingsPage() {
                 >
                   <button
                     type="submit"
-                    className={`text-xs px-2.5 py-1 rounded border transition-colors ${
+                    className={`cursor-pointer text-xs px-2.5 py-1 rounded border transition-colors ${
                       rule.enabled
                         ? "border-[#588157] text-[#588157] hover:bg-[#EDF3EC]"
                         : "border-border text-muted-foreground hover:text-foreground"
@@ -217,7 +217,7 @@ export default async function SettingsPage() {
                 >
                   <button
                     type="submit"
-                    className="text-muted-foreground hover:text-[#A4503C] transition-colors"
+                    className="text-muted-foreground clickable-danger"
                     title="Delete rule"
                   >
                     <Trash size={14} />
@@ -230,7 +230,7 @@ export default async function SettingsPage() {
 
         {/* Add rule form */}
         <details className="border border-dashed border-border rounded-xl overflow-hidden">
-          <summary className="px-4 py-3 cursor-pointer text-sm text-muted-foreground hover:text-foreground transition-colors list-none">
+          <summary className="px-4 py-3 cursor-pointer text-sm text-muted-foreground clickable-icon list-none">
             + Add notification rule
           </summary>
           <form
@@ -310,7 +310,7 @@ export default async function SettingsPage() {
             <div className="col-span-2">
               <button
                 type="submit"
-                className="rounded-md bg-primary text-primary-foreground text-sm font-medium px-4 py-2 hover:bg-primary/80 transition-colors"
+                className="rounded-md cursor-pointer bg-primary text-primary-foreground text-sm font-medium px-4 py-2 hover:bg-primary/80 transition-colors"
               >
                 Add rule
               </button>

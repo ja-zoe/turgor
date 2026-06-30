@@ -50,7 +50,7 @@ export function SemesterField({
               setMode("select");
               onChange(options[0]);
             }}
-            className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+            className="text-xs text-muted-foreground clickable-icon"
             style={font}
           >
             ← Choose an existing semester
