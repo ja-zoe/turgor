@@ -2,6 +2,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { requireAuth, requirePermission, getProjectMembership } from "@/lib/permissions";
+import { parseDateInput } from "@/lib/date";
 import { Permission } from "@/generated/prisma";
 import { revalidatePath } from "next/cache";
 
@@ -16,8 +17,7 @@ export async function createActionItem(projectId: string, formData: FormData) {
 
   const description = (formData.get("description") as string).trim();
   const ownerId = (formData.get("ownerId") as string | null) || null;
-  const deadlineRaw = formData.get("deadline") as string | null;
-  const deadline = deadlineRaw ? new Date(deadlineRaw) : null;
+  const deadline = parseDateInput(formData.get("deadline"));
   const meetingId = (formData.get("meetingId") as string | null) || null;
 
   if (!description) throw new Error("Description is required");
@@ -89,8 +89,7 @@ export async function updateActionItem(actionItemId: string, formData: FormData)
 
   const description = (formData.get("description") as string).trim();
   const ownerId = (formData.get("ownerId") as string | null) || null;
-  const deadlineRaw = formData.get("deadline") as string | null;
-  const deadline = deadlineRaw ? new Date(deadlineRaw) : null;
+  const deadline = parseDateInput(formData.get("deadline"));
 
   if (!description) throw new Error("Description is required");
 
