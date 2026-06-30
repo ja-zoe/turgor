@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { Plus, Check, ArrowClockwise, PencilSimple, Trash } from "@phosphor-icons/react";
 import { closeActionItem, reopenActionItem, updateActionItem, deleteActionItem } from "@/lib/actions/action-items";
+import { isValidDateInput } from "@/lib/date";
 import { ActionItemModal, type ActionItemAssignee } from "@/components/action-item-modal";
 import { InlineConfirm } from "@/components/sortable-deliverables";
 
@@ -52,13 +53,20 @@ function ActionItemRow({
     setEditing(null);
   }
   function commit(overrides: { description?: string; ownerId?: string; deadline?: string }) {
+    const deadline = overrides.deadline ?? (item.deadline ? item.deadline.slice(0, 10) : "");
+    // Don't submit an impossible date (e.g. 06/31) — keep editing so it can be corrected.
+    if (!isValidDateInput(deadline)) return;
     const fd = new FormData();
     fd.set("description", overrides.description ?? item.description);
     fd.set("ownerId", overrides.ownerId ?? item.ownerId ?? "");
-    fd.set("deadline", overrides.deadline ?? (item.deadline ? item.deadline.slice(0, 10) : ""));
+    fd.set("deadline", deadline);
     startTransition(async () => {
-      await updateActionItem(item.id, fd);
-      setEditing(null);
+      try {
+        await updateActionItem(item.id, fd);
+        setEditing(null);
+      } catch {
+        setEditing(null); // revert the inline editor rather than crash the page
+      }
     });
   }
   function commitDescription() {

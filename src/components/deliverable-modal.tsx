@@ -9,6 +9,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { updateDeliverable } from "@/lib/actions/deliverables";
+import { isValidDateInput } from "@/lib/date";
 import { MarkdownEditor } from "@/components/markdown-editor";
 
 type TimelineStatus = "NOT_STARTED" | "IN_PROGRESS" | "BLOCKED" | "COMPLETE";
@@ -86,6 +87,8 @@ export function DeliverableModal({
     const trimmed = title.trim();
     if (!trimmed) { setError("Title is required"); return; }
     if (!targetDate) { setError("Target date is required"); return; }
+    if (!isValidDateInput(targetDate)) { setError("Target date is not a valid date"); return; }
+    if (!isValidDateInput(startDate)) { setError("Start date is not a valid date"); return; }
     if (startDate && startDate > targetDate) { setError("Start date must be before the target date"); return; }
 
     const fd = new FormData();
@@ -98,8 +101,12 @@ export function DeliverableModal({
     if (!hasSubtasks) fd.set("status", status);
 
     startTransition(async () => {
-      await updateDeliverable(deliverable.id, fd);
-      setOpen(false);
+      try {
+        await updateDeliverable(deliverable.id, fd);
+        setOpen(false);
+      } catch (e) {
+        setError((e as Error)?.message ?? "Could not save the deliverable");
+      }
     });
   }
 

@@ -2,6 +2,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { requirePermission, requireAuth, getProjectMembership } from "@/lib/permissions";
+import { parseDateInput, DateInputError } from "@/lib/date";
 import { Permission, TimelineStatus, Priority } from "@/generated/prisma";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -80,9 +81,9 @@ export async function createDeliverable(projectId: string, formData: FormData) {
 
   const title = (formData.get("title") as string).trim();
   const description = (formData.get("description") as string | null)?.trim() || null;
-  const targetDate = new Date(formData.get("targetDate") as string);
-  const startDateRaw = formData.get("startDate") as string | null;
-  const startDate = startDateRaw ? new Date(startDateRaw) : null;
+  const targetDate = parseDateInput(formData.get("targetDate"));
+  if (!targetDate) throw new DateInputError("Target date is required.");
+  const startDate = parseDateInput(formData.get("startDate"));
   const group = (formData.get("group") as string | null)?.trim() || null;
 
   if (!title) throw new Error("Title is required");
@@ -121,9 +122,9 @@ export async function updateDeliverable(deliverableId: string, formData: FormDat
 
   const title = (formData.get("title") as string).trim();
   const description = (formData.get("description") as string | null)?.trim() || null;
-  const targetDate = new Date(formData.get("targetDate") as string);
-  const startDateRaw = formData.get("startDate") as string | null;
-  const startDate = startDateRaw ? new Date(startDateRaw) : null;
+  const targetDate = parseDateInput(formData.get("targetDate"));
+  if (!targetDate) throw new DateInputError("Target date is required.");
+  const startDate = parseDateInput(formData.get("startDate"));
   const group = (formData.get("group") as string | null)?.trim() || null;
   const priorityRaw = formData.get("priority") as string | null;
 
@@ -180,8 +181,7 @@ export async function createSubtask(deliverableId: string, formData: FormData) {
 
   const title = (formData.get("title") as string).trim();
   const description = (formData.get("description") as string | null)?.trim() || null;
-  const dueDateRaw = formData.get("dueDate") as string | null;
-  const dueDate = dueDateRaw ? new Date(dueDateRaw) : null;
+  const dueDate = parseDateInput(formData.get("dueDate"));
   const assigneeId = (formData.get("assigneeId") as string | null) || null;
 
   await assertDueWithinDeliverable(deliverableId, dueDate);
@@ -219,8 +219,7 @@ export async function updateSubtask(subtaskId: string, formData: FormData) {
 
   const title = (formData.get("title") as string).trim();
   const description = (formData.get("description") as string | null)?.trim() || null;
-  const dueDateRaw = formData.get("dueDate") as string | null;
-  const dueDate = dueDateRaw ? new Date(dueDateRaw) : null;
+  const dueDate = parseDateInput(formData.get("dueDate"));
   const assigneeId = (formData.get("assigneeId") as string | null) || null;
   const status = formData.get("status") as TimelineStatus;
 
@@ -384,11 +383,12 @@ export async function updateSubtaskDueDate(subtaskId: string, dueDate: string | 
   const membership = await getProjectMembership(user.id, subtask.deliverable.projectId);
   if (!membership) await requirePermission(Permission.MANAGE_MILESTONES);
 
-  await assertDueWithinDeliverable(subtask.deliverable.id, dueDate ? new Date(dueDate) : null);
+  const parsedDue = parseDateInput(dueDate);
+  await assertDueWithinDeliverable(subtask.deliverable.id, parsedDue);
 
   await prisma.subtask.update({
     where: { id: subtaskId },
-    data: { dueDate: dueDate ? new Date(dueDate) : null },
+    data: { dueDate: parsedDue },
   });
 
   revalidatePath(`/projects/${subtask.deliverable.projectId}`);
@@ -528,8 +528,9 @@ export async function updateDeliverableDates(
   const membership = await getProjectMembership(user.id, deliverable.projectId);
   if (!membership) await requirePermission(Permission.MANAGE_MILESTONES);
 
-  const target = new Date(targetDate);
-  const start = startDate ? new Date(startDate) : null;
+  const target = parseDateInput(targetDate);
+  if (!target) throw new DateInputError("Target date is required.");
+  const start = parseDateInput(startDate);
   if (start && start > target) throw new Error("Start date must not be after target date");
 
   await prisma.deliverable.update({

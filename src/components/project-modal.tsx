@@ -9,6 +9,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { updateProject, deleteProject } from "@/lib/actions/projects";
+import { isValidDateInput } from "@/lib/date";
 import { MarkdownEditor } from "@/components/markdown-editor";
 import { InlineConfirm } from "@/components/sortable-deliverables";
 import { SemesterField } from "@/components/semester-field";
@@ -68,6 +69,8 @@ export function ProjectModal({
   function submit() {
     if (!name.trim()) { setError("Name is required"); return; }
     if (!semester.trim()) { setError("Semester is required"); return; }
+    if (!isValidDateInput(startDate)) { setError("Start date is not a valid date"); return; }
+    if (!isValidDateInput(endDate)) { setError("End date is not a valid date"); return; }
     if (startDate && endDate && endDate < startDate) { setError("End date must be after start date"); return; }
 
     const fd = new FormData();
@@ -79,8 +82,12 @@ export function ProjectModal({
     fd.set("endDate", endDate);
 
     startTransition(async () => {
-      await updateProject(project.id, fd);
-      setOpen(false);
+      try {
+        await updateProject(project.id, fd);
+        setOpen(false);
+      } catch (e) {
+        setError((e as Error)?.message ?? "Could not save the project");
+      }
     });
   }
 

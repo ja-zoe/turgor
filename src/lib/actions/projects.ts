@@ -2,6 +2,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { requireAuth, requirePermission } from "@/lib/permissions";
+import { parseDateInput } from "@/lib/date";
 import { Permission, ProjectMemberRole, ProjectStatus } from "@/generated/prisma";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -17,8 +18,8 @@ export async function createProject(formData: FormData) {
 
   if (!name || !semester) throw new Error("Name and semester are required");
 
-  const startDate = startDateRaw ? new Date(startDateRaw) : null;
-  const endDate = endDateRaw ? new Date(endDateRaw) : null;
+  const startDate = parseDateInput(startDateRaw);
+  const endDate = parseDateInput(endDateRaw);
 
   if (startDate && endDate && endDate < startDate) {
     throw new Error("End date must be after start date");
@@ -43,8 +44,8 @@ export async function updateProject(projectId: string, formData: FormData) {
   const startDateRaw = formData.get("startDate") as string | null;
   const endDateRaw = formData.get("endDate") as string | null;
 
-  const startDate = startDateRaw ? new Date(startDateRaw) : null;
-  const endDate = endDateRaw ? new Date(endDateRaw) : null;
+  const startDate = parseDateInput(startDateRaw);
+  const endDate = parseDateInput(endDateRaw);
 
   if (startDate && endDate && endDate < startDate) {
     throw new Error("End date must be after start date");

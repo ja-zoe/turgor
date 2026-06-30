@@ -2,6 +2,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/permissions";
+import { parseDateInput, DateInputError } from "@/lib/date";
 import { Permission, ProjectStatus } from "@/generated/prisma";
 import { carryOverActionItems } from "@/lib/actions/action-items";
 import { runRedFlagDetection } from "@/lib/red-flag";
@@ -11,7 +12,8 @@ import { redirect } from "next/navigation";
 export async function createMeetingRecord(projectId: string, formData: FormData) {
   const user = await requirePermission(Permission.POST_MEETING_TRACKING);
 
-  const meetingDate = new Date(formData.get("meetingDate") as string);
+  const meetingDate = parseDateInput(formData.get("meetingDate"));
+  if (!meetingDate) throw new DateInputError("Meeting date is required.");
   const status = formData.get("status") as ProjectStatus;
   const goalMet =
     formData.get("goalMet") === "true"
