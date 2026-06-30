@@ -114,7 +114,7 @@ function ActionItemRow({
                 autoFocus
                 value={ownerDraft}
                 onChange={(e) => setOwnerDraft(e.target.value)}
-                className="text-xs rounded border border-primary bg-card px-1 py-0.5 outline-none"
+                className="text-xs cursor-pointer rounded border border-primary bg-card px-1 py-0.5 outline-none"
                 style={{ fontFamily: "var(--font-mono)" }}
                 data-testid="action-item-owner-select"
               >

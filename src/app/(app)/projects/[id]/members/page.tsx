@@ -122,7 +122,7 @@ export default async function MembersPage({
               <select
                 name="userId"
                 required
-                className="w-full rounded-md border border-border bg-card px-3 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-colors"
+                className="w-full cursor-pointer rounded-md border border-border bg-card px-3 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-colors"
                 style={{ fontFamily: "var(--font-mono)" }}
               >
                 <option value="">Select a user…</option>
@@ -140,7 +140,7 @@ export default async function MembersPage({
               <select
                 name="role"
                 required
-                className="w-full rounded-md border border-border bg-card px-3 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-colors"
+                className="w-full cursor-pointer rounded-md border border-border bg-card px-3 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-colors"
                 style={{ fontFamily: "var(--font-mono)" }}
               >
                 <option value={ProjectMemberRole.LEAD}>Lead</option>

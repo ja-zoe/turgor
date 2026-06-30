@@ -58,7 +58,7 @@ export default async function PendingPage() {
         <form action={handleSignOut}>
           <button
             type="submit"
-            className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+            className="inline-flex items-center gap-2 cursor-pointer text-sm text-muted-foreground hover:text-foreground transition-colors"
           >
             <SignOut size={14} weight="bold" />
             Sign out

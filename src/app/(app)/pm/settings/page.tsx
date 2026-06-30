@@ -256,7 +256,7 @@ export default async function SettingsPage() {
               <select
                 name="triggerType"
                 required
-                className="w-full rounded-md border border-border bg-card px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
+                className="w-full cursor-pointer rounded-md border border-border bg-card px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
               >
                 {Object.entries(TRIGGER_LABELS).map(([v, l]) => (
                   <option key={v} value={v}>{l}</option>
@@ -271,7 +271,7 @@ export default async function SettingsPage() {
               <select
                 name="channel"
                 required
-                className="w-full rounded-md border border-border bg-card px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
+                className="w-full cursor-pointer rounded-md border border-border bg-card px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
               >
                 {Object.entries(CHANNEL_LABELS).map(([v, l]) => (
                   <option key={v} value={v}>{l}</option>
@@ -286,7 +286,7 @@ export default async function SettingsPage() {
               <select
                 name="recipients"
                 required
-                className="w-full rounded-md border border-border bg-card px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
+                className="w-full cursor-pointer rounded-md border border-border bg-card px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
               >
                 {Object.entries(RECIPIENT_LABELS).map(([v, l]) => (
                   <option key={v} value={v}>{l}</option>

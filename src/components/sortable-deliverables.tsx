@@ -320,7 +320,7 @@ function StatusPill({
           type="button"
           className={[
             "leading-none outline-none",
-            confirming ? "cursor-default pointer-events-none" : "hover:opacity-80 transition-opacity",
+            confirming ? "cursor-default pointer-events-none" : "cursor-pointer hover:opacity-80 transition-opacity",
           ].join(" ")}
           onClick={() => { if (!confirming) setDropdownOpen((o) => !o); }}
           data-testid={!confirming ? "status-pill" : undefined}
@@ -867,7 +867,7 @@ export function SortableDeliverables({
             <select
               value={groupFilter}
               onChange={(e) => setGroupFilter(e.target.value)}
-              className="text-xs bg-transparent border border-border rounded-md px-2 py-1 text-muted-foreground hover:text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
+              className="text-xs bg-transparent border border-border cursor-pointer rounded-md px-2 py-1 text-muted-foreground hover:text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
               style={{ fontFamily: "var(--font-mono)" }}
               data-testid="group-filter"
               aria-label="Filter by group"

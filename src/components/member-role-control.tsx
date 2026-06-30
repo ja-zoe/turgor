@@ -60,7 +60,7 @@ export function MemberRoleControl({
           value={draft}
           onChange={(e) => setDraft(e.target.value as ProjectMemberRole)}
           onKeyDown={(e) => { if (e.key === "Escape") cancel(); }}
-          className="text-xs rounded border border-primary bg-card px-1 py-0.5 outline-none"
+          className="text-xs cursor-pointer rounded border border-primary bg-card px-1 py-0.5 outline-none"
           style={{ fontFamily: "var(--font-mono)" }}
           data-testid="member-role-select"
         >

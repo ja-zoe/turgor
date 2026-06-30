@@ -256,7 +256,7 @@ function EventEditor({ event, defaultDate, semester, allSemesters, projects, can
                 name="type"
                 value={eventType}
                 onChange={(e) => setEventType(e.target.value as EventType)}
-                className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-colors"
+                className="w-full cursor-pointer rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-colors"
                 style={{ fontFamily: "var(--font-mono)" }}
               >
                 <option value="PROJECT_MEETING">Project Meeting</option>
@@ -335,7 +335,7 @@ function EventEditor({ event, defaultDate, semester, allSemesters, projects, can
               <select
                 name="projectId"
                 defaultValue={event?.projectId ?? ""}
-                className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-colors"
+                className="w-full cursor-pointer rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-colors"
                 style={{ fontFamily: "var(--font-mono)" }}
               >
                 <option value="">None</option>
@@ -509,7 +509,7 @@ function MonthGrid({
                           key={e.id}
                           type="button"
                           onClick={(ev) => { ev.stopPropagation(); onEventClick(e); }}
-                          className={`w-full text-left text-[10px] px-1.5 py-0.5 rounded truncate flex items-center gap-1 ${c.bg} ${c.text} border ${c.border} hover:opacity-80 transition-opacity`}
+                          className={`w-full text-left text-[10px] px-1.5 py-0.5 cursor-pointer rounded truncate flex items-center gap-1 ${c.bg} ${c.text} border ${c.border} hover:opacity-80 transition-opacity`}
                           style={{ fontFamily: "var(--font-mono)" }}
                         >
                           {TYPE_ICON[e.type]}
@@ -554,7 +554,7 @@ function AgendaView({
           <button
             type="button"
             onClick={onAddClick}
-            className="mt-3 inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:text-primary/70 transition-colors"
+            className="mt-3 inline-flex items-center gap-1.5 cursor-pointer text-sm font-medium text-primary hover:text-primary/70 transition-colors"
           >
             <Plus size={14} />
             Add first event
@@ -597,7 +597,7 @@ function AgendaView({
                     key={e.id}
                     type="button"
                     onClick={() => onEventClick(e)}
-                    className={`w-full text-left px-4 py-3 rounded-lg border ${c.border} ${c.bg} hover:opacity-90 transition-opacity`}
+                    className={`w-full text-left px-4 py-3 cursor-pointer rounded-lg border ${c.border} ${c.bg} hover:opacity-90 transition-opacity`}
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex-1 min-w-0">
@@ -710,7 +710,7 @@ export function SemesterCalendar({ events, canEdit, semester, allSemesters, proj
             <select
               value={semester}
               onChange={(e) => router.push(`/calendar?semester=${encodeURIComponent(e.target.value)}`)}
-              className="rounded-md border border-border bg-card px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 transition-colors"
+              className="cursor-pointer rounded-md border border-border bg-card px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 transition-colors"
               style={{ fontFamily: "var(--font-mono)" }}
             >
               {allSemesters.map((s) => (
@@ -792,7 +792,7 @@ export function SemesterCalendar({ events, canEdit, semester, allSemesters, proj
                 <button
                   type="button"
                   onClick={() => openNewEvent()}
-                  className="mt-3 inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:text-primary/70 transition-colors"
+                  className="mt-3 inline-flex items-center gap-1.5 cursor-pointer text-sm font-medium text-primary hover:text-primary/70 transition-colors"
                 >
                   <Plus size={14} />
                   Add first event

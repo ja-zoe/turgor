@@ -95,7 +95,7 @@ export default async function DevLoginPage({ searchParams }: Props) {
 
           <button
             type="submit"
-            className="w-full rounded-md bg-primary text-primary-foreground text-sm font-medium py-2.5 hover:bg-primary/80 transition-colors"
+            className="w-full cursor-pointer rounded-md bg-primary text-primary-foreground text-sm font-medium py-2.5 hover:bg-primary/80 transition-colors"
           >
             Sign in with Rutgers NetID
           </button>
