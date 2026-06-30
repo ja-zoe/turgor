@@ -154,6 +154,18 @@ const TOOLS = [
       required: ["actionItemId"],
     },
   },
+  {
+    name: "delete_action_item",
+    description:
+      "Delete an action item. Requires CLOSE_ACTION_ITEMS, ASSIGN_ACTION_ITEMS, or project LEAD/SUBLEAD.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        action_item_id: { type: "string" },
+      },
+      required: ["action_item_id"],
+    },
+  },
   // ── Status updates ────────────────────────────────────────────────────────
   {
     name: "create_status_update",
@@ -771,6 +783,25 @@ async function executeTool(
       return { updated };
     }
 
+    // ── delete_action_item ───────────────────────────────────────────────────
+    case "delete_action_item": {
+      const aid = args.action_item_id as string;
+      const actionItem = await prisma.actionItem.findUnique({
+        where: { id: aid },
+        select: { projectId: true },
+      });
+      if (!actionItem) return { error: "Action item not found" };
+      const membership = await getProjectMembership(user.id, actionItem.projectId);
+      const canDelete =
+        permissions.includes(Permission.CLOSE_ACTION_ITEMS) ||
+        permissions.includes(Permission.ASSIGN_ACTION_ITEMS) ||
+        membership?.role === "LEAD" ||
+        membership?.role === "SUBLEAD";
+      if (!canDelete) return { error: "Insufficient permissions to delete this action item" };
+      await prisma.actionItem.delete({ where: { id: aid } });
+      return { deleted: true, id: aid };
+    }
+
     // ── create_status_update ─────────────────────────────────────────────────
     case "create_status_update": {
       const pid = args.projectId as string;
@@ -1231,7 +1262,7 @@ export async function POST(req: NextRequest) {
       return ok({
         protocolVersion: "2024-11-05",
         capabilities: { tools: {} },
-        serverInfo: { name: "SEED Tracker", version: "2.3.0" },
+        serverInfo: { name: "SEED Tracker", version: "2.4.0" },
       });
 
     case "ping":

@@ -250,6 +250,7 @@ export function MpcTokenSection({ hasToken, appUrl, connections }: Props) {
               tools: [
                 { name: "create_action_item", desc: "create (LEAD/SUBLEAD or PM)" },
                 { name: "update_action_item", desc: "close, reopen, or edit (LEAD/SUBLEAD or PM)" },
+                { name: "delete_action_item", desc: "delete an action item (LEAD/SUBLEAD or PM)" },
               ],
             },
             {
