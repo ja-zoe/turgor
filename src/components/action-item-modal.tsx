@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition, type ReactElement } from "react";
+import { Trash } from "@phosphor-icons/react";
 import {
   Dialog,
   DialogTrigger,
@@ -8,7 +9,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { createActionItem, updateActionItem } from "@/lib/actions/action-items";
+import { createActionItem, updateActionItem, deleteActionItem } from "@/lib/actions/action-items";
+import { InlineConfirm } from "@/components/sortable-deliverables";
 
 export interface ActionItemDTO {
   id: string;
@@ -49,6 +51,7 @@ export function ActionItemModal({
   const [ownerId, setOwnerId] = useState(item?.ownerId ?? "");
   const [deadline, setDeadline] = useState(toDateInput(item?.deadline));
   const [error, setError] = useState<string | null>(null);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [isPending, startTransition] = useTransition();
 
   function resetForCreate() {
@@ -62,6 +65,15 @@ export function ActionItemModal({
     setOpen(next);
     if (next && mode === "create") resetForCreate();
     if (next) setError(null);
+    if (next) setConfirmingDelete(false);
+  }
+
+  function doDelete() {
+    if (!item) return;
+    startTransition(async () => {
+      await deleteActionItem(item.id);
+      setOpen(false);
+    });
   }
 
   function submit() {
@@ -146,7 +158,37 @@ export function ActionItemModal({
 
           {error && <p className="text-xs text-[#A4503C]">{error}</p>}
 
-          <div className="flex items-center justify-end gap-3 pt-1">
+          <div className="flex items-center justify-between gap-3 pt-1">
+            <div>
+              {mode === "edit" && item && (
+                confirmingDelete ? (
+                  <span
+                    className="inline-flex items-center gap-1 text-sm text-muted-foreground"
+                    style={{ fontFamily: "var(--font-mono)" }}
+                    data-testid="action-item-modal-delete-confirm"
+                  >
+                    Delete?
+                    <InlineConfirm
+                      show
+                      onConfirm={doDelete}
+                      onCancel={() => setConfirmingDelete(false)}
+                      disabled={isPending}
+                    />
+                  </span>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setConfirmingDelete(true)}
+                    disabled={isPending}
+                    data-testid="action-item-modal-delete"
+                    className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-[#A4503C] transition-colors disabled:opacity-50"
+                  >
+                    <Trash size={14} /> Delete
+                  </button>
+                )
+              )}
+            </div>
+            <div className="flex items-center gap-3">
             <button
               type="button"
               onClick={() => setOpen(false)}
@@ -164,6 +206,7 @@ export function ActionItemModal({
             >
               {isPending ? "Saving…" : mode === "create" ? "Add action item" : "Save changes"}
             </button>
+            </div>
           </div>
         </div>
       </DialogContent>

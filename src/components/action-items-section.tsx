@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Plus, Check, ArrowClockwise, PencilSimple } from "@phosphor-icons/react";
-import { closeActionItem, reopenActionItem, updateActionItem } from "@/lib/actions/action-items";
+import { Plus, Check, ArrowClockwise, PencilSimple, Trash } from "@phosphor-icons/react";
+import { closeActionItem, reopenActionItem, updateActionItem, deleteActionItem } from "@/lib/actions/action-items";
 import { ActionItemModal, type ActionItemAssignee } from "@/components/action-item-modal";
 import { InlineConfirm } from "@/components/sortable-deliverables";
 
@@ -38,6 +38,7 @@ function ActionItemRow({
   const [descDraft, setDescDraft] = useState(item.description);
   const [ownerDraft, setOwnerDraft] = useState(item.ownerId ?? "");
   const [deadlineDraft, setDeadlineDraft] = useState(item.deadline ? item.deadline.slice(0, 10) : "");
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [isPending, startTransition] = useTransition();
 
   function open(field: Exclude<EditField, null>) {
@@ -67,6 +68,7 @@ function ActionItemRow({
   }
 
   const close = () => startTransition(async () => { await closeActionItem(item.id); });
+  const del = () => startTransition(async () => { await deleteActionItem(item.id); setConfirmingDelete(false); });
 
   const metaClass = "text-xs text-muted-foreground";
   const editableCls = canEdit ? "cursor-text hover:text-foreground transition-colors" : "";
@@ -203,7 +205,95 @@ function ActionItemRow({
             <Check size={12} />
           </button>
         )}
+        {canEdit && (
+          confirmingDelete ? (
+            <span
+              className="inline-flex items-center gap-1 text-xs text-muted-foreground"
+              style={{ fontFamily: "var(--font-mono)" }}
+              data-testid="action-item-delete-confirm"
+            >
+              <InlineConfirm
+                show
+                onConfirm={del}
+                onCancel={() => setConfirmingDelete(false)}
+                disabled={isPending}
+              />
+            </span>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setConfirmingDelete(true)}
+              disabled={isPending}
+              title="Delete"
+              data-testid="action-item-delete"
+              className="text-muted-foreground hover:text-[#A4503C] transition-colors disabled:opacity-50"
+            >
+              <Trash size={12} />
+            </button>
+          )
+        )}
       </div>
+    </div>
+  );
+}
+
+/** A single completed action item with re-open + delete (R18.3). */
+function ClosedActionItemRow({
+  item,
+  canClose,
+}: {
+  item: ActionItemRowDTO;
+  canClose: boolean;
+}) {
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [isPending, startTransition] = useTransition();
+  const reopen = () => startTransition(async () => { await reopenActionItem(item.id); });
+  const del = () => startTransition(async () => { await deleteActionItem(item.id); setConfirmingDelete(false); });
+
+  return (
+    <div
+      className="flex items-center justify-between gap-3 px-4 py-2.5 bg-card border border-border rounded-lg opacity-60"
+      data-testid="action-item-done-row"
+    >
+      <p className="text-sm text-foreground line-through">{item.description}</p>
+      {canClose && (
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <button
+            type="button"
+            onClick={reopen}
+            disabled={isPending}
+            title="Re-open"
+            className="text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
+          >
+            <ArrowClockwise size={12} />
+          </button>
+          {confirmingDelete ? (
+            <span
+              className="inline-flex items-center gap-1 text-xs text-muted-foreground"
+              style={{ fontFamily: "var(--font-mono)" }}
+              data-testid="action-item-delete-confirm"
+            >
+              <InlineConfirm
+                show
+                onConfirm={del}
+                onCancel={() => setConfirmingDelete(false)}
+                disabled={isPending}
+              />
+            </span>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setConfirmingDelete(true)}
+              disabled={isPending}
+              title="Delete"
+              data-testid="action-item-delete"
+              className="text-muted-foreground hover:text-[#A4503C] transition-colors disabled:opacity-50"
+            >
+              <Trash size={12} />
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -223,13 +313,8 @@ export function ActionItemsSection({
   canClose: boolean;
   currentUserId: string;
 }) {
-  const [isPending, startTransition] = useTransition();
   const openItems = items.filter((i) => i.status === "OPEN");
   const doneItems = items.filter((i) => i.status === "DONE");
-
-  function reopen(id: string) {
-    startTransition(async () => { await reopenActionItem(id); });
-  }
 
   return (
     <div>
@@ -278,23 +363,7 @@ export function ActionItemsSection({
               </summary>
               <div className="mt-2 space-y-2">
                 {doneItems.map((item) => (
-                  <div
-                    key={item.id}
-                    className="flex items-center justify-between gap-3 px-4 py-2.5 bg-card border border-border rounded-lg opacity-60"
-                  >
-                    <p className="text-sm text-foreground line-through">{item.description}</p>
-                    {canClose && (
-                      <button
-                        type="button"
-                        onClick={() => reopen(item.id)}
-                        disabled={isPending}
-                        title="Re-open"
-                        className="text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
-                      >
-                        <ArrowClockwise size={12} />
-                      </button>
-                    )}
-                  </div>
+                  <ClosedActionItemRow key={item.id} item={item} canClose={canClose} />
                 ))}
               </div>
             </details>

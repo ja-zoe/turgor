@@ -104,6 +104,26 @@ export async function updateActionItem(actionItemId: string, formData: FormData)
   revalidatePath("/action-items");
 }
 
+export async function deleteActionItem(actionItemId: string) {
+  const user = await requireAuth();
+
+  const item = await prisma.actionItem.findUniqueOrThrow({
+    where: { id: actionItemId },
+    select: { projectId: true },
+  });
+
+  // Same gate as updateActionItem so UI capability and write-permission don't drift.
+  const membership = await getProjectMembership(user.id, item.projectId);
+  if (!membership || membership.role === "MEMBER") {
+    await requirePermission(Permission.ASSIGN_ACTION_ITEMS);
+  }
+
+  await prisma.actionItem.delete({ where: { id: actionItemId } });
+
+  revalidatePath(`/projects/${item.projectId}`);
+  revalidatePath("/action-items");
+}
+
 /** Marks all OPEN action items on a project as carriedOver = true. */
 export async function carryOverActionItems(projectId: string) {
   await prisma.actionItem.updateMany({
