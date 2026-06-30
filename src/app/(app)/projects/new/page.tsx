@@ -70,13 +70,13 @@ export default async function NewProjectPage() {
         <div className="flex items-center gap-3 pt-2">
           <button
             type="submit"
-            className="rounded-md bg-primary text-primary-foreground text-sm font-medium px-5 py-2.5 hover:bg-primary/80 transition-colors"
+            className="rounded-md cursor-pointer bg-primary text-primary-foreground text-sm font-medium px-5 py-2.5 hover:bg-primary/80 transition-colors"
           >
             Create Project
           </button>
           <a
             href="/projects"
-            className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+            className="text-sm text-muted-foreground clickable-icon"
           >
             Cancel
           </a>

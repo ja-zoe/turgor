@@ -173,6 +173,63 @@
   .card-hover:hover {
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
   }
+
+  /* ─── Clickability affordances (R19) ──────────────────────────
+     One convention for "this is interactive", built on Forest Floor
+     tokens — no fills, underlines, shadows, or gradients.
+
+     Row vs. control distinction (user-decided R19):
+       • container rows that open (deliverable/subtask) → `.clickable-row`:
+         a subtle hover TINT with DEFAULT cursor (the pointer is reserved
+         for the controls inside, so you can tell which row you're on).
+       • clickable icons / inline controls → `.clickable-icon`: pointer +
+         color shift to forest (--primary #2E4034) on hover.
+       • clickable text / links (not rows) → `.clickable`: pointer + color
+         shift to forest on hover.
+       • destructive triggers → `.clickable-danger`: pointer + color shift
+         to clay (#A4503C / --destructive).
+     Never apply any of these to static/display elements. */
+
+  .clickable-row {
+    cursor: default;
+    transition: background-color 150ms ease;
+  }
+  .clickable-row:hover {
+    background-color: color-mix(in srgb, var(--foreground) 4%, transparent);
+  }
+
+  .clickable-icon {
+    cursor: pointer;
+    transition: color 150ms ease;
+  }
+  .clickable-icon:hover {
+    color: var(--primary);
+  }
+
+  .clickable {
+    cursor: pointer;
+    transition: color 150ms ease;
+  }
+  .clickable:hover {
+    color: var(--primary);
+  }
+
+  .clickable-danger {
+    cursor: pointer;
+    transition: color 150ms ease;
+  }
+  .clickable-danger:hover {
+    color: var(--destructive);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .clickable-row,
+    .clickable-icon,
+    .clickable,
+    .clickable-danger {
+      transition-duration: 0ms;
+    }
+  }
 }
 
 /* ─── Inline confirm microinteractions ───────────────────────────────────── */

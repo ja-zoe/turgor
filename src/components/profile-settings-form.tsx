@@ -107,7 +107,7 @@ export function ProfileSettingsForm({
             onClick={submit}
             disabled={isPending}
             data-testid="profile-save"
-            className="rounded-md bg-primary text-primary-foreground text-sm font-medium px-5 py-2.5 hover:bg-primary/80 disabled:opacity-50 transition-colors"
+            className="rounded-md cursor-pointer bg-primary text-primary-foreground text-sm font-medium px-5 py-2.5 hover:bg-primary/80 disabled:opacity-50 transition-colors"
           >
             {isPending ? "Saving…" : "Save changes"}
           </button>

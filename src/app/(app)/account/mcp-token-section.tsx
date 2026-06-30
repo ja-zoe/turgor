@@ -144,7 +144,7 @@ export function MpcTokenSection({ hasToken, appUrl, connections }: Props) {
             type="button"
             onClick={handleGenerate}
             disabled={loading !== null}
-            className="flex items-center gap-1.5 text-xs font-medium text-foreground bg-[#2E4034] text-white rounded-md px-3 py-1.5 hover:bg-[#2E4034]/80 transition-colors disabled:opacity-50"
+            className="cursor-pointer flex items-center gap-1.5 text-xs font-medium text-foreground bg-[#2E4034] text-white rounded-md px-3 py-1.5 hover:bg-[#2E4034]/80 transition-colors disabled:opacity-50 disabled:cursor-default"
           >
             {loading === "generate" ? (
               <span className="w-3 h-3 border border-white/40 border-t-white rounded-full animate-spin" />
@@ -159,7 +159,7 @@ export function MpcTokenSection({ hasToken, appUrl, connections }: Props) {
               type="button"
               onClick={handleRevoke}
               disabled={loading !== null}
-              className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-[#A4503C] transition-colors disabled:opacity-50"
+              className="flex items-center gap-1.5 text-xs text-muted-foreground clickable-danger disabled:opacity-50"
             >
               <Trash size={13} />
               Revoke
@@ -184,7 +184,7 @@ export function MpcTokenSection({ hasToken, appUrl, connections }: Props) {
               <button
                 type="button"
                 onClick={copyToken}
-                className="shrink-0 text-muted-foreground hover:text-foreground transition-colors"
+                className="shrink-0 text-muted-foreground clickable-icon"
                 title="Copy token"
               >
                 {copied ? <Check size={14} className="text-[#588157]" /> : <Copy size={14} />}
@@ -217,7 +217,7 @@ export function MpcTokenSection({ hasToken, appUrl, connections }: Props) {
           <button
             type="button"
             onClick={copyConfig}
-            className="absolute top-3 right-3 text-muted-foreground hover:text-foreground transition-colors"
+            className="absolute top-3 right-3 text-muted-foreground clickable-icon"
             title="Copy config"
           >
             {copied ? <Check size={14} className="text-[#588157]" /> : <Copy size={14} />}

@@ -44,6 +44,7 @@ export function ProjectStatusBadge({ status }: { status: ProjectStatus }) {
   const { label, className } = PROJECT_STATUS_MAP[status];
   return (
     <span
+      data-testid="project-status-badge"
       className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium tracking-wide uppercase ${className}`}
       style={{ fontFamily: "var(--font-mono)", letterSpacing: "0.05em" }}
     >

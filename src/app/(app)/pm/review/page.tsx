@@ -156,7 +156,7 @@ export default async function MonthlyReviewPage() {
                 </div>
                 <Link
                   href={`/projects/${p.id}`}
-                  className="text-xs text-[#A4503C] hover:text-[#A4503C]/70 transition-colors"
+                  className="cursor-pointer text-xs text-[#A4503C] hover:text-[#A4503C]/70 transition-colors"
                   style={{ fontFamily: "var(--font-mono)" }}
                 >
                   View <ArrowRight size={10} className="inline" />

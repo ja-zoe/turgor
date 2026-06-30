@@ -41,7 +41,7 @@ export default async function MembersPage({
       <div className="mb-8">
         <Link
           href={`/projects/${id}`}
-          className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground mb-4 transition-colors"
+          className="inline-flex items-center gap-1.5 text-xs text-muted-foreground clickable mb-4"
           style={{ fontFamily: "var(--font-mono)" }}
         >
           <ArrowLeft size={12} />
@@ -91,7 +91,7 @@ export default async function MembersPage({
                 >
                   <button
                     type="submit"
-                    className="text-muted-foreground hover:text-[#A4503C] transition-colors"
+                    className="text-muted-foreground clickable-danger"
                   >
                     <Trash size={14} />
                   </button>
@@ -150,7 +150,7 @@ export default async function MembersPage({
             </div>
             <button
               type="submit"
-              className="rounded-md bg-primary text-primary-foreground text-sm font-medium px-5 py-2.5 hover:bg-primary/80 transition-colors"
+              className="rounded-md cursor-pointer bg-primary text-primary-foreground text-sm font-medium px-5 py-2.5 hover:bg-primary/80 transition-colors"
             >
               Add to Project
             </button>

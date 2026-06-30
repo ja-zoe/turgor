@@ -185,7 +185,7 @@ export function ProjectModal({
                 onClick={() => setConfirmingDelete(true)}
                 disabled={isPending}
                 data-testid="project-modal-delete"
-                className="text-xs text-muted-foreground hover:text-[#A4503C] transition-colors"
+                className="text-xs text-muted-foreground clickable-danger"
                 style={{ fontFamily: "var(--font-mono)" }}
               >
                 Delete project
@@ -197,7 +197,7 @@ export function ProjectModal({
                 type="button"
                 onClick={() => setOpen(false)}
                 disabled={isPending}
-                className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                className="text-sm text-muted-foreground clickable-icon"
               >
                 Cancel
               </button>
@@ -206,7 +206,7 @@ export function ProjectModal({
                 onClick={submit}
                 disabled={isPending}
                 data-testid="project-modal-submit"
-                className="rounded-md bg-primary text-primary-foreground text-sm font-medium px-4 py-2 hover:bg-primary/80 disabled:opacity-50 transition-colors"
+                className="rounded-md cursor-pointer bg-primary text-primary-foreground text-sm font-medium px-4 py-2 hover:bg-primary/80 disabled:opacity-50 transition-colors"
               >
                 {isPending ? "Saving…" : "Save changes"}
               </button>

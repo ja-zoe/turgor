@@ -124,7 +124,7 @@ export default async function ProjectTimelinePage({
         <div>
           <Link
             href={`/projects/${id}`}
-            className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground mb-4 transition-colors"
+            className="inline-flex items-center gap-1.5 text-xs text-muted-foreground clickable mb-4"
             style={{ fontFamily: "var(--font-mono)" }}
           >
             <ArrowLeft size={12} />
@@ -150,7 +150,7 @@ export default async function ProjectTimelinePage({
         </div>
         <a
           href={`/api/projects/${id}/export`}
-          className="inline-flex items-center gap-2 rounded-md border border-border bg-card text-sm font-medium px-3 py-2 hover:bg-muted transition-colors"
+          className="inline-flex items-center gap-2 rounded-md cursor-pointer border border-border bg-card text-sm font-medium px-3 py-2 hover:bg-muted transition-colors"
           download
         >
           <Download size={14} />

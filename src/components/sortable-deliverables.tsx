@@ -205,7 +205,7 @@ function StatusDropdown({
           key={s}
           type="button"
           onClick={() => onSelect(s)}
-          className={`w-full flex items-center gap-2 px-3 py-1.5 hover:bg-muted transition-colors text-left ${
+          className={`w-full flex items-center gap-2 px-3 py-1.5 cursor-pointer hover:bg-muted transition-colors text-left ${
             s === current ? "text-primary font-medium" : "text-foreground"
           }`}
         >
@@ -236,12 +236,12 @@ export function InlineConfirm({
 }) {
   const confirmClass =
     tone === "onColor"
-      ? "text-white hover:opacity-70 disabled:opacity-40 transition-opacity px-0.5"
-      : "text-[#588157] hover:opacity-70 disabled:opacity-40 transition-opacity px-0.5";
+      ? "cursor-pointer text-white hover:opacity-70 disabled:opacity-40 disabled:cursor-default transition-opacity px-0.5"
+      : "cursor-pointer text-[#588157] hover:opacity-70 disabled:opacity-40 disabled:cursor-default transition-opacity px-0.5";
   const cancelClass =
     tone === "onColor"
-      ? "text-white/90 hover:opacity-70 disabled:opacity-40 transition-opacity px-0.5"
-      : "hover:opacity-70 disabled:opacity-40 transition-opacity px-0.5";
+      ? "cursor-pointer text-white/90 hover:opacity-70 disabled:opacity-40 disabled:cursor-default transition-opacity px-0.5"
+      : "cursor-pointer hover:opacity-70 disabled:opacity-40 disabled:cursor-default transition-opacity px-0.5";
   return (
     <span
       className={[
@@ -385,7 +385,7 @@ function DeliverableStatusPopover({
           key={s}
           type="button"
           onClick={() => onSelect(s)}
-          className={`w-full flex items-center gap-2 px-3 py-1.5 hover:bg-muted transition-colors text-left ${s === current ? "text-primary font-medium" : "text-foreground"}`}
+          className={`w-full flex items-center gap-2 px-3 py-1.5 cursor-pointer hover:bg-muted transition-colors text-left ${s === current ? "text-primary font-medium" : "text-foreground"}`}
         >
           <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${STATUS_DOT[s]}`} />
           {STATUS_LABELS[s]}
@@ -474,7 +474,7 @@ function AssigneeSearch({
               onClick={() => onSelect(opt.id)}
               onMouseEnter={() => setActiveIndex(idx)}
               data-active={isActive ? "true" : undefined}
-              className={`w-full flex items-center gap-2 px-3 py-1.5 transition-colors text-left text-xs ${
+              className={`w-full flex items-center gap-2 px-3 py-1.5 cursor-pointer transition-colors text-left text-xs ${
                 isActive ? "bg-muted" : ""
               } ${isCurrent ? "text-primary font-medium" : opt.id ? "text-foreground" : "text-muted-foreground"}`}
             >
@@ -561,7 +561,7 @@ function GroupCombobox({
               onClick={() => onSelect(opt.value)}
               onMouseEnter={() => setActiveIndex(idx)}
               data-active={isActive ? "true" : undefined}
-              className={`w-full flex items-center gap-2 px-3 py-1.5 transition-colors text-left text-xs ${
+              className={`w-full flex items-center gap-2 px-3 py-1.5 cursor-pointer transition-colors text-left text-xs ${
                 isActive ? "bg-muted" : ""
               } ${isCurrent ? "text-primary font-medium" : opt.value ? "text-foreground" : "text-muted-foreground"}`}
             >
@@ -601,7 +601,7 @@ function PriorityMenu({
           key={p}
           type="button"
           onClick={() => onSelect(p)}
-          className={`w-full flex items-center gap-2 px-3 py-1.5 hover:bg-muted transition-colors text-left ${p === current ? "text-primary font-medium" : "text-foreground"}`}
+          className={`w-full flex items-center gap-2 px-3 py-1.5 cursor-pointer hover:bg-muted transition-colors text-left ${p === current ? "text-primary font-medium" : "text-foreground"}`}
         >
           <span className={`inline-flex items-center text-[10px] font-medium px-1.5 py-0.5 rounded-full ${PRIORITY_META[p].cls}`}>
             {PRIORITY_META[p].label}
@@ -881,8 +881,8 @@ export function SortableDeliverables({
           )}
           <button
             onClick={() => setSortByStatus((s) => !s)}
-            className={`inline-flex items-center gap-1.5 text-xs transition-colors ${
-              sortByStatus ? "text-primary font-medium" : "text-muted-foreground hover:text-foreground"
+            className={`inline-flex items-center gap-1.5 text-xs clickable ${
+              sortByStatus ? "text-primary font-medium" : "text-muted-foreground"
             }`}
             style={{ fontFamily: "var(--font-mono)" }}
           >
@@ -948,7 +948,7 @@ export function SortableDeliverables({
                     <div key={deliverable.id} data-deliverable-id={deliverable.id} className="border border-border rounded-xl overflow-hidden">
                       {/* Deliverable header — click the body (not a control) to expand the description */}
                       <div
-                        className="flex items-start justify-between gap-4 p-4 bg-card group/deliv cursor-pointer"
+                        className="flex items-start justify-between gap-4 p-4 bg-card group/deliv clickable-row"
                         role="button"
                         aria-expanded={expandedDeliverableId === deliverable.id}
                         data-testid="deliverable-header"
@@ -994,7 +994,7 @@ export function SortableDeliverables({
                                   <button
                                     type="button"
                                     onClick={() => startDelivEdit("title", deliverable)}
-                                    className="opacity-0 group-hover/deliv:opacity-100 transition-opacity text-muted-foreground hover:text-foreground"
+                                    className="opacity-0 group-hover/deliv:opacity-100 transition-opacity text-muted-foreground clickable-icon"
                                     title="Edit title"
                                     data-testid="deliv-title-pencil"
                                   >
@@ -1088,7 +1088,7 @@ export function SortableDeliverables({
                                   onClick={() =>
                                     setPriorityMenuFor(priorityMenuFor === deliverable.id ? null : deliverable.id)
                                   }
-                                  className={`inline-flex items-center text-[10px] font-medium px-1.5 py-0.5 rounded-full transition-opacity hover:opacity-80 ${PRIORITY_META[deliverable.priority].cls}`}
+                                  className={`inline-flex items-center cursor-pointer text-[10px] font-medium px-1.5 py-0.5 rounded-full transition-opacity hover:opacity-80 ${PRIORITY_META[deliverable.priority].cls}`}
                                   style={{ fontFamily: "var(--font-mono)" }}
                                   title="Set priority"
                                   data-testid="deliverable-priority"
@@ -1122,10 +1122,10 @@ export function SortableDeliverables({
                                   onClick={() =>
                                     setGroupMenuFor(groupMenuFor === deliverable.id ? null : deliverable.id)
                                   }
-                                  className={`inline-flex items-center text-[10px] font-medium px-1.5 py-0.5 rounded-full transition-colors ${
+                                  className={`inline-flex items-center clickable-icon text-[10px] font-medium px-1.5 py-0.5 rounded-full ${
                                     deliverable.group
-                                      ? "bg-muted text-muted-foreground hover:text-foreground"
-                                      : "text-muted-foreground/60 hover:text-foreground"
+                                      ? "bg-muted text-muted-foreground"
+                                      : "text-muted-foreground/60"
                                   }`}
                                   style={{ fontFamily: "var(--font-mono)" }}
                                   title="Edit group"
@@ -1212,7 +1212,7 @@ export function SortableDeliverables({
                                 <button
                                   type="button"
                                   onClick={() => startDelivEdit("dates", deliverable)}
-                                  className="opacity-0 group-hover/deliv-dates:opacity-100 transition-opacity text-muted-foreground hover:text-foreground ml-1"
+                                  className="opacity-0 group-hover/deliv-dates:opacity-100 transition-opacity text-muted-foreground clickable-icon ml-1"
                                   title="Edit dates"
                                   data-testid="deliv-dates-pencil"
                                 >
@@ -1230,7 +1230,7 @@ export function SortableDeliverables({
                                   type="button"
                                   onClick={() => moveDeliv(deliverable.id, "up")}
                                   disabled={!canMoveUp}
-                                  className="text-muted-foreground hover:text-foreground disabled:opacity-30 disabled:pointer-events-none transition-colors"
+                                  className="text-muted-foreground clickable-icon disabled:opacity-30 disabled:pointer-events-none"
                                   title="Move up"
                                   data-testid="deliverable-move-up"
                                 >
@@ -1240,7 +1240,7 @@ export function SortableDeliverables({
                                   type="button"
                                   onClick={() => moveDeliv(deliverable.id, "down")}
                                   disabled={!canMoveDown}
-                                  className="text-muted-foreground hover:text-foreground disabled:opacity-30 disabled:pointer-events-none transition-colors"
+                                  className="text-muted-foreground clickable-icon disabled:opacity-30 disabled:pointer-events-none"
                                   title="Move down"
                                   data-testid="deliverable-move-down"
                                 >
@@ -1264,7 +1264,7 @@ export function SortableDeliverables({
                               trigger={
                                 <button
                                   type="button"
-                                  className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                                  className="text-xs text-muted-foreground clickable-icon"
                                   style={{ fontFamily: "var(--font-mono)" }}
                                   data-testid="deliverable-edit"
                                 >
@@ -1290,7 +1290,7 @@ export function SortableDeliverables({
                               <button
                                 type="button"
                                 onClick={() => setConfirmingDeliverableDelete(deliverable.id)}
-                                className="text-xs text-muted-foreground hover:text-[#A4503C] transition-colors"
+                                className="text-xs text-muted-foreground clickable-danger"
                                 style={{ fontFamily: "var(--font-mono)" }}
                                 data-testid="deliverable-delete"
                               >
@@ -1340,7 +1340,7 @@ export function SortableDeliverables({
                                   onClick={() =>
                                     setDeliverableDescEdit({ id: deliverable.id, value: deliverable.description ?? "" })
                                   }
-                                  className="flex-shrink-0 text-muted-foreground hover:text-foreground transition-colors"
+                                  className="flex-shrink-0 text-muted-foreground clickable-icon"
                                   title="Edit description"
                                   data-testid="deliverable-desc-edit"
                                 >
@@ -1391,7 +1391,7 @@ export function SortableDeliverables({
                                 data-testid="subtask-row"
                               >
                               <div
-                                className="flex items-center justify-between px-4 py-2.5 cursor-pointer"
+                                className="flex items-center justify-between px-4 py-2.5 clickable-row"
                                 role="button"
                                 aria-expanded={expandedSubtaskId === subtask.id}
                                 data-testid="subtask-row-body"
@@ -1455,7 +1455,7 @@ export function SortableDeliverables({
                                             )
                                           }
                                           aria-expanded={expandedSubtaskId === subtask.id}
-                                          className="text-xs text-foreground truncate text-left hover:text-primary transition-colors"
+                                          className="text-xs text-foreground truncate text-left clickable"
                                           data-testid="subtask-title-toggle"
                                           title="Show description"
                                         >
@@ -1465,7 +1465,7 @@ export function SortableDeliverables({
                                           <button
                                             type="button"
                                             onClick={() => startEdit(subtask.id, "title", subtask.title)}
-                                            className="flex-shrink-0 opacity-0 group-hover/subtask:opacity-100 text-muted-foreground hover:text-foreground transition-all"
+                                            className="flex-shrink-0 opacity-0 group-hover/subtask:opacity-100 transition-opacity text-muted-foreground clickable-icon"
                                             title="Edit title"
                                             data-testid="pencil-btn"
                                           >
@@ -1511,7 +1511,7 @@ export function SortableDeliverables({
                                         <button
                                           type="button"
                                           onClick={() => startEdit(subtask.id, "assignee", subtask.assignee?.id ?? "")}
-                                          className="text-xs text-muted-foreground hover:text-foreground hover:underline transition-colors"
+                                          className="text-xs text-muted-foreground clickable-icon"
                                           style={{ fontFamily: "var(--font-mono)" }}
                                           title="Change assignee"
                                         >
@@ -1593,7 +1593,7 @@ export function SortableDeliverables({
                                                 subtask.dueDate ? subtask.dueDate.split("T")[0] : ""
                                               )
                                             }
-                                            className="text-muted-foreground hover:text-foreground transition-colors opacity-0 group-hover/subtask:opacity-100"
+                                            className="text-muted-foreground clickable-icon opacity-0 group-hover/subtask:opacity-100"
                                             title="Edit due date"
                                           >
                                             <CalendarBlank size={12} />
@@ -1617,7 +1617,7 @@ export function SortableDeliverables({
                                             trigger={
                                               <button
                                                 type="button"
-                                                className="text-muted-foreground hover:text-foreground transition-colors opacity-0 group-hover/subtask:opacity-100"
+                                                className="text-muted-foreground clickable-icon opacity-0 group-hover/subtask:opacity-100"
                                                 title="Edit subtask"
                                                 data-testid="edit-subtask-modal"
                                               >
@@ -1629,7 +1629,7 @@ export function SortableDeliverables({
                                         <button
                                           type="button"
                                           onClick={() => setConfirmingDelete(subtask.id)}
-                                          className="text-muted-foreground hover:text-[#A4503C] transition-colors opacity-0 group-hover/subtask:opacity-100"
+                                          className="text-muted-foreground clickable-danger opacity-0 group-hover/subtask:opacity-100"
                                           title="Delete subtask"
                                         >
                                           <XCircle size={13} weight="bold" />
@@ -1648,7 +1648,7 @@ export function SortableDeliverables({
                                           type="button"
                                           onClick={commitEdit}
                                           disabled={isPendingEdit}
-                                          className="text-[#588157] hover:text-[#588157]/70 disabled:opacity-50 transition-colors"
+                                          className="cursor-pointer text-[#588157] hover:text-[#588157]/70 disabled:opacity-50 disabled:cursor-default transition-colors"
                                           title="Save"
                                         >
                                           <CheckFat size={13} weight="fill" />
@@ -1657,7 +1657,7 @@ export function SortableDeliverables({
                                           type="button"
                                           onClick={cancelEdit}
                                           disabled={isPendingEdit}
-                                          className="text-muted-foreground hover:text-foreground disabled:opacity-50 transition-colors"
+                                          className="text-muted-foreground clickable-icon disabled:opacity-50 disabled:cursor-default"
                                           title="Cancel"
                                         >
                                           <XCircle size={13} weight="bold" />
@@ -1678,7 +1678,7 @@ export function SortableDeliverables({
                                             await deleteSubtask(subtask.id);
                                             setConfirmingDelete(null);
                                           }}
-                                          className="text-xs text-[#A4503C] hover:text-[#A4503C]/70 transition-colors"
+                                          className="cursor-pointer text-xs text-[#A4503C] hover:text-[#A4503C]/70 transition-colors"
                                           style={{ fontFamily: "var(--font-mono)" }}
                                         >
                                           Yes
@@ -1686,7 +1686,7 @@ export function SortableDeliverables({
                                         <button
                                           type="button"
                                           onClick={() => setConfirmingDelete(null)}
-                                          className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                                          className="text-xs text-muted-foreground clickable-icon"
                                           style={{ fontFamily: "var(--font-mono)" }}
                                         >
                                           No
@@ -1736,7 +1736,7 @@ export function SortableDeliverables({
                                           onClick={() =>
                                             setSubtaskDescEdit({ id: subtask.id, value: subtask.description ?? "" })
                                           }
-                                          className="flex-shrink-0 text-muted-foreground hover:text-foreground transition-colors"
+                                          className="flex-shrink-0 text-muted-foreground clickable-icon"
                                           title="Edit description"
                                           data-testid="subtask-desc-edit"
                                         >
@@ -1765,7 +1765,7 @@ export function SortableDeliverables({
                             trigger={
                               <button
                                 type="button"
-                                className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                                className="inline-flex items-center gap-1 text-xs text-muted-foreground clickable-icon"
                                 style={{ fontFamily: "var(--font-mono)" }}
                                 data-testid="add-subtask"
                               >

@@ -171,7 +171,7 @@ function EventEditor({ event, defaultDate, semester, allSemesters, projects, can
           <h2 className="text-sm font-semibold text-foreground">
             {isNew ? "Add Event" : (canEdit ? "Edit Event" : "Event Details")}
           </h2>
-          <button type="button" onClick={onClose} className="text-muted-foreground hover:text-foreground transition-colors">
+          <button type="button" onClick={onClose} className="text-muted-foreground clickable-icon">
             <X size={16} />
           </button>
         </div>
@@ -375,14 +375,14 @@ function EventEditor({ event, defaultDate, semester, allSemesters, projects, can
                 <button
                   type="submit"
                   disabled={isPending || (isMultiSemester && pinnedSemesters.length === 0)}
-                  className="rounded-md bg-primary text-primary-foreground text-sm font-medium px-4 py-2 hover:bg-primary/80 transition-colors disabled:opacity-50"
+                  className="rounded-md cursor-pointer bg-primary text-primary-foreground text-sm font-medium px-4 py-2 hover:bg-primary/80 transition-colors disabled:opacity-50"
                 >
                   {isPending ? "Saving…" : isNew ? "Add Event" : "Save"}
                 </button>
                 <button
                   type="button"
                   onClick={onClose}
-                  className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                  className="text-sm text-muted-foreground clickable-icon"
                 >
                   Cancel
                 </button>
@@ -395,7 +395,7 @@ function EventEditor({ event, defaultDate, semester, allSemesters, projects, can
                         type="button"
                         onClick={handleDelete}
                         disabled={isPending}
-                        className="text-xs text-[#A4503C] hover:text-[#A4503C]/70 transition-colors"
+                        className="cursor-pointer text-xs text-[#A4503C] hover:text-[#A4503C]/70 transition-colors"
                         style={{ fontFamily: "var(--font-mono)" }}
                       >
                         Confirm delete
@@ -403,7 +403,7 @@ function EventEditor({ event, defaultDate, semester, allSemesters, projects, can
                       <button
                         type="button"
                         onClick={() => setConfirmDelete(false)}
-                        className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                        className="text-xs text-muted-foreground clickable-icon"
                         style={{ fontFamily: "var(--font-mono)" }}
                       >
                         Cancel
@@ -413,7 +413,7 @@ function EventEditor({ event, defaultDate, semester, allSemesters, projects, can
                     <button
                       type="button"
                       onClick={() => setConfirmDelete(true)}
-                      className="text-xs text-muted-foreground hover:text-[#A4503C] transition-colors"
+                      className="text-xs text-muted-foreground clickable-danger"
                       style={{ fontFamily: "var(--font-mono)" }}
                     >
                       Delete
@@ -729,7 +729,7 @@ export function SemesterCalendar({ events, canEdit, semester, allSemesters, proj
             <button
               type="button"
               onClick={() => switchView("month")}
-              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs transition-colors ${view === "month" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground hover:bg-muted"}`}
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs cursor-pointer transition-colors ${view === "month" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground hover:bg-muted"}`}
             >
               <GridFour size={13} />
               Month
@@ -737,7 +737,7 @@ export function SemesterCalendar({ events, canEdit, semester, allSemesters, proj
             <button
               type="button"
               onClick={() => switchView("agenda")}
-              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs transition-colors ${view === "agenda" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground hover:bg-muted"}`}
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs cursor-pointer transition-colors ${view === "agenda" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground hover:bg-muted"}`}
             >
               <List size={13} />
               Agenda
@@ -746,7 +746,7 @@ export function SemesterCalendar({ events, canEdit, semester, allSemesters, proj
 
           <a
             href={`/api/calendar/ics${semester ? `?semester=${encodeURIComponent(semester)}` : ""}`}
-            className="inline-flex items-center gap-1.5 rounded-md border border-border bg-card text-sm font-medium px-3 py-2 text-muted-foreground hover:text-foreground transition-colors"
+            className="inline-flex items-center gap-1.5 rounded-md cursor-pointer border border-border bg-card text-sm font-medium px-3 py-2 text-muted-foreground clickable-icon"
             data-testid="export-ics"
           >
             <CalendarBlank size={14} />
@@ -757,7 +757,7 @@ export function SemesterCalendar({ events, canEdit, semester, allSemesters, proj
             <button
               type="button"
               onClick={() => openNewEvent()}
-              className="inline-flex items-center gap-1.5 rounded-md bg-primary text-primary-foreground text-sm font-medium px-3 py-2 hover:bg-primary/80 transition-colors"
+              className="inline-flex items-center gap-1.5 rounded-md cursor-pointer bg-primary text-primary-foreground text-sm font-medium px-3 py-2 hover:bg-primary/80 transition-colors"
             >
               <Plus size={14} />
               Add event
@@ -777,11 +777,11 @@ export function SemesterCalendar({ events, canEdit, semester, allSemesters, proj
       {semester && view === "month" && (
         <div>
           <div className="flex items-center justify-between mb-4">
-            <button type="button" onClick={prevMonth} className="text-muted-foreground hover:text-foreground transition-colors p-1">
+            <button type="button" onClick={prevMonth} className="text-muted-foreground clickable-icon p-1">
               <CaretLeft size={16} />
             </button>
             <h2 className="text-sm font-semibold text-foreground">{monthName}</h2>
-            <button type="button" onClick={nextMonth} className="text-muted-foreground hover:text-foreground transition-colors p-1">
+            <button type="button" onClick={nextMonth} className="text-muted-foreground clickable-icon p-1">
               <CaretRight size={16} />
             </button>
           </div>

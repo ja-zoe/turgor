@@ -119,7 +119,7 @@ export default async function MyTasksPage() {
                       <button
                         type="submit"
                         title="Mark done"
-                        className="flex-shrink-0 w-6 h-6 rounded border border-border hover:border-[#588157] hover:bg-[#EDF3EC] transition-colors flex items-center justify-center text-muted-foreground hover:text-[#588157]"
+                        className="cursor-pointer flex-shrink-0 w-6 h-6 rounded border border-border hover:border-[#588157] hover:bg-[#EDF3EC] transition-colors flex items-center justify-center text-muted-foreground hover:text-[#588157]"
                       >
                         <Check size={12} />
                       </button>

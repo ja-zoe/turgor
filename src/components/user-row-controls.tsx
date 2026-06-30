@@ -52,7 +52,7 @@ export function UserRowControls({ userId }: { userId: string }) {
         <button
           type="button"
           onClick={() => setConfirming(true)}
-          className="text-muted-foreground hover:text-[#A4503C] transition-colors"
+          className="text-muted-foreground clickable-danger"
           title="Delete user"
           data-testid="user-delete"
         >

@@ -73,9 +73,9 @@ function EditModal({ update, trigger }: { update: StatusUpdateData; trigger: Rea
           ))}
           <div className="flex items-center justify-end gap-3 pt-1">
             <button type="button" onClick={() => setOpen(false)} disabled={isPending}
-              className="text-sm text-muted-foreground hover:text-foreground transition-colors">Cancel</button>
+              className="text-sm text-muted-foreground clickable-icon">Cancel</button>
             <button type="button" onClick={submit} disabled={isPending} data-testid="status-edit-submit"
-              className="rounded-md bg-primary text-primary-foreground text-sm font-medium px-4 py-2 hover:bg-primary/80 disabled:opacity-50 transition-colors">
+              className="rounded-md cursor-pointer bg-primary text-primary-foreground text-sm font-medium px-4 py-2 hover:bg-primary/80 disabled:opacity-50 transition-colors">
               {isPending ? "Saving…" : "Save changes"}
             </button>
           </div>
@@ -103,7 +103,7 @@ export function StatusUpdateControls({ update }: { update: StatusUpdateData }) {
         trigger={
           <button
             type="button"
-            className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+            className="text-xs text-muted-foreground clickable-icon"
             style={{ fontFamily: "var(--font-mono)" }}
             data-testid="status-edit"
           >
@@ -121,7 +121,7 @@ export function StatusUpdateControls({ update }: { update: StatusUpdateData }) {
         <button
           type="button"
           onClick={() => setConfirmingDelete(true)}
-          className="text-xs text-muted-foreground hover:text-[#A4503C] transition-colors"
+          className="text-xs text-muted-foreground clickable-danger"
           style={{ fontFamily: "var(--font-mono)" }}
           data-testid="status-delete"
         >

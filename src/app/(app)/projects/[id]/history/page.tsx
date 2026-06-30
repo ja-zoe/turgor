@@ -70,7 +70,7 @@ export default async function ProjectHistoryPage({
       <div>
         <Link
           href={`/projects/${id}`}
-          className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground mb-4 transition-colors"
+          className="inline-flex items-center gap-1.5 text-xs text-muted-foreground clickable mb-4"
           style={{ fontFamily: "var(--font-mono)" }}
         >
           <ArrowLeft size={12} />

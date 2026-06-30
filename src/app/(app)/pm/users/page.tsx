@@ -133,7 +133,7 @@ export default async function UsersPage() {
                   </select>
                   <button
                     type="submit"
-                    className="flex items-center gap-1.5 rounded-md bg-primary text-primary-foreground text-sm font-medium px-3 py-1.5 hover:bg-primary/80 transition-colors"
+                    className="flex items-center gap-1.5 rounded-md cursor-pointer bg-primary text-primary-foreground text-sm font-medium px-3 py-1.5 hover:bg-primary/80 transition-colors"
                   >
                     <CheckCircle size={13} weight="fill" />
                     Approve
@@ -147,7 +147,7 @@ export default async function UsersPage() {
                 >
                   <button
                     type="submit"
-                    className="text-muted-foreground hover:text-[#A4503C] transition-colors"
+                    className="text-muted-foreground clickable-danger"
                     title="Reject"
                   >
                     <XCircle size={16} />
@@ -207,7 +207,7 @@ export default async function UsersPage() {
                   </select>
                   <button
                     type="submit"
-                    className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                    className="text-xs text-muted-foreground clickable-icon"
                     style={{ fontFamily: "var(--font-mono)" }}
                   >
                     Save
@@ -222,7 +222,7 @@ export default async function UsersPage() {
                   >
                     <button
                       type="submit"
-                      className="text-muted-foreground hover:text-[#A4503C] transition-colors"
+                      className="text-muted-foreground clickable-danger"
                       title="Suspend"
                     >
                       <PauseCircle size={15} />
@@ -348,7 +348,7 @@ export default async function UsersPage() {
                   <div className="flex items-center gap-3">
                     <button
                       type="submit"
-                      className="rounded-md bg-primary text-primary-foreground text-sm font-medium px-4 py-2 hover:bg-primary/80 transition-colors"
+                      className="rounded-md cursor-pointer bg-primary text-primary-foreground text-sm font-medium px-4 py-2 hover:bg-primary/80 transition-colors"
                     >
                       Save role
                     </button>
@@ -364,7 +364,7 @@ export default async function UsersPage() {
                     >
                       <button
                         type="submit"
-                        className="text-xs text-[#A4503C] hover:text-[#A4503C]/70 transition-colors"
+                        className="cursor-pointer text-xs text-[#A4503C] hover:text-[#A4503C]/70 transition-colors"
                         style={{ fontFamily: "var(--font-mono)" }}
                       >
                         Delete role
@@ -378,7 +378,7 @@ export default async function UsersPage() {
 
           {/* Create new role */}
           <details className="mt-4 border border-dashed border-border rounded-xl overflow-hidden">
-            <summary className="px-4 py-3 cursor-pointer text-sm text-muted-foreground hover:text-foreground transition-colors list-none">
+            <summary className="px-4 py-3 cursor-pointer text-sm text-muted-foreground clickable-icon list-none">
               + Create custom role
             </summary>
             <form
@@ -410,7 +410,7 @@ export default async function UsersPage() {
               </div>
               <button
                 type="submit"
-                className="rounded-md bg-primary text-primary-foreground text-sm font-medium px-4 py-2 hover:bg-primary/80 transition-colors"
+                className="rounded-md cursor-pointer bg-primary text-primary-foreground text-sm font-medium px-4 py-2 hover:bg-primary/80 transition-colors"
               >
                 Create role
               </button>

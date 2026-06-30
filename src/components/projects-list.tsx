@@ -96,7 +96,7 @@ export function ProjectsList({
               type="button"
               onClick={() => setSelecting(true)}
               data-testid="select-toggle"
-              className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+              className="text-xs text-muted-foreground clickable-icon"
               style={{ fontFamily: "var(--font-mono)" }}
             >
               Select
@@ -106,7 +106,7 @@ export function ProjectsList({
               type="button"
               onClick={exitSelect}
               data-testid="select-cancel"
-              className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+              className="text-xs text-muted-foreground clickable-icon"
               style={{ fontFamily: "var(--font-mono)" }}
             >
               Cancel
@@ -126,7 +126,7 @@ export function ProjectsList({
                 onClick={() => toggle(project.id)}
                 data-testid="project-card"
                 data-selected={isSel ? "true" : undefined}
-                className={`group p-5 bg-card border rounded-xl text-left transition-colors ${
+                className={`group cursor-pointer p-5 bg-card border rounded-xl text-left transition-colors ${
                   isSel ? "border-primary ring-1 ring-primary/30" : "border-border hover:border-primary/30"
                 }`}
               >
@@ -168,7 +168,7 @@ export function ProjectsList({
               type="button"
               onClick={() => setConfirming(true)}
               data-testid="bulk-delete"
-              className="text-sm font-medium px-3 py-1.5 rounded-md bg-[#A4503C] text-white hover:bg-[#A4503C]/85 transition-colors"
+              className="cursor-pointer text-sm font-medium px-3 py-1.5 rounded-md bg-[#A4503C] text-white hover:bg-[#A4503C]/85 transition-colors"
             >
               Delete
             </button>
@@ -180,7 +180,7 @@ export function ProjectsList({
                 onClick={doDelete}
                 disabled={isPending}
                 data-testid="bulk-delete-confirm"
-                className="text-sm font-medium px-3 py-1.5 rounded-md bg-[#A4503C] text-white hover:bg-[#A4503C]/85 disabled:opacity-50 transition-colors"
+                className="cursor-pointer text-sm font-medium px-3 py-1.5 rounded-md bg-[#A4503C] text-white hover:bg-[#A4503C]/85 disabled:opacity-50 disabled:cursor-default transition-colors"
               >
                 {isPending ? "Deleting…" : "Yes, delete"}
               </button>
@@ -188,7 +188,7 @@ export function ProjectsList({
                 type="button"
                 onClick={() => setConfirming(false)}
                 disabled={isPending}
-                className="text-sm text-background/80 hover:text-background transition-colors"
+                className="cursor-pointer text-sm text-background/80 hover:text-background transition-colors"
               >
                 Cancel
               </button>

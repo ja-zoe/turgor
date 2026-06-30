@@ -149,7 +149,7 @@ export default async function AllActionItemsPage() {
                               type="button"
                               title="Edit"
                               data-testid="action-item-edit"
-                              className="text-muted-foreground hover:text-foreground transition-colors"
+                              className="text-muted-foreground clickable-icon"
                             >
                               <PencilSimple size={12} />
                             </button>
@@ -166,7 +166,7 @@ export default async function AllActionItemsPage() {
                           <button
                             type="submit"
                             title="Mark done"
-                            className="flex-shrink-0 w-6 h-6 rounded border border-border hover:border-[#588157] hover:bg-[#EDF3EC] transition-colors flex items-center justify-center text-muted-foreground hover:text-[#588157]"
+                            className="cursor-pointer flex-shrink-0 w-6 h-6 rounded border border-border hover:border-[#588157] hover:bg-[#EDF3EC] transition-colors flex items-center justify-center text-muted-foreground hover:text-[#588157]"
                           >
                             <Check size={12} />
                           </button>
@@ -183,7 +183,7 @@ export default async function AllActionItemsPage() {
             <section>
               <details>
                 <summary
-                  className="cursor-pointer text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-3 hover:text-foreground transition-colors"
+                  className="clickable text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-3"
                   style={{ fontFamily: "var(--font-mono)" }}
                 >
                   Completed — {doneItems.length}
@@ -199,7 +199,7 @@ export default async function AllActionItemsPage() {
                         <div className="flex items-center gap-2 mt-0.5">
                           <Link
                             href={`/projects/${item.project.id}`}
-                            className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                            className="text-xs text-muted-foreground clickable-icon"
                             style={{ fontFamily: "var(--font-mono)" }}
                           >
                             {item.project.name}
@@ -228,7 +228,7 @@ export default async function AllActionItemsPage() {
                           <button
                             type="submit"
                             title="Re-open"
-                            className="text-muted-foreground hover:text-foreground transition-colors"
+                            className="text-muted-foreground clickable-icon"
                           >
                             <ArrowClockwise size={12} />
                           </button>

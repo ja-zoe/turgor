@@ -181,7 +181,7 @@ export function ActionItemModal({
                     onClick={() => setConfirmingDelete(true)}
                     disabled={isPending}
                     data-testid="action-item-modal-delete"
-                    className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-[#A4503C] transition-colors disabled:opacity-50"
+                    className="inline-flex items-center gap-1.5 text-sm text-muted-foreground clickable-danger disabled:opacity-50"
                   >
                     <Trash size={14} /> Delete
                   </button>
@@ -193,7 +193,7 @@ export function ActionItemModal({
               type="button"
               onClick={() => setOpen(false)}
               disabled={isPending}
-              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+              className="text-sm text-muted-foreground clickable-icon"
             >
               Cancel
             </button>
@@ -202,7 +202,7 @@ export function ActionItemModal({
               onClick={submit}
               disabled={isPending}
               data-testid="action-item-modal-submit"
-              className="rounded-md bg-primary text-primary-foreground text-sm font-medium px-4 py-2 hover:bg-primary/80 disabled:opacity-50 transition-colors"
+              className="rounded-md cursor-pointer bg-primary text-primary-foreground text-sm font-medium px-4 py-2 hover:bg-primary/80 disabled:opacity-50 transition-colors"
             >
               {isPending ? "Saving…" : mode === "create" ? "Add action item" : "Save changes"}
             </button>
