@@ -175,6 +175,7 @@ export function MpcTokenSection({ hasToken, appUrl, connections }: Props) {
             </p>
             <div className="flex items-center gap-2 rounded-lg border border-[#588157]/40 bg-[#EDF3EC]/50 px-3 py-2">
               <code
+                data-testid="mcp-new-token"
                 className="flex-1 text-xs text-foreground break-all"
                 style={{ fontFamily: "var(--font-mono)" }}
               >
