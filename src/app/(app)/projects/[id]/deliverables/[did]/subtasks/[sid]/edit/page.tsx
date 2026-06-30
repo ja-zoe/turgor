@@ -120,7 +120,7 @@ export default async function EditSubtaskPage({
             <select
               name="status"
               defaultValue={subtask.status}
-              className="w-full rounded-md border border-border bg-card px-3 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-colors"
+              className="w-full cursor-pointer rounded-md border border-border bg-card px-3 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-colors"
             >
               {STATUS_OPTIONS.map((o) => (
                 <option key={o.value} value={o.value}>
@@ -139,7 +139,7 @@ export default async function EditSubtaskPage({
             <select
               name="assigneeId"
               defaultValue={subtask.assigneeId ?? ""}
-              className="w-full rounded-md border border-border bg-card px-3 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-colors"
+              className="w-full cursor-pointer rounded-md border border-border bg-card px-3 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-colors"
               style={{ fontFamily: "var(--font-mono)" }}
             >
               <option value="">Unassigned</option>

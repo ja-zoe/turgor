@@ -86,7 +86,7 @@ export function StatusSubmitSwitcher({
               key={p.id}
               type="button"
               onClick={() => setIndex(i)}
-              className={`text-xs px-2 py-1 rounded-md border transition-colors ${
+              className={`text-xs px-2 py-1 cursor-pointer rounded-md border transition-colors ${
                 i === index
                   ? "border-primary bg-primary/5 text-foreground"
                   : "border-border text-muted-foreground hover:bg-muted"

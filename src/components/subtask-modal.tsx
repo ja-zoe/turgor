@@ -165,7 +165,7 @@ export function SubtaskModal({
               <select
                 value={assigneeId}
                 onChange={(e) => setAssigneeId(e.target.value)}
-                className={inputClass}
+                className={`${inputClass} cursor-pointer`}
                 style={{ fontFamily: "var(--font-mono)" }}
                 data-testid="subtask-modal-assignee"
               >
@@ -202,7 +202,7 @@ export function SubtaskModal({
               <select
                 value={status}
                 onChange={(e) => setStatus(e.target.value as TimelineStatus)}
-                className={inputClass}
+                className={`${inputClass} cursor-pointer`}
                 style={{ fontFamily: "var(--font-mono)" }}
                 data-testid="subtask-modal-status"
               >

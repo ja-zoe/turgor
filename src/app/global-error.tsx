@@ -46,7 +46,7 @@ export default function GlobalError({
             <button
               type="button"
               onClick={reset}
-              className="inline-flex items-center gap-1.5 rounded-md bg-primary text-primary-foreground text-sm font-medium px-4 py-2 hover:bg-primary/80 transition-colors"
+              className="inline-flex items-center gap-1.5 cursor-pointer rounded-md bg-primary text-primary-foreground text-sm font-medium px-4 py-2 hover:bg-primary/80 transition-colors"
             >
               <ArrowClockwise size={14} /> Try again
             </button>

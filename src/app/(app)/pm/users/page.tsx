@@ -121,7 +121,7 @@ export default async function UsersPage() {
                   <select
                     name="roleId"
                     required
-                    className="rounded-md border border-border bg-card text-sm px-2 py-1.5 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
+                    className="rounded-md border border-border bg-card text-sm px-2 py-1.5 text-foreground cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary/40"
                     style={{ fontFamily: "var(--font-mono)" }}
                   >
                     <option value="">Assign role…</option>
@@ -195,7 +195,7 @@ export default async function UsersPage() {
                   <select
                     name="roleId"
                     defaultValue={u.roleId ?? ""}
-                    className="rounded-md border border-border bg-card text-xs px-2 py-1.5 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
+                    className="rounded-md border border-border bg-card text-xs px-2 py-1.5 text-foreground cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary/40"
                     style={{ fontFamily: "var(--font-mono)" }}
                   >
                     <option value="">No role</option>
@@ -267,7 +267,7 @@ export default async function UsersPage() {
                 >
                   <button
                     type="submit"
-                    className="text-xs text-muted-foreground hover:text-[#588157] transition-colors"
+                    className="text-xs text-muted-foreground cursor-pointer hover:text-[#588157] transition-colors"
                     style={{ fontFamily: "var(--font-mono)" }}
                   >
                     Reactivate

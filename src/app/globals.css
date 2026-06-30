@@ -195,7 +195,7 @@
     transition: background-color 150ms ease;
   }
   .clickable-row:hover {
-    background-color: color-mix(in srgb, var(--foreground) 4%, transparent);
+    background-color: color-mix(in srgb, var(--foreground) 2%, transparent);
   }
 
   .clickable-icon {

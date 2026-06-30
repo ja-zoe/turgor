@@ -71,7 +71,7 @@ export function SemesterField({
           onChange(e.target.value);
         }
       }}
-      className={controlClass}
+      className={`${controlClass} cursor-pointer`}
       style={font}
       data-testid={testId}
     >

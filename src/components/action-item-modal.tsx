@@ -129,7 +129,7 @@ export function ActionItemModal({
               <select
                 value={ownerId}
                 onChange={(e) => setOwnerId(e.target.value)}
-                className={inputClass}
+                className={`${inputClass} cursor-pointer`}
                 style={{ fontFamily: "var(--font-mono)" }}
                 data-testid="action-item-modal-owner"
               >

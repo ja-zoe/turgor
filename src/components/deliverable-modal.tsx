@@ -129,7 +129,7 @@ export function DeliverableModal({
               <select
                 value={priority}
                 onChange={(e) => setPriority(e.target.value as Priority)}
-                className={inputClass}
+                className={`${inputClass} cursor-pointer`}
                 style={{ fontFamily: "var(--font-mono)" }}
                 data-testid="deliv-modal-priority"
               >
@@ -192,7 +192,7 @@ export function DeliverableModal({
               <select
                 value={status}
                 onChange={(e) => setStatus(e.target.value as TimelineStatus)}
-                className={inputClass}
+                className={`${inputClass} cursor-pointer`}
                 style={{ fontFamily: "var(--font-mono)" }}
                 data-testid="deliv-modal-status"
               >

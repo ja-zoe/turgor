@@ -155,7 +155,7 @@ export function Sidebar({
       {/* Mobile hamburger */}
       <button
         onClick={() => setMobileOpen(true)}
-        className="lg:hidden fixed top-4 left-4 z-50 w-8 h-8 flex items-center justify-center rounded-md bg-card border border-border text-foreground hover:bg-muted transition-colors"
+        className="lg:hidden fixed top-4 left-4 z-50 w-8 h-8 flex items-center justify-center cursor-pointer rounded-md bg-card border border-border text-foreground hover:bg-muted transition-colors"
         aria-label="Open menu"
       >
         <List size={16} />
