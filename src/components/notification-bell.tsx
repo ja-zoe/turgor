@@ -72,6 +72,27 @@ export function NotificationBell() {
     setUnreadCount((c) => Math.max(0, c - 1));
   }
 
+  async function clearAll() {
+    setLoading(true);
+    try {
+      await fetch("/api/notifications/clear", { method: "POST", body: JSON.stringify({}) });
+      setNotifications([]);
+      setUnreadCount(0);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function dismissOne(id: string, wasUnread: boolean) {
+    await fetch("/api/notifications/clear", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id }),
+    });
+    setNotifications((n) => n.filter((x) => x.id !== id));
+    if (wasUnread) setUnreadCount((c) => Math.max(0, c - 1));
+  }
+
   return (
     <div ref={ref} className="relative">
       <button
@@ -105,6 +126,17 @@ export function NotificationBell() {
                   Mark all read
                 </button>
               )}
+              {notifications.length > 0 && (
+                <button
+                  onClick={clearAll}
+                  disabled={loading}
+                  className="text-xs clickable-danger"
+                  style={{ fontFamily: "var(--font-mono)" }}
+                  data-testid="notif-clear-all"
+                >
+                  Clear all
+                </button>
+              )}
               <button
                 onClick={() => setOpen(false)}
                 className="text-muted-foreground clickable-icon"
@@ -124,7 +156,7 @@ export function NotificationBell() {
               notifications.map((n) => {
                 const content = (
                   <div
-                    className={`px-4 py-3 hover:bg-muted/20 transition-colors cursor-pointer ${
+                    className={`px-4 py-3 pr-9 hover:bg-muted/20 transition-colors cursor-pointer ${
                       !n.read ? "bg-[#EDF3EC]/40" : ""
                     }`}
                     onClick={() => !n.read && markOneRead(n.id)}
@@ -152,12 +184,24 @@ export function NotificationBell() {
                   </div>
                 );
 
-                return n.link ? (
-                  <Link key={n.id} href={n.link} onClick={() => { markOneRead(n.id); setOpen(false); }}>
-                    {content}
-                  </Link>
-                ) : (
-                  <div key={n.id}>{content}</div>
+                return (
+                  <div key={n.id} className="relative group/notif">
+                    {n.link ? (
+                      <Link href={n.link} onClick={() => { markOneRead(n.id); setOpen(false); }}>
+                        {content}
+                      </Link>
+                    ) : (
+                      content
+                    )}
+                    <button
+                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); dismissOne(n.id, !n.read); }}
+                      className="absolute top-2.5 right-2.5 text-muted-foreground clickable-icon"
+                      aria-label="Dismiss notification"
+                      data-testid="notif-dismiss"
+                    >
+                      <X size={12} />
+                    </button>
+                  </div>
                 );
               })
             )}
