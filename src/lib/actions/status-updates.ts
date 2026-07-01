@@ -100,10 +100,12 @@ export async function updateStatusUpdate(statusUpdateId: string, formData: FormD
   });
 
   revalidatePath(`/projects/${update.projectId}`);
+  revalidatePath(`/projects/${update.projectId}/history`);
 }
 
 export async function deleteStatusUpdate(statusUpdateId: string) {
   const update = await assertCanModifyStatusUpdate(statusUpdateId);
   await prisma.statusUpdate.delete({ where: { id: statusUpdateId } });
   revalidatePath(`/projects/${update.projectId}`);
+  revalidatePath(`/projects/${update.projectId}/history`);
 }

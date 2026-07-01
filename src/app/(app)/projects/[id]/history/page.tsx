@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { Permission } from "@/generated/prisma";
 import { ProjectStatusBadge } from "@/components/status-badge";
 import { MeetingRecordControls } from "@/components/meeting-record-controls";
+import { StatusUpdateControls } from "@/components/status-update-controls";
 import { ArrowLeft, ClipboardText, CalendarCheck, Clock } from "@phosphor-icons/react/dist/ssr";
 import { getDisplayName, formatDateOnly } from "@/lib/utils";
 
@@ -20,6 +21,7 @@ export default async function ProjectHistoryPage({
     permissions.includes(Permission.VIEW_ALL_PROJECTS) ||
     permissions.includes(Permission.MANAGE_PROJECTS);
   const canManageMeetingRecords = permissions.includes(Permission.MANAGE_MEETING_RECORDS);
+  const canManageStatusUpdates = permissions.includes(Permission.MANAGE_STATUS_UPDATES);
 
   const project = await prisma.project.findUnique({
     where: { id },
@@ -31,6 +33,7 @@ export default async function ProjectHistoryPage({
         orderBy: { meetingDate: "desc" },
         include: {
           submittedBy: { select: { name: true, firstName: true, nickname: true, email: true } },
+          calendarEvent: { select: { startsAt: true } },
         },
       },
       meetingRecords: {
@@ -46,6 +49,19 @@ export default async function ProjectHistoryPage({
 
   const membership = await getProjectMembership(user.id, id);
   if (!membership && !canViewAll) notFound();
+
+  const isLeadHere = membership?.role === "LEAD" || membership?.role === "SUBLEAD";
+  // Same gate as the project detail page: privileged (MANAGE_STATUS_UPDATES) any time, or
+  // the submitting lead/sublead before the linked meeting's start time (its due time).
+  const canModifyStatusUpdate = (u: {
+    submittedById: string;
+    meetingDate: Date;
+    calendarEvent: { startsAt: Date } | null;
+  }) =>
+    canManageStatusUpdates ||
+    (u.submittedById === user.id &&
+      isLeadHere &&
+      new Date() <= new Date(u.calendarEvent?.startsAt ?? u.meetingDate));
 
   // Merge and sort all events chronologically (newest first)
   type StatusEntry = { kind: "status"; date: Date; data: (typeof project.statusUpdates)[number] };
@@ -151,6 +167,19 @@ export default async function ProjectHistoryPage({
                           >
                             Late
                           </span>
+                        )}
+                        {canModifyStatusUpdate(s) && (
+                          <StatusUpdateControls
+                            update={{
+                              id: s.id,
+                              plannedWork: s.plannedWork,
+                              actualProgress: s.actualProgress,
+                              blockers: s.blockers,
+                              nextWeekGoals: s.nextWeekGoals,
+                              needsHelp: s.needsHelp,
+                              helpNeeded: s.helpNeeded,
+                            }}
+                          />
                         )}
                       </div>
 
