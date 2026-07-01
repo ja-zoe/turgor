@@ -1,9 +1,11 @@
 import { requireAuth } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
+import { TimelineStatus } from "@/generated/prisma";
 import { TimelineStatusBadge } from "@/components/status-badge";
 import Link from "next/link";
 import { CheckSquare, ListChecks, Check } from "@phosphor-icons/react/dist/ssr";
 import { closeActionItem } from "@/lib/actions/action-items";
+import { updateSubtaskStatus } from "@/lib/actions/deliverables";
 import { formatDateOnly } from "@/lib/utils";
 
 export default async function MyTasksPage() {
@@ -138,12 +140,14 @@ export default async function MyTasksPage() {
               </h2>
               <div className="space-y-2">
                 {subtasks.map((subtask) => (
-                  <Link
+                  <div
                     key={subtask.id}
-                    href={`/projects/${subtask.deliverable.project.id}`}
-                    className="group flex items-center justify-between p-4 bg-card border border-border rounded-xl hover:border-primary/30 transition-colors"
+                    className="group flex items-center justify-between gap-3 p-4 bg-card border border-border rounded-xl hover:border-primary/30 transition-colors"
                   >
-                    <div>
+                    <Link
+                      href={`/projects/${subtask.deliverable.project.id}`}
+                      className="min-w-0 flex-1"
+                    >
                       <p className="text-sm font-medium text-foreground group-hover:text-primary transition-colors">
                         {subtask.title}
                       </p>
@@ -153,7 +157,7 @@ export default async function MyTasksPage() {
                       >
                         {subtask.deliverable.project.name} &middot; {subtask.deliverable.title}
                       </p>
-                    </div>
+                    </Link>
                     <div className="flex items-center gap-3 flex-shrink-0">
                       {subtask.dueDate && (
                         <span
@@ -164,8 +168,22 @@ export default async function MyTasksPage() {
                         </span>
                       )}
                       <TimelineStatusBadge status={subtask.status} />
+                      <form
+                        action={async () => {
+                          "use server";
+                          await updateSubtaskStatus(subtask.id, TimelineStatus.COMPLETE);
+                        }}
+                      >
+                        <button
+                          type="submit"
+                          title="Mark complete"
+                          className="cursor-pointer flex-shrink-0 w-6 h-6 rounded border border-border hover:border-[#588157] hover:bg-[#EDF3EC] transition-colors flex items-center justify-center text-muted-foreground hover:text-[#588157]"
+                        >
+                          <Check size={12} />
+                        </button>
+                      </form>
                     </div>
-                  </Link>
+                  </div>
                 ))}
               </div>
             </section>

@@ -276,6 +276,9 @@ export async function updateSubtaskStatus(subtaskId: string, status: TimelineSta
   await deriveDeliverableStatus(subtask.deliverable.id);
 
   revalidatePath(`/projects/${subtask.deliverable.projectId}`);
+  // The subtask also surfaces on the assignee's My Tasks list; refresh it so a
+  // completion done from there drops the item out of the open-work list.
+  revalidatePath("/my-tasks");
 }
 
 export async function updateSubtaskTitle(subtaskId: string, title: string) {
