@@ -89,23 +89,40 @@ export default async function NewDeliverablePage({
           />
         </div>
 
-        <div>
-          <label className="block text-xs font-medium text-muted-foreground uppercase tracking-widest mb-2" style={{ fontFamily: "var(--font-mono)" }}>
-            Group
-            <span className="ml-2 text-muted-foreground/60 normal-case font-normal tracking-normal">optional — e.g. Software, Hardware, Marketing</span>
-          </label>
-          <input
-            name="group"
-            type="text"
-            list="group-suggestions"
-            placeholder="e.g. Software"
-            className="w-full rounded-md border border-border bg-card px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-colors"
-          />
-          <datalist id="group-suggestions">
-            {existingGroups.map((g) => (
-              <option key={g} value={g} />
-            ))}
-          </datalist>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-xs font-medium text-muted-foreground uppercase tracking-widest mb-2" style={{ fontFamily: "var(--font-mono)" }}>
+              Group
+              <span className="ml-2 text-muted-foreground/60 normal-case font-normal tracking-normal">optional</span>
+            </label>
+            <input
+              name="group"
+              type="text"
+              list="group-suggestions"
+              placeholder="e.g. Software"
+              className="w-full rounded-md border border-border bg-card px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-colors"
+            />
+            <datalist id="group-suggestions">
+              {existingGroups.map((g) => (
+                <option key={g} value={g} />
+              ))}
+            </datalist>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-muted-foreground uppercase tracking-widest mb-2" style={{ fontFamily: "var(--font-mono)" }}>
+              Priority
+            </label>
+            <select
+              name="priority"
+              defaultValue="MEDIUM"
+              className="w-full cursor-pointer rounded-md border border-border bg-card px-3 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-colors"
+              style={{ fontFamily: "var(--font-mono)" }}
+            >
+              <option value="HIGH">High</option>
+              <option value="MEDIUM">Medium</option>
+              <option value="LOW">Low</option>
+            </select>
+          </div>
         </div>
 
         <div className="grid grid-cols-2 gap-4">

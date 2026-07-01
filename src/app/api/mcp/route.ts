@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getUserPermissions } from "@/lib/permissions";
-import { Permission, TimelineStatus, ActionItemStatus, CalendarEventType, ProjectStatus, McpConnectionType } from "@/generated/prisma";
+import { Permission, TimelineStatus, ActionItemStatus, CalendarEventType, ProjectStatus, McpConnectionType, Priority } from "@/generated/prisma";
 import { carryOverActionItems } from "@/lib/actions/action-items";
 import { getPendingLeadMeetings } from "@/lib/lead-meeting";
 import { runRedFlagDetection } from "@/lib/red-flag";
@@ -276,6 +276,11 @@ const TOOLS = [
         description: { type: "string" },
         startDate: { type: "string", description: "ISO date string (optional)" },
         group: { type: "string", description: "Group/phase label (optional)" },
+        priority: {
+          type: "string",
+          enum: ["LOW", "MEDIUM", "HIGH"],
+          description: "Priority (optional, defaults to MEDIUM). Primary sort key for deliverables.",
+        },
       },
       required: ["projectId", "title", "targetDate"],
     },
@@ -283,7 +288,7 @@ const TOOLS = [
   {
     name: "update_deliverable",
     description:
-      "Update a deliverable's title, dates, status, or group. Requires MANAGE_MILESTONES or project LEAD/SUBLEAD.",
+      "Update a deliverable's title, dates, status, group, or priority. Requires MANAGE_MILESTONES or project LEAD/SUBLEAD.",
     inputSchema: {
       type: "object",
       properties: {
@@ -297,6 +302,11 @@ const TOOLS = [
           enum: ["NOT_STARTED", "IN_PROGRESS", "BLOCKED", "COMPLETE"],
         },
         group: { type: "string" },
+        priority: {
+          type: "string",
+          enum: ["LOW", "MEDIUM", "HIGH"],
+          description: "Priority (LOW, MEDIUM, or HIGH)",
+        },
       },
       required: ["deliverableId"],
     },
@@ -1013,8 +1023,11 @@ async function executeTool(
           startDate: args.startDate ? new Date(args.startDate as string) : null,
           group: (args.group as string | undefined) ?? null,
           orderIndex: count,
+          ...(typeof args.priority === "string" && args.priority in Priority
+            ? { priority: args.priority as Priority }
+            : {}),
         },
-        select: { id: true, title: true, status: true, targetDate: true, group: true },
+        select: { id: true, title: true, status: true, targetDate: true, group: true, priority: true },
       });
       return { created: deliverable };
     }
@@ -1050,8 +1063,11 @@ async function executeTool(
             completedDate: isComplete ? new Date() : null,
           } : {}),
           ...("group" in args ? { group: (args.group as string | undefined) ?? null } : {}),
+          ...(typeof args.priority === "string" && args.priority in Priority
+            ? { priority: args.priority as Priority }
+            : {}),
         },
-        select: { id: true, title: true, status: true, targetDate: true, group: true },
+        select: { id: true, title: true, status: true, targetDate: true, group: true, priority: true },
       });
       return { updated };
     }

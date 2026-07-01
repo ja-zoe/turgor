@@ -100,6 +100,9 @@ export async function createDeliverable(projectId: string, formData: FormData) {
   if (!targetDate) throw new DateInputError("Target date is required.");
   const startDate = parseDateInput(formData.get("startDate"));
   const group = (formData.get("group") as string | null)?.trim() || null;
+  const priorityRaw = formData.get("priority") as string | null;
+  const priority =
+    priorityRaw && priorityRaw in Priority ? (priorityRaw as Priority) : undefined;
 
   if (!title) throw new Error("Title is required");
 
@@ -114,6 +117,7 @@ export async function createDeliverable(projectId: string, formData: FormData) {
       startDate,
       orderIndex: count,
       group,
+      ...(priority ? { priority } : {}),
     },
   });
 
