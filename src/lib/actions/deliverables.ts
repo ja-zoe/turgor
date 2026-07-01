@@ -105,6 +105,9 @@ export async function createDeliverable(projectId: string, formData: FormData) {
     priorityRaw && priorityRaw in Priority ? (priorityRaw as Priority) : undefined;
 
   if (!title) throw new Error("Title is required");
+  if (startDate && startDate > targetDate) {
+    throw new Error("Start date must not be after target date");
+  }
 
   const count = await prisma.deliverable.count({ where: { projectId } });
 

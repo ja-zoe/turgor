@@ -1013,14 +1013,18 @@ async function executeTool(
         membership?.role === "SUBLEAD";
       if (!canCreate) return { error: "Insufficient permissions to create deliverables" };
 
+      const cTarget = new Date(args.targetDate as string);
+      const cStart = args.startDate ? new Date(args.startDate as string) : null;
+      if (cStart && cStart > cTarget) return { error: "startDate must not be after targetDate" };
+
       const count = await prisma.deliverable.count({ where: { projectId: pid } });
       const deliverable = await prisma.deliverable.create({
         data: {
           projectId: pid,
           title: args.title as string,
-          targetDate: new Date(args.targetDate as string),
+          targetDate: cTarget,
           description: (args.description as string | undefined) ?? null,
-          startDate: args.startDate ? new Date(args.startDate as string) : null,
+          startDate: cStart,
           group: (args.group as string | undefined) ?? null,
           orderIndex: count,
           ...(typeof args.priority === "string" && args.priority in Priority
@@ -1037,7 +1041,7 @@ async function executeTool(
       const did = args.deliverableId as string;
       const deliverable = await prisma.deliverable.findUnique({
         where: { id: did },
-        select: { projectId: true },
+        select: { projectId: true, startDate: true, targetDate: true },
       });
       if (!deliverable) return { error: "Deliverable not found" };
       const membership = await getProjectMembership(user.id, deliverable.projectId);
@@ -1046,6 +1050,18 @@ async function executeTool(
         membership?.role === "LEAD" ||
         membership?.role === "SUBLEAD";
       if (!canUpdate) return { error: "Insufficient permissions to update this deliverable" };
+
+      // Validate the effective (post-update) date window so a partial update can't leave the
+      // deliverable inverted (start after target) — mirrors the web updateDeliverable check.
+      const effTarget =
+        args.targetDate !== undefined ? new Date(args.targetDate as string) : deliverable.targetDate;
+      const effStart =
+        "startDate" in args
+          ? (args.startDate ? new Date(args.startDate as string) : null)
+          : deliverable.startDate;
+      if (effStart && effTarget && effStart > effTarget) {
+        return { error: "startDate must not be after targetDate" };
+      }
 
       const newStatus = args.status as TimelineStatus | undefined;
       const isComplete = newStatus === TimelineStatus.COMPLETE;

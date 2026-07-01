@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { Permission } from "@/generated/prisma";
 import { createDeliverable } from "@/lib/actions/deliverables";
 import { MarkdownEditor } from "@/components/markdown-editor";
+import { DeliverableDateFields } from "@/components/deliverable-date-fields";
 import { SubmitButton } from "@/components/submit-button";
 import { ArrowLeft } from "@phosphor-icons/react/dist/ssr";
 import Link from "next/link";
@@ -125,31 +126,7 @@ export default async function NewDeliverablePage({
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block text-xs font-medium text-muted-foreground uppercase tracking-widest mb-2" style={{ fontFamily: "var(--font-mono)" }}>
-              Start Date
-            </label>
-            <input
-              name="startDate"
-              type="date"
-              className="w-full rounded-md border border-border bg-card px-3 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-colors"
-              style={{ fontFamily: "var(--font-mono)" }}
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-muted-foreground uppercase tracking-widest mb-2" style={{ fontFamily: "var(--font-mono)" }}>
-              Target Date *
-            </label>
-            <input
-              name="targetDate"
-              type="date"
-              required
-              className="w-full rounded-md border border-border bg-card px-3 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-colors"
-              style={{ fontFamily: "var(--font-mono)" }}
-            />
-          </div>
-        </div>
+        <DeliverableDateFields />
 
         <div>
           <label className="block text-xs font-medium text-muted-foreground uppercase tracking-widest mb-2" style={{ fontFamily: "var(--font-mono)" }}>
