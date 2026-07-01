@@ -71,6 +71,33 @@ function EditModal({ update, trigger }: { update: StatusUpdateData; trigger: Rea
               />
             </div>
           ))}
+          {/* Help-needed toggle — mirrors the submit form so a lead can add/clear the
+              PM escalation after the fact (both surfaces feed needsHelp/helpNeeded). */}
+          <div className="p-3 bg-card border border-border rounded-lg">
+            <div className="flex items-center gap-3 mb-2">
+              <input
+                type="checkbox"
+                id={`status-edit-needsHelp-${update.id}`}
+                checked={vals.needsHelp}
+                onChange={(e) => setVals((v) => ({ ...v, needsHelp: e.target.checked }))}
+                className="w-4 h-4 accent-primary"
+                data-testid="status-edit-needsHelp"
+              />
+              <label htmlFor={`status-edit-needsHelp-${update.id}`} className="text-sm font-medium text-foreground">
+                I need help from the PM
+              </label>
+            </div>
+            {vals.needsHelp && (
+              <textarea
+                rows={2}
+                value={vals.helpNeeded ?? ""}
+                onChange={(e) => setVals((v) => ({ ...v, helpNeeded: e.target.value }))}
+                placeholder="Describe what help you need…"
+                className={fieldClass}
+                data-testid="status-edit-helpNeeded"
+              />
+            )}
+          </div>
           <div className="flex items-center justify-end gap-3 pt-1">
             <button type="button" onClick={() => setOpen(false)} disabled={isPending}
               className="text-sm text-muted-foreground clickable-icon">Cancel</button>
