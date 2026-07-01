@@ -135,6 +135,11 @@ const TOOLS = [
         projectId: { type: "string" },
         description: { type: "string" },
         deadline: { type: "string", description: "ISO date string e.g. 2026-07-15 (optional)" },
+        ownerId: {
+          type: "string",
+          description:
+            "User ID to assign as owner (use list_members to find one). Defaults to the caller if omitted; pass an empty string for no owner.",
+        },
       },
       required: ["projectId", "description"],
     },
@@ -142,7 +147,7 @@ const TOOLS = [
   {
     name: "update_action_item",
     description:
-      "Close, reopen, or edit an action item. Requires CLOSE_ACTION_ITEMS, ASSIGN_ACTION_ITEMS, or project LEAD/SUBLEAD.",
+      "Close, reopen, or edit an action item (including reassigning its owner). Requires CLOSE_ACTION_ITEMS, ASSIGN_ACTION_ITEMS, or project LEAD/SUBLEAD.",
     inputSchema: {
       type: "object",
       properties: {
@@ -150,6 +155,10 @@ const TOOLS = [
         status: { type: "string", enum: ["OPEN", "DONE"] },
         deadline: { type: "string", description: "ISO date string, or null to clear" },
         description: { type: "string" },
+        ownerId: {
+          type: "string",
+          description: "User ID to reassign as owner, or an empty string to clear the owner",
+        },
       },
       required: ["actionItemId"],
     },
@@ -739,14 +748,17 @@ async function executeTool(
         membership?.role === "LEAD" ||
         membership?.role === "SUBLEAD";
       if (!canCreate) return { error: "Insufficient permissions to create action items on this project" };
+      // Owner defaults to the caller, but a lead/eboard can delegate to any user by id
+      // (mirrors the owner dropdown in the web action-item form); "" clears the owner.
+      const ownerId = "ownerId" in args ? ((args.ownerId as string) || null) : user.id;
       const item = await prisma.actionItem.create({
         data: {
           projectId: pid,
           description: args.description as string,
           deadline: args.deadline ? new Date(args.deadline as string) : null,
-          ownerId: user.id,
+          ownerId,
         },
-        select: { id: true, description: true },
+        select: { id: true, description: true, ownerId: true },
       });
       return { created: item };
     }
@@ -777,8 +789,9 @@ async function executeTool(
           } : {}),
           ...("deadline" in args ? { deadline: args.deadline ? new Date(args.deadline as string) : null } : {}),
           ...(args.description !== undefined ? { description: args.description as string } : {}),
+          ...("ownerId" in args ? { ownerId: (args.ownerId as string) || null } : {}),
         },
-        select: { id: true, status: true, deadline: true, description: true },
+        select: { id: true, status: true, deadline: true, description: true, ownerId: true },
       });
       return { updated };
     }
