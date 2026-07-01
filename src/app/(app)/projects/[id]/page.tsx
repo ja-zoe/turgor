@@ -100,6 +100,10 @@ export default async function ProjectDetailPage({
   const canManageStatusUpdates = permissions.includes(Permission.MANAGE_STATUS_UPDATES);
   const canManageMeetingRecords = permissions.includes(Permission.MANAGE_MEETING_RECORDS);
   const isLeadHere = membership?.role === "LEAD" || membership?.role === "SUBLEAD";
+  // A lead/sublead who holds EDIT_OWN_PROJECT may edit their own project (name, dates,
+  // corrective action plan) — same fields as a PM, scoped to projects they lead.
+  const canEditThisProject =
+    canManage || (permissions.includes(Permission.EDIT_OWN_PROJECT) && isLeadHere);
   // "Submit Project Standing" only appears for a lead when the project's lead meeting is open
   // for submission AND nothing has been submitted for it yet.
   const canSubmitStatus = isLeadHere && submissionState.canSubmit;
@@ -186,10 +190,11 @@ export default async function ProjectDetailPage({
           </div>
 
           <div className="flex items-center gap-2 flex-shrink-0">
-            {canManage && (
+            {canEditThisProject && (
               <ProjectModal
                 allSemesters={allSemesters}
                 project={editableProject}
+                canDelete={canManage}
                 trigger={
                   <button
                     type="button"
@@ -238,10 +243,11 @@ export default async function ProjectDetailPage({
             ) : (
               <p className="text-xs text-[#A4503C]/80 mt-0.5">
                 A corrective action plan is required.{" "}
-                {canManage && (
+                {canEditThisProject && (
                   <ProjectModal
                     allSemesters={allSemesters}
                     project={editableProject}
+                    canDelete={canManage}
                     trigger={
                       <button type="button" className="underline clickable-danger">
                         Add one

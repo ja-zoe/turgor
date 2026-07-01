@@ -36,10 +36,14 @@ export function ProjectModal({
   project,
   allSemesters,
   trigger,
+  canDelete = true,
 }: {
   project: EditableProject;
   allSemesters: string[];
   trigger: ReactElement;
+  /** Whether to show the Delete button. Deleting is PM-only, so leads editing
+   *  their own project should not see it. */
+  canDelete?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState(project.name);
@@ -180,8 +184,10 @@ export function ProjectModal({
           {error && <p className="text-xs text-[#A4503C]">{error}</p>}
 
           <div className="flex items-center justify-between gap-3 pt-1">
-            {/* Delete (armed confirm) on the left */}
-            {confirmingDelete ? (
+            {/* Delete (armed confirm) on the left — PM-only */}
+            {!canDelete ? (
+              <span />
+            ) : confirmingDelete ? (
               <span className="inline-flex items-center gap-1 text-xs text-[#A4503C]" data-testid="project-modal-delete-confirm">
                 Delete project?
                 <InlineConfirm show onConfirm={doDelete} onCancel={() => setConfirmingDelete(false)} disabled={isPending} />

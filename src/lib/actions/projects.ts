@@ -1,11 +1,36 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
-import { requireAuth, requirePermission } from "@/lib/permissions";
+import {
+  requireAuth,
+  requirePermission,
+  getUserPermissions,
+  getProjectMembership,
+} from "@/lib/permissions";
 import { parseDateInput } from "@/lib/date";
 import { Permission, ProjectMemberRole, ProjectStatus } from "@/generated/prisma";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+
+/**
+ * Who may edit an existing project's editable fields (name, description, dates,
+ * corrective action plan):
+ *  - anyone with MANAGE_PROJECTS (PM) — any project;
+ *  - a project LEAD/SUBLEAD who holds EDIT_OWN_PROJECT — their own project only.
+ * This is what makes the "Edit own project" permission (and the corrective-action-plan
+ * prompt on the BEHIND banner) actually reachable for leads.
+ */
+export async function canEditProject(
+  userId: string,
+  roleId: string | null,
+  projectId: string
+): Promise<boolean> {
+  const perms = await getUserPermissions(roleId);
+  if (perms.includes(Permission.MANAGE_PROJECTS)) return true;
+  if (!perms.includes(Permission.EDIT_OWN_PROJECT)) return false;
+  const membership = await getProjectMembership(userId, projectId);
+  return membership?.role === "LEAD" || membership?.role === "SUBLEAD";
+}
 
 export async function createProject(formData: FormData) {
   await requirePermission(Permission.MANAGE_PROJECTS);
@@ -34,7 +59,10 @@ export async function createProject(formData: FormData) {
 }
 
 export async function updateProject(projectId: string, formData: FormData) {
-  await requirePermission(Permission.MANAGE_PROJECTS);
+  const user = await requireAuth();
+  if (!(await canEditProject(user.id, user.roleId, projectId))) {
+    throw new Error("You do not have permission to edit this project");
+  }
 
   const name = (formData.get("name") as string).trim();
   const description = (formData.get("description") as string | null)?.trim() || null;
