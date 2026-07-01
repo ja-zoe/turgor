@@ -450,6 +450,12 @@ export default async function ProjectDetailPage({
                       <p className="text-xs text-foreground line-clamp-2">{update.blockers}</p>
                     </div>
                   )}
+                  {update.nextWeekGoals && (
+                    <div>
+                      <p className="text-xs font-medium text-muted-foreground mb-1">Next Week</p>
+                      <p className="text-xs text-foreground line-clamp-2">{update.nextWeekGoals}</p>
+                    </div>
+                  )}
                   {update.needsHelp && update.helpNeeded && (
                     <div>
                       <p className="text-xs font-medium text-[#C99846] mb-1">Help Needed</p>
