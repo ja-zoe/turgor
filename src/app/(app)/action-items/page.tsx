@@ -46,6 +46,10 @@ export default async function AllActionItemsPage() {
   });
   const leadProjectIds = new Set(myLeadAssignments.map((a) => a.projectId));
   const canEditItem = (projectId: string) => canAssign || leadProjectIds.has(projectId);
+  // A project LEAD/SUBLEAD may also close/reopen items on their own project (matching the
+  // closeActionItem/reopenActionItem gates + the project detail page), even without the
+  // global CLOSE_ACTION_ITEMS permission.
+  const canCloseItem = (projectId: string) => canCloseAll || leadProjectIds.has(projectId);
 
   // Owner options for the edit modal, per project (only needed for projects the user can edit).
   const projectIds = [...new Set(items.map((i) => i.project.id))];
@@ -165,7 +169,7 @@ export default async function AllActionItemsPage() {
                           }
                         />
                       )}
-                      {(canCloseAll || item.ownerId === user.id) && (
+                      {(canCloseItem(item.project.id) || item.ownerId === user.id) && (
                         <form
                           action={async () => {
                             "use server";
@@ -227,7 +231,7 @@ export default async function AllActionItemsPage() {
                           )}
                         </div>
                       </div>
-                      {canCloseAll && (
+                      {canCloseItem(item.project.id) && (
                         <form
                           action={async () => {
                             "use server";

@@ -43,9 +43,14 @@ export async function closeActionItem(actionItemId: string) {
     select: { projectId: true, ownerId: true },
   });
 
-  // Owner can always close their own item; others need CLOSE_ACTION_ITEMS
+  // Owner can always close their own item; a project LEAD/SUBLEAD may close any item on
+  // their project (same membership gate as create/update/delete so the "mark done" control
+  // and the write-permission don't drift); everyone else needs global CLOSE_ACTION_ITEMS.
   if (item.ownerId !== user.id) {
-    await requirePermission(Permission.CLOSE_ACTION_ITEMS);
+    const membership = await getProjectMembership(user.id, item.projectId);
+    if (!membership || membership.role === "MEMBER") {
+      await requirePermission(Permission.CLOSE_ACTION_ITEMS);
+    }
   }
 
   await prisma.actionItem.update({
@@ -58,12 +63,19 @@ export async function closeActionItem(actionItemId: string) {
 }
 
 export async function reopenActionItem(actionItemId: string) {
-  await requirePermission(Permission.CLOSE_ACTION_ITEMS);
+  const user = await requireAuth();
 
   const item = await prisma.actionItem.findUniqueOrThrow({
     where: { id: actionItemId },
     select: { projectId: true },
   });
+
+  // A project LEAD/SUBLEAD may reopen items on their project; otherwise global CLOSE_ACTION_ITEMS
+  // is required. Mirrors the close gate so both halves of the toggle stay in sync.
+  const membership = await getProjectMembership(user.id, item.projectId);
+  if (!membership || membership.role === "MEMBER") {
+    await requirePermission(Permission.CLOSE_ACTION_ITEMS);
+  }
 
   await prisma.actionItem.update({
     where: { id: actionItemId },

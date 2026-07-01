@@ -115,6 +115,9 @@ export default async function ProjectDetailPage({
       new Date() <= new Date(u.calendarEvent?.startsAt ?? u.meetingDate));
   const canCreateActionItem =
     canAssignActionItems || membership?.role === "LEAD" || membership?.role === "SUBLEAD";
+  // Closing/reopening an item follows the same rule as creating/editing it: a project
+  // lead/sublead may do it on their own project even without global CLOSE_ACTION_ITEMS.
+  const canCloseActionItemsHere = canCloseActionItems || isLeadHere;
 
   const openItems = project.actionItems.filter((a) => a.status === "OPEN");
   const doneItems = project.actionItems.filter((a) => a.status === "DONE");
@@ -326,7 +329,7 @@ export default async function ProjectDetailPage({
           }))}
           assignees={project.assignments.map((a) => ({ id: a.userId, name: getDisplayName(a.user) }))}
           canCreate={canCreateActionItem}
-          canClose={canCloseActionItems}
+          canClose={canCloseActionItemsHere}
           currentUserId={user.id}
         />
       </section>
