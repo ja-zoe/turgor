@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { requireAuth, getUserPermissions } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
-import { Permission } from "@/generated/prisma";
+import { Permission, ProjectMemberRole } from "@/generated/prisma";
 import { Check, ListChecks, ArrowClockwise, PencilSimple } from "@phosphor-icons/react/dist/ssr";
 import { closeActionItem, reopenActionItem } from "@/lib/actions/action-items";
 import { ActionItemModal } from "@/components/action-item-modal";
@@ -38,15 +38,24 @@ export default async function AllActionItemsPage() {
   const openItems = items.filter((i) => i.status === "OPEN");
   const doneItems = items.filter((i) => i.status === "DONE");
 
-  // Owner options for the edit modal, per project (only needed when the user can edit).
+  // A project LEAD/SUBLEAD may edit action items on their own project (matching the
+  // updateActionItem gate + the project detail page), even without ASSIGN_ACTION_ITEMS.
+  const myLeadAssignments = await prisma.projectAssignment.findMany({
+    where: { userId: user.id, role: { in: [ProjectMemberRole.LEAD, ProjectMemberRole.SUBLEAD] } },
+    select: { projectId: true },
+  });
+  const leadProjectIds = new Set(myLeadAssignments.map((a) => a.projectId));
+  const canEditItem = (projectId: string) => canAssign || leadProjectIds.has(projectId);
+
+  // Owner options for the edit modal, per project (only needed for projects the user can edit).
   const projectIds = [...new Set(items.map((i) => i.project.id))];
-  const assignments =
-    canAssign && projectIds.length
-      ? await prisma.projectAssignment.findMany({
-          where: { projectId: { in: projectIds } },
-          include: { user: { select: { id: true, name: true, firstName: true, nickname: true, email: true } } },
-        })
-      : [];
+  const editableProjectIds = projectIds.filter(canEditItem);
+  const assignments = editableProjectIds.length
+    ? await prisma.projectAssignment.findMany({
+        where: { projectId: { in: editableProjectIds } },
+        include: { user: { select: { id: true, name: true, firstName: true, nickname: true, email: true } } },
+      })
+    : [];
   const assigneesByProject: Record<string, { id: string; name: string }[]> = {};
   for (const a of assignments) {
     (assigneesByProject[a.projectId] ??= []).push({ id: a.userId, name: getDisplayName(a.user) });
@@ -133,7 +142,7 @@ export default async function AllActionItemsPage() {
                       </div>
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0">
-                      {canAssign && (
+                      {canEditItem(item.project.id) && (
                         <ActionItemModal
                           mode="edit"
                           projectId={item.project.id}
