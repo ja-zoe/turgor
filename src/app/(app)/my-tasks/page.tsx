@@ -161,8 +161,13 @@ export default async function MyTasksPage() {
                     <div className="flex items-center gap-3 flex-shrink-0">
                       {subtask.dueDate && (
                         <span
-                          className="text-xs text-muted-foreground"
+                          className={`text-xs ${
+                            subtask.dueDate < new Date()
+                              ? "text-[#A4503C]"
+                              : "text-muted-foreground"
+                          }`}
                           style={{ fontFamily: "var(--font-mono)" }}
+                          title={subtask.dueDate < new Date() ? "Overdue" : undefined}
                         >
                           {formatDateOnly(subtask.dueDate)}
                         </span>

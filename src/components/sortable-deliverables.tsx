@@ -1393,6 +1393,13 @@ export function SortableDeliverables({
                               ? pendingValue
                               : subtask.dueDate ?? "";
 
+                            // Flag a past-due, still-open subtask so a lead can spot slipping
+                            // work at a glance — mirrors the deliverable "overdue" treatment.
+                            const subtaskOverdue =
+                              subtask.status !== "COMPLETE" &&
+                              !!subtask.dueDate &&
+                              new Date(subtask.dueDate) < new Date();
+
                             // Right-panel mode drives the slide animation.
                             // Title edits confirm next to the title (not in the right panel),
                             // so the title field stays in "controls" mode here.
@@ -1584,8 +1591,9 @@ export function SortableDeliverables({
                                     />
                                   ) : displayDueDate ? (
                                     <span
-                                      className="text-xs text-muted-foreground"
+                                      className={`text-xs ${subtaskOverdue ? "text-[#A4503C]" : "text-muted-foreground"}`}
                                       style={{ fontFamily: "var(--font-mono)" }}
+                                      title={subtaskOverdue ? "Overdue" : undefined}
                                     >
                                       {formatDueDate(displayDueDate)}
                                     </span>
