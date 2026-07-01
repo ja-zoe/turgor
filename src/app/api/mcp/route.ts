@@ -391,6 +391,7 @@ const TOOLS = [
         deliverableId: { type: "string" },
         title: { type: "string" },
         description: { type: "string" },
+        startDate: { type: "string", description: "ISO date string (optional)" },
         dueDate: { type: "string", description: "ISO date string (optional)" },
         assigneeId: { type: "string", description: "User ID to assign (optional)" },
       },
@@ -407,6 +408,7 @@ const TOOLS = [
         subtaskId: { type: "string" },
         title: { type: "string" },
         description: { type: "string" },
+        startDate: { type: "string", description: "ISO date string, or null to clear" },
         dueDate: { type: "string", description: "ISO date string, or null to clear" },
         assigneeId: { type: "string", description: "User ID, or null to unassign" },
         status: {
@@ -1213,11 +1215,12 @@ async function executeTool(
           deliverableId: delId,
           title: args.title as string,
           description: (args.description as string | undefined) ?? null,
+          startDate: args.startDate ? new Date(args.startDate as string) : null,
           dueDate: args.dueDate ? new Date(args.dueDate as string) : null,
           assigneeId: (args.assigneeId as string | undefined) ?? null,
           orderIndex: count,
         },
-        select: { id: true, title: true, status: true, dueDate: true },
+        select: { id: true, title: true, status: true, startDate: true, dueDate: true },
       });
       return { created: subtask };
     }
@@ -1241,6 +1244,7 @@ async function executeTool(
         data: {
           ...(args.title !== undefined ? { title: args.title as string } : {}),
           ...("description" in args ? { description: (args.description as string | undefined) ?? null } : {}),
+          ...("startDate" in args ? { startDate: args.startDate ? new Date(args.startDate as string) : null } : {}),
           ...("dueDate" in args ? { dueDate: args.dueDate ? new Date(args.dueDate as string) : null } : {}),
           ...("assigneeId" in args ? { assigneeId: (args.assigneeId as string | undefined) ?? null } : {}),
           ...(newStatus !== undefined ? {
@@ -1248,7 +1252,7 @@ async function executeTool(
             completedAt: newStatus === TimelineStatus.COMPLETE ? new Date() : null,
           } : {}),
         },
-        select: { id: true, title: true, status: true, dueDate: true, assigneeId: true },
+        select: { id: true, title: true, status: true, startDate: true, dueDate: true, assigneeId: true },
       });
       return { updated };
     }

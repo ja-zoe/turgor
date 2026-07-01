@@ -58,6 +58,7 @@ interface Subtask {
   description: string | null;
   status: TimelineStatus;
   assignee: Member | null;
+  startDate: string | null;
   dueDate: string | null;
 }
 
@@ -1630,6 +1631,7 @@ export function SortableDeliverables({
                                               title: subtask.title,
                                               description: subtask.description,
                                               assigneeId: subtask.assignee?.id ?? null,
+                                              startDate: subtask.startDate,
                                               dueDate: subtask.dueDate,
                                               status: subtask.status,
                                             }}

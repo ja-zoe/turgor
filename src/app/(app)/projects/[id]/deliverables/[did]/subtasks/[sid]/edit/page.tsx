@@ -152,20 +152,37 @@ export default async function EditSubtaskPage({
           </div>
         </div>
 
-        <div>
-          <label
-            className="block text-xs font-medium text-muted-foreground uppercase tracking-widest mb-2"
-            style={{ fontFamily: "var(--font-mono)" }}
-          >
-            Due Date
-          </label>
-          <input
-            name="dueDate"
-            type="date"
-            defaultValue={subtask.dueDate ? subtask.dueDate.toISOString().slice(0, 10) : ""}
-            className="w-full rounded-md border border-border bg-card px-3 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-colors"
-            style={{ fontFamily: "var(--font-mono)" }}
-          />
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label
+              className="block text-xs font-medium text-muted-foreground uppercase tracking-widest mb-2"
+              style={{ fontFamily: "var(--font-mono)" }}
+            >
+              Start Date
+            </label>
+            <input
+              name="startDate"
+              type="date"
+              defaultValue={subtask.startDate ? subtask.startDate.toISOString().slice(0, 10) : ""}
+              className="w-full rounded-md border border-border bg-card px-3 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-colors"
+              style={{ fontFamily: "var(--font-mono)" }}
+            />
+          </div>
+          <div>
+            <label
+              className="block text-xs font-medium text-muted-foreground uppercase tracking-widest mb-2"
+              style={{ fontFamily: "var(--font-mono)" }}
+            >
+              Due Date
+            </label>
+            <input
+              name="dueDate"
+              type="date"
+              defaultValue={subtask.dueDate ? subtask.dueDate.toISOString().slice(0, 10) : ""}
+              className="w-full rounded-md border border-border bg-card px-3 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-colors"
+              style={{ fontFamily: "var(--font-mono)" }}
+            />
+          </div>
         </div>
 
         <div>

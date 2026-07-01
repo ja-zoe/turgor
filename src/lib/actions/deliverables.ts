@@ -61,18 +61,29 @@ export async function deriveDeliverableStatus(deliverableId: string) {
 }
 
 /**
- * Reject a subtask due date that falls outside its deliverable's window
- * (after the target date, or before the start date). No-op for a null date.
+ * Reject subtask start/due dates that fall outside their deliverable's window
+ * (after the target date, or before the start date) or are out of order
+ * (start after due). No-op for null dates.
  */
-async function assertDueWithinDeliverable(deliverableId: string, dueDate: Date | null) {
-  if (!dueDate) return;
+async function assertSubtaskDatesWithinDeliverable(
+  deliverableId: string,
+  startDate: Date | null,
+  dueDate: Date | null
+) {
+  if (startDate && dueDate && startDate > dueDate) {
+    throw new Error("Start date must be on or before the due date");
+  }
+  if (!startDate && !dueDate) return;
   const d = await prisma.deliverable.findUnique({
     where: { id: deliverableId },
     select: { startDate: true, targetDate: true },
   });
   if (!d) return;
-  if (dueDate > d.targetDate || (d.startDate && dueDate < d.startDate)) {
-    throw new Error("Due date must fall within the deliverable's dates");
+  for (const date of [startDate, dueDate]) {
+    if (!date) continue;
+    if (date > d.targetDate || (d.startDate && date < d.startDate)) {
+      throw new Error("Subtask dates must fall within the deliverable's dates");
+    }
   }
 }
 
@@ -190,10 +201,11 @@ export async function createSubtask(deliverableId: string, formData: FormData) {
 
   const title = (formData.get("title") as string).trim();
   const description = (formData.get("description") as string | null)?.trim() || null;
+  const startDate = parseDateInput(formData.get("startDate"));
   const dueDate = parseDateInput(formData.get("dueDate"));
   const assigneeId = (formData.get("assigneeId") as string | null) || null;
 
-  await assertDueWithinDeliverable(deliverableId, dueDate);
+  await assertSubtaskDatesWithinDeliverable(deliverableId, startDate, dueDate);
 
   const count = await prisma.subtask.count({ where: { deliverableId } });
 
@@ -202,6 +214,7 @@ export async function createSubtask(deliverableId: string, formData: FormData) {
       deliverableId,
       title,
       description,
+      startDate,
       dueDate,
       assigneeId: assigneeId || null,
       orderIndex: count,
@@ -231,14 +244,23 @@ export async function updateSubtask(subtaskId: string, formData: FormData) {
   const dueDate = parseDateInput(formData.get("dueDate"));
   const assigneeId = (formData.get("assigneeId") as string | null) || null;
   const status = formData.get("status") as TimelineStatus;
+  // startDate is optional in the form — only touch it when the field is submitted,
+  // so callers that don't render it don't silently clear the stored value.
+  const hasStartDate = formData.has("startDate");
+  const startDate = hasStartDate ? parseDateInput(formData.get("startDate")) : null;
 
-  await assertDueWithinDeliverable(subtask.deliverable.id, dueDate);
+  await assertSubtaskDatesWithinDeliverable(
+    subtask.deliverable.id,
+    hasStartDate ? startDate : subtask.startDate,
+    dueDate
+  );
 
   await prisma.subtask.update({
     where: { id: subtaskId },
     data: {
       title,
       description,
+      ...(hasStartDate ? { startDate } : {}),
       dueDate,
       assigneeId: assigneeId || null,
       status,
@@ -396,7 +418,7 @@ export async function updateSubtaskDueDate(subtaskId: string, dueDate: string | 
   if (!membership) await requirePermission(Permission.MANAGE_MILESTONES);
 
   const parsedDue = parseDateInput(dueDate);
-  await assertDueWithinDeliverable(subtask.deliverable.id, parsedDue);
+  await assertSubtaskDatesWithinDeliverable(subtask.deliverable.id, subtask.startDate, parsedDue);
 
   await prisma.subtask.update({
     where: { id: subtaskId },

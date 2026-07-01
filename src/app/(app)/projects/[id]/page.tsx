@@ -289,6 +289,7 @@ export default async function ProjectDetailPage({
               description: s.description ?? null,
               status: s.status as "NOT_STARTED" | "IN_PROGRESS" | "BLOCKED" | "COMPLETE",
               assignee: s.assignee,
+              startDate: s.startDate?.toISOString() ?? null,
               dueDate: s.dueDate?.toISOString() ?? null,
             })),
           }))}

@@ -28,6 +28,7 @@ interface EditableSubtask {
   title: string;
   description: string | null;
   assigneeId: string | null;
+  startDate: string | null;
   dueDate: string | null;
   status: TimelineStatus;
 }
@@ -72,6 +73,7 @@ export function SubtaskModal({
   const [title, setTitle] = useState(subtask?.title ?? "");
   const [description, setDescription] = useState(subtask?.description ?? "");
   const [assigneeId, setAssigneeId] = useState(subtask?.assigneeId ?? "");
+  const [startDate, setStartDate] = useState(toDateInput(subtask?.startDate));
   const [dueDate, setDueDate] = useState(toDateInput(subtask?.dueDate));
   const [status, setStatus] = useState<TimelineStatus>(subtask?.status ?? "NOT_STARTED");
   const [error, setError] = useState<string | null>(null);
@@ -84,6 +86,7 @@ export function SubtaskModal({
     setTitle("");
     setDescription("");
     setAssigneeId("");
+    setStartDate("");
     setDueDate("");
     setStatus("NOT_STARTED");
     setError(null);
@@ -101,6 +104,10 @@ export function SubtaskModal({
       setError("Title is required");
       return;
     }
+    if (!isValidDateInput(startDate)) {
+      setError("Start date is not a valid date");
+      return;
+    }
     if (!isValidDateInput(dueDate)) {
       setError("Due date is not a valid date");
       return;
@@ -109,9 +116,18 @@ export function SubtaskModal({
       setError("Due date can't be after the deliverable's target date");
       return;
     }
+    if (startDate && minDue && startDate < minDue) {
+      setError("Start date can't be before the deliverable's start date");
+      return;
+    }
+    if (startDate && dueDate && startDate > dueDate) {
+      setError("Start date can't be after the due date");
+      return;
+    }
     const fd = new FormData();
     fd.set("title", trimmed);
     fd.set("description", description);
+    fd.set("startDate", startDate);
     fd.set("dueDate", dueDate);
     fd.set("assigneeId", assigneeId);
     if (mode === "edit") fd.set("status", status);
@@ -166,25 +182,41 @@ export function SubtaskModal({
             />
           </div>
 
+          <div>
+            <label className={labelClass} style={{ fontFamily: "var(--font-mono)" }}>
+              Assignee
+            </label>
+            <select
+              value={assigneeId}
+              onChange={(e) => setAssigneeId(e.target.value)}
+              className={`${inputClass} cursor-pointer`}
+              style={{ fontFamily: "var(--font-mono)" }}
+              data-testid="subtask-modal-assignee"
+            >
+              <option value="">Unassigned</option>
+              {members.map((m) => (
+                <option key={m.id} value={m.id}>
+                  {getDisplayName(m)}
+                </option>
+              ))}
+            </select>
+          </div>
+
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className={labelClass} style={{ fontFamily: "var(--font-mono)" }}>
-                Assignee
+                Start date
               </label>
-              <select
-                value={assigneeId}
-                onChange={(e) => setAssigneeId(e.target.value)}
-                className={`${inputClass} cursor-pointer`}
+              <input
+                type="date"
+                value={startDate}
+                min={minDue || undefined}
+                max={dueDate || maxDue || undefined}
+                onChange={(e) => setStartDate(e.target.value)}
+                className={inputClass}
                 style={{ fontFamily: "var(--font-mono)" }}
-                data-testid="subtask-modal-assignee"
-              >
-                <option value="">Unassigned</option>
-                {members.map((m) => (
-                  <option key={m.id} value={m.id}>
-                    {getDisplayName(m)}
-                  </option>
-                ))}
-              </select>
+                data-testid="subtask-modal-startdate"
+              />
             </div>
             <div>
               <label className={labelClass} style={{ fontFamily: "var(--font-mono)" }}>
@@ -193,7 +225,7 @@ export function SubtaskModal({
               <input
                 type="date"
                 value={dueDate}
-                min={minDue || undefined}
+                min={startDate || minDue || undefined}
                 max={maxDue || undefined}
                 onChange={(e) => setDueDate(e.target.value)}
                 className={inputClass}
