@@ -259,7 +259,7 @@ export default async function ProjectDetailPage({
       <section>
         <SortableDeliverables
           projectId={id}
-          canManage={canManageMilestones}
+          canManage={canManageMilestones || isLeadHere}
           canEdit={canManageMilestones || !!membership}
           userId={user.id}
           members={project.assignments.map((a) => a.user)}

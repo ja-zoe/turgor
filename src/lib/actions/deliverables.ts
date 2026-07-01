@@ -77,7 +77,11 @@ async function assertDueWithinDeliverable(deliverableId: string, dueDate: Date |
 }
 
 export async function createDeliverable(projectId: string, formData: FormData) {
-  await requirePermission(Permission.MANAGE_MILESTONES);
+  const user = await requireAuth();
+  const membership = await getProjectMembership(user.id, projectId);
+  const canManage = membership?.role === "LEAD" || membership?.role === "SUBLEAD";
+  // A project lead/sublead manages their own deliverables; otherwise MANAGE_MILESTONES.
+  if (!canManage) await requirePermission(Permission.MANAGE_MILESTONES);
 
   const title = (formData.get("title") as string).trim();
   const description = (formData.get("description") as string | null)?.trim() || null;
@@ -156,12 +160,17 @@ export async function updateDeliverable(deliverableId: string, formData: FormDat
 }
 
 export async function deleteDeliverable(deliverableId: string) {
-  await requirePermission(Permission.MANAGE_MILESTONES);
+  const user = await requireAuth();
 
   const deliverable = await prisma.deliverable.findUniqueOrThrow({
     where: { id: deliverableId },
     select: { projectId: true },
   });
+
+  const membership = await getProjectMembership(user.id, deliverable.projectId);
+  const canManage = membership?.role === "LEAD" || membership?.role === "SUBLEAD";
+  // A project lead/sublead manages their own deliverables; otherwise MANAGE_MILESTONES.
+  if (!canManage) await requirePermission(Permission.MANAGE_MILESTONES);
 
   await prisma.deliverable.delete({ where: { id: deliverableId } });
 
