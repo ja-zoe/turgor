@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getUserPermissions } from "@/lib/permissions";
 import { Permission, TimelineStatus, ActionItemStatus, CalendarEventType, ProjectStatus, McpConnectionType } from "@/generated/prisma";
 import { carryOverActionItems } from "@/lib/actions/action-items";
+import { getPendingLeadMeetings } from "@/lib/lead-meeting";
 import { runRedFlagDetection } from "@/lib/red-flag";
 import { verifyOAuthAccessToken, looksLikeJwt, type McpUser } from "@/lib/mcp-oauth";
 
@@ -178,20 +179,26 @@ const TOOLS = [
   // ── Status updates ────────────────────────────────────────────────────────
   {
     name: "create_status_update",
-    description: "Submit a weekly project standing for a project.",
+    description:
+      "Submit a weekly project standing. Submitted against the soonest lead meeting currently awaiting a standing update for this project, unless calendarEventId names a different pending one; the meeting date and late flag are derived from that meeting. Fails if no lead meeting is currently open for submission.",
     inputSchema: {
       type: "object",
       properties: {
         projectId: { type: "string" },
-        meetingDate: { type: "string", description: "ISO date string" },
         plannedWork: { type: "string" },
         actualProgress: { type: "string" },
         blockers: { type: "string", description: "Describe blockers, or 'None'" },
         nextWeekGoals: { type: "string" },
+        calendarEventId: {
+          type: "string",
+          description:
+            "ID of the pending lead meeting to submit for. Omit to use the soonest one awaiting a standing update.",
+        },
+        needsHelp: { type: "boolean", description: "Flag that the project needs help (optional)" },
+        helpNeeded: { type: "string", description: "What help is needed (only used when needsHelp is true)" },
       },
       required: [
         "projectId",
-        "meetingDate",
         "plannedWork",
         "actualProgress",
         "blockers",
@@ -825,18 +832,41 @@ async function executeTool(
         membership?.role === "LEAD" ||
         membership?.role === "SUBLEAD";
       if (!canPost) return { error: "Insufficient permissions to submit status updates" };
+
+      // Standings are submitted against a pending lead meeting (mirrors the web submit
+      // flow) so the meeting date/late flag are derived and the project's "Submit Project
+      // Standing" affordance actually clears — an unlinked update leaves it stuck pending.
+      const pending = await getPendingLeadMeetings(pid);
+      if (pending.length === 0) {
+        return { error: "No lead meeting is currently open for a project standing submission on this project" };
+      }
+      const targetMeetingId = (args.calendarEventId as string | undefined)?.trim() || null;
+      const target = targetMeetingId
+        ? pending.find((p) => p.meeting.id === targetMeetingId)
+        : pending[0];
+      if (!target) {
+        return {
+          error:
+            "That lead meeting is not open for submission for this project. Omit calendarEventId to submit for the soonest pending meeting.",
+        };
+      }
+
+      const needsHelp = typeof args.needsHelp === "boolean" ? (args.needsHelp as boolean) : false;
       const update = await prisma.statusUpdate.create({
         data: {
           projectId: pid,
           submittedById: user.id,
-          meetingDate: new Date(args.meetingDate as string),
+          calendarEventId: target.meeting.id,
+          meetingDate: target.meeting.startsAt,
           plannedWork: args.plannedWork as string,
           actualProgress: args.actualProgress as string,
           blockers: args.blockers as string,
           nextWeekGoals: args.nextWeekGoals as string,
-          needsHelp: false,
+          needsHelp,
+          helpNeeded: needsHelp ? ((args.helpNeeded as string | undefined)?.trim() || null) : null,
+          isLate: target.isLate,
         },
-        select: { id: true },
+        select: { id: true, meetingDate: true, isLate: true },
       });
       return { created: update };
     }
