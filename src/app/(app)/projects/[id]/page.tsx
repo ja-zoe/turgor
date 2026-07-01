@@ -109,13 +109,21 @@ export default async function ProjectDetailPage({
     canManageStatusUpdates ||
     (u.submittedById === user.id && isLeadHere &&
       new Date() <= new Date(u.calendarEvent?.startsAt ?? u.meetingDate));
-  const canEditProject =
-    canManage || membership?.role === "LEAD" || membership?.role === "SUBLEAD";
   const canCreateActionItem =
     canAssignActionItems || membership?.role === "LEAD" || membership?.role === "SUBLEAD";
 
   const openItems = project.actionItems.filter((a) => a.status === "OPEN");
   const doneItems = project.actionItems.filter((a) => a.status === "DONE");
+
+  const editableProject = {
+    id,
+    name: project.name,
+    semester: project.semester,
+    description: project.description,
+    correctiveActionPlan: project.correctiveActionPlan,
+    startDate: project.startDate?.toISOString() ?? null,
+    endDate: project.endDate?.toISOString() ?? null,
+  };
 
   return (
     <div className="space-y-8">
@@ -181,15 +189,7 @@ export default async function ProjectDetailPage({
             {canManage && (
               <ProjectModal
                 allSemesters={allSemesters}
-                project={{
-                  id,
-                  name: project.name,
-                  semester: project.semester,
-                  description: project.description,
-                  correctiveActionPlan: project.correctiveActionPlan,
-                  startDate: project.startDate?.toISOString() ?? null,
-                  endDate: project.endDate?.toISOString() ?? null,
-                }}
+                project={editableProject}
                 trigger={
                   <button
                     type="button"
@@ -238,10 +238,16 @@ export default async function ProjectDetailPage({
             ) : (
               <p className="text-xs text-[#A4503C]/80 mt-0.5">
                 A corrective action plan is required.{" "}
-                {canEditProject && (
-                  <Link href={`/projects/${id}/edit`} className="underline">
-                    Add one
-                  </Link>
+                {canManage && (
+                  <ProjectModal
+                    allSemesters={allSemesters}
+                    project={editableProject}
+                    trigger={
+                      <button type="button" className="underline clickable-danger">
+                        Add one
+                      </button>
+                    }
+                  />
                 )}
               </p>
             )}
