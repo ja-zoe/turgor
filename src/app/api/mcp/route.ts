@@ -304,7 +304,7 @@ const TOOLS = [
   {
     name: "delete_deliverable",
     description:
-      "Delete a deliverable and all its subtasks. Requires MANAGE_MILESTONES.",
+      "Delete a deliverable and all its subtasks. Requires MANAGE_MILESTONES or project LEAD/SUBLEAD.",
     inputSchema: {
       type: "object",
       properties: {
@@ -1056,15 +1056,20 @@ async function executeTool(
 
     // ── delete_deliverable ───────────────────────────────────────────────────
     case "delete_deliverable": {
-      if (!permissions.includes(Permission.MANAGE_MILESTONES)) {
-        return { error: "MANAGE_MILESTONES permission required to delete deliverables" };
-      }
       const did = args.deliverableId as string;
       const deliverable = await prisma.deliverable.findUnique({
         where: { id: did },
-        select: { id: true, title: true },
+        select: { id: true, title: true, projectId: true },
       });
       if (!deliverable) return { error: "Deliverable not found" };
+      const membership = await getProjectMembership(user.id, deliverable.projectId);
+      const canDelete =
+        permissions.includes(Permission.MANAGE_MILESTONES) ||
+        membership?.role === "LEAD" ||
+        membership?.role === "SUBLEAD";
+      if (!canDelete) {
+        return { error: "MANAGE_MILESTONES or project LEAD/SUBLEAD required to delete deliverables" };
+      }
       await prisma.deliverable.delete({ where: { id: did } });
       return { deleted: { id: did, title: deliverable.title } };
     }
