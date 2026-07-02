@@ -128,6 +128,7 @@ export async function runNotificationEngine(): Promise<{ fired: number; errors: 
         // Projects with no status update in the last windowHours hours
         const projects = await prisma.project.findMany({
           where: {
+            archivedAt: null,
             assignments: { some: { role: { in: ["LEAD", "SUBLEAD"] } } },
             statusUpdates: { none: { submittedAt: { gte: cutoff } } },
           },
@@ -161,7 +162,7 @@ export async function runNotificationEngine(): Promise<{ fired: number; errors: 
       // ── PROJECT_BEHIND ────────────────────────────────────────────────────
       if (rule.triggerType === TriggerType.PROJECT_BEHIND) {
         const behindProjects = await prisma.project.findMany({
-          where: { status: "BEHIND" },
+          where: { status: "BEHIND", archivedAt: null },
           select: { id: true, name: true },
         });
 
@@ -199,6 +200,7 @@ export async function runNotificationEngine(): Promise<{ fired: number; errors: 
             status: "OPEN",
             ownerId: { not: null },
             deadline: { gte: new Date(), lte: windowEnd },
+            project: { archivedAt: null },
           },
           include: { project: { select: { id: true, name: true } } },
         });
@@ -230,7 +232,7 @@ export async function runNotificationEngine(): Promise<{ fired: number; errors: 
       // ── GOAL_MISSED ───────────────────────────────────────────────────────
       if (rule.triggerType === TriggerType.GOAL_MISSED) {
         const recentRecords = await prisma.meetingRecord.findMany({
-          where: { goalMet: false },
+          where: { goalMet: false, project: { archivedAt: null } },
           orderBy: { meetingDate: "desc" },
           distinct: ["projectId"],
           select: { projectId: true, project: { select: { name: true } } },

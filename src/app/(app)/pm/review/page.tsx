@@ -20,6 +20,7 @@ export default async function MonthlyReviewPage() {
   const [settings, projects] = await Promise.all([
     prisma.settings.findUnique({ where: { id: "singleton" } }),
     prisma.project.findMany({
+      where: { archivedAt: null },
       orderBy: { name: "asc" },
       include: {
         assignments: { select: { role: true, user: { select: { name: true, email: true } } } },

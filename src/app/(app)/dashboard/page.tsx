@@ -25,7 +25,7 @@ export default async function DashboardPage() {
   const canMonthlyReview = permissions.includes(Permission.VIEW_MONTHLY_REVIEW);
 
   const assignments = await prisma.projectAssignment.findMany({
-    where: { userId: user.id },
+    where: { userId: user.id, project: { archivedAt: null } },
     include: {
       project: {
         select: {
@@ -43,6 +43,7 @@ export default async function DashboardPage() {
   // All projects if PM
   const allProjects = canManageProjects
     ? await prisma.project.findMany({
+        where: { archivedAt: null },
         select: {
           id: true,
           name: true,
@@ -120,7 +121,9 @@ export default async function DashboardPage() {
   // PM stats
   let pmStats: { total: number; behind: number; atRisk: number; openItems: number } | null = null;
   if (canManageProjects && allProjects) {
-    const openItems = await prisma.actionItem.count({ where: { status: "OPEN" } });
+    const openItems = await prisma.actionItem.count({
+      where: { status: "OPEN", project: { archivedAt: null } },
+    });
     pmStats = {
       total: allProjects.length,
       behind: allProjects.filter((p) => p.status === "BEHIND").length,
@@ -131,7 +134,7 @@ export default async function DashboardPage() {
 
   // My open action items
   const myActionItems = await prisma.actionItem.findMany({
-    where: { ownerId: user.id, status: "OPEN" },
+    where: { ownerId: user.id, status: "OPEN", project: { archivedAt: null } },
     orderBy: [{ carriedOver: "desc" }, { deadline: "asc" }],
     take: 5,
     include: { project: { select: { id: true, name: true } } },

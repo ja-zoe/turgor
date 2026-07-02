@@ -18,8 +18,9 @@ export default async function AllActionItemsPage() {
   // PM sees all; others see only items they own or are on their projects
   const items = await prisma.actionItem.findMany({
     where: canManage
-      ? {}
+      ? { project: { archivedAt: null } }
       : {
+          project: { archivedAt: null },
           OR: [
             { ownerId: user.id },
             {

@@ -16,6 +16,7 @@ export async function shouldFlagBehind(projectId: string): Promise<boolean> {
       where: { id: projectId },
       select: {
         statusOverride: true,
+        archivedAt: true,
         deliverables: {
           // Backlogged deliverables are deliberately deferred — they don't count as "behind".
           where: { completed: false, backlog: false },
@@ -29,8 +30,8 @@ export async function shouldFlagBehind(projectId: string): Promise<boolean> {
     }),
   ]);
 
-  // Never auto-flag when PM has manually overridden
-  if (!project || project.statusOverride) return false;
+  // Never auto-flag when PM has manually overridden, or the project is archived
+  if (!project || project.statusOverride || project.archivedAt) return false;
 
   const weeksBehind = settings?.weeksBehindMilestone ?? 1;
   const missedInARow = settings?.missedGoalsInARow ?? 2;
@@ -55,9 +56,11 @@ export async function runRedFlagDetection(
 ): Promise<"ON_TRACK" | "AT_RISK" | "BEHIND"> {
   const project = await prisma.project.findUnique({
     where: { id: projectId },
-    select: { status: true, statusOverride: true },
+    select: { status: true, statusOverride: true, archivedAt: true },
   });
-  if (!project || project.statusOverride) return project?.status ?? "ON_TRACK";
+  if (!project || project.statusOverride || project.archivedAt) {
+    return project?.status ?? "ON_TRACK";
+  }
 
   const flagged = await shouldFlagBehind(projectId);
   if (flagged && project.status !== "BEHIND") {
