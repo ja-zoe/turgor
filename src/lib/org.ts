@@ -10,6 +10,8 @@ export type OrgSettings = {
   /** What a project cycle is called — "Semester", "Quarter", "Cycle"… Display-only;
    *  the `Project.semester` data field and form/query names stay `semester`. */
   periodLabel: string;
+  /** Curated color theme id (see src/lib/themes.ts). Unknown values fall back to "forest". */
+  themePreset: string;
   /** Derived: `${orgName} Tracker` — short app name (sidebar, metadata title). */
   appName: string;
   /** Derived: `${orgName} Project Tracker` — full app name (landing hero, emails). */
@@ -26,6 +28,7 @@ const DEFAULTS = {
   orgLogoUrl: "/seed-logo-transparent.png",
   signInLabel: "Rutgers NetID",
   periodLabel: "Semester",
+  themePreset: "forest",
 } as const;
 
 /**
@@ -43,6 +46,7 @@ export const getOrgSettings = cache(async (): Promise<OrgSettings> => {
       orgLogoUrl: true,
       signInLabel: true,
       periodLabel: true,
+      themePreset: true,
     },
   });
 

@@ -374,6 +374,8 @@ model Settings {
   signInLabel    String @default("Rutgers NetID")
   // What a project cycle is called (R24.2) — display labels only; Project.semester stays generic.
   periodLabel    String @default("Semester")
+  // Color theme (R24.3) — one of the curated preset ids in src/lib/themes.ts.
+  themePreset    String @default("forest")
 
   updatedAt DateTime @updatedAt
 }

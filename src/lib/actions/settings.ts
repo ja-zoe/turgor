@@ -3,6 +3,7 @@
 import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/permissions";
 import { Permission, Channel, RecipientGroup, TriggerType } from "@/generated/prisma";
+import { isThemePresetId } from "@/lib/themes";
 import { revalidatePath } from "next/cache";
 
 export async function updateSettings(formData: FormData) {
@@ -55,7 +56,13 @@ export async function updateOrgSettings(formData: FormData) {
   const orgFullName = ((formData.get("orgFullName") as string) ?? "").trim();
   const orgInstitution = ((formData.get("orgInstitution") as string) ?? "").trim();
 
-  const data = { orgName, orgFullName, orgInstitution, orgLogoUrl, signInLabel, periodLabel };
+  // Only curated preset ids are accepted; anything else keeps the current theme.
+  const themePresetRaw = ((formData.get("themePreset") as string) ?? "").trim();
+  const themePreset = isThemePresetId(themePresetRaw)
+    ? themePresetRaw
+    : current?.themePreset ?? "forest";
+
+  const data = { orgName, orgFullName, orgInstitution, orgLogoUrl, signInLabel, periodLabel, themePreset };
 
   await prisma.settings.upsert({
     where: { id: "singleton" },

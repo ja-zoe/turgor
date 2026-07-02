@@ -144,7 +144,7 @@ export function MpcTokenSection({ hasToken, orgName, appUrl, connections }: Prop
             type="button"
             onClick={handleGenerate}
             disabled={loading !== null}
-            className="cursor-pointer flex items-center gap-1.5 text-xs font-medium text-foreground bg-[#2E4034] text-white rounded-md px-3 py-1.5 hover:bg-[#2E4034]/80 transition-colors disabled:opacity-50 disabled:cursor-default"
+            className="cursor-pointer flex items-center gap-1.5 text-xs font-medium text-foreground bg-primary text-white rounded-md px-3 py-1.5 hover:bg-primary/80 transition-colors disabled:opacity-50 disabled:cursor-default"
           >
             {loading === "generate" ? (
               <ActionSpinner size={13} />

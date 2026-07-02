@@ -165,7 +165,7 @@ export function NotificationBell() {
                 const content = (
                   <div
                     className={`px-4 py-3 pr-9 hover:bg-muted/20 transition-colors cursor-pointer ${
-                      !n.read ? "bg-[#EDF3EC]/40" : ""
+                      !n.read ? "bg-accent/40" : ""
                     }`}
                     onClick={() => !n.read && markOneRead(n.id)}
                   >

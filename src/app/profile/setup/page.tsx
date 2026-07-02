@@ -24,7 +24,7 @@ export default async function ProfileSetupPage() {
           {org.appFullName}
         </p>
         <h1
-          className="text-2xl text-[#2E4034] mb-2"
+          className="text-2xl text-primary mb-2"
           style={{ fontFamily: "var(--font-display), Georgia, serif", letterSpacing: "-0.02em" }}
         >
           Complete your profile
@@ -35,42 +35,42 @@ export default async function ProfileSetupPage() {
 
         <form action={updateProfile} className="space-y-5">
           <div>
-            <label className="block text-xs font-medium text-[#2E4034] mb-1" style={{ fontFamily: "var(--font-mono)" }}>
+            <label className="block text-xs font-medium text-primary mb-1" style={{ fontFamily: "var(--font-mono)" }}>
               First name <span className="text-[#A4503C]">*</span>
             </label>
             <input
               name="firstName"
               required
               autoFocus
-              className="w-full rounded-lg border border-[#D5CFC0] bg-[#F4F1EA] px-3 py-2.5 text-sm text-[#2E4034] placeholder:text-[#787774] focus:outline-none focus:ring-2 focus:ring-[#588157]/40"
+              className="w-full rounded-lg border border-[#D5CFC0] bg-[#F4F1EA] px-3 py-2.5 text-sm text-primary placeholder:text-[#787774] focus:outline-none focus:ring-2 focus:ring-[#588157]/40"
               placeholder="Jane"
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-[#2E4034] mb-1" style={{ fontFamily: "var(--font-mono)" }}>
+            <label className="block text-xs font-medium text-primary mb-1" style={{ fontFamily: "var(--font-mono)" }}>
               Last name <span className="text-[#A4503C]">*</span>
             </label>
             <input
               name="lastName"
               required
-              className="w-full rounded-lg border border-[#D5CFC0] bg-[#F4F1EA] px-3 py-2.5 text-sm text-[#2E4034] placeholder:text-[#787774] focus:outline-none focus:ring-2 focus:ring-[#588157]/40"
+              className="w-full rounded-lg border border-[#D5CFC0] bg-[#F4F1EA] px-3 py-2.5 text-sm text-primary placeholder:text-[#787774] focus:outline-none focus:ring-2 focus:ring-[#588157]/40"
               placeholder="Smith"
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-[#2E4034] mb-1" style={{ fontFamily: "var(--font-mono)" }}>
+            <label className="block text-xs font-medium text-primary mb-1" style={{ fontFamily: "var(--font-mono)" }}>
               Nickname <span className="text-[#787774]">(optional)</span>
             </label>
             <input
               name="nickname"
-              className="w-full rounded-lg border border-[#D5CFC0] bg-[#F4F1EA] px-3 py-2.5 text-sm text-[#2E4034] placeholder:text-[#787774] focus:outline-none focus:ring-2 focus:ring-[#588157]/40"
+              className="w-full rounded-lg border border-[#D5CFC0] bg-[#F4F1EA] px-3 py-2.5 text-sm text-primary placeholder:text-[#787774] focus:outline-none focus:ring-2 focus:ring-[#588157]/40"
               placeholder="Jay — shown as your display name"
             />
           </div>
           <SubmitButton
             label="Save and continue"
             pendingLabel="Saving…"
-            className="w-full cursor-pointer rounded-lg bg-[#2E4034] text-white text-sm font-medium py-2.5 hover:bg-[#2E4034]/80 transition-colors disabled:opacity-50"
+            className="w-full cursor-pointer rounded-lg bg-primary text-white text-sm font-medium py-2.5 hover:bg-primary/80 transition-colors disabled:opacity-50"
           />
         </form>
       </div>

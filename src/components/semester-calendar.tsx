@@ -53,7 +53,7 @@ interface Props {
 }
 
 const TYPE_COLOR: Record<EventType, { bg: string; text: string; border: string }> = {
-  PROJECT_MEETING: { bg: "bg-[#EDF3EC]", text: "text-[#2E4034]", border: "border-[#2E4034]/20" },
+  PROJECT_MEETING: { bg: "bg-accent", text: "text-primary", border: "border-primary/20" },
   NON_PROJECT_EVENT: { bg: "bg-[#FBF3DB]", text: "text-[#7A5C00]", border: "border-[#C99846]/30" },
   LEAD_MEETING: { bg: "bg-[#E1F3FE]", text: "text-[#1F6C9F]", border: "border-[#1F6C9F]/30" },
   EBOARD_MEETING: { bg: "bg-[#F3E8FF]", text: "text-[#6B3FA0]", border: "border-[#6B3FA0]/30" },
@@ -502,7 +502,7 @@ function MonthGrid({
               key={i}
               className={`border-r border-b border-border min-h-[80px] p-1 ${
                 day && canEdit ? "cursor-pointer hover:bg-muted/50 transition-colors" : ""
-              } ${isToday ? "bg-[#EDF3EC]/40" : ""}`}
+              } ${isToday ? "bg-accent/40" : ""}`}
               onClick={() => {
                 if (day && canEdit) {
                   onDayClick(`${year}-${String(month + 1).padStart(2, "0")}-${String(day.getDate()).padStart(2, "0")}`);
@@ -514,7 +514,7 @@ function MonthGrid({
                   <p
                     className={`text-[11px] mb-0.5 font-mono ${
                       isToday
-                        ? "text-[#2E4034] font-semibold"
+                        ? "text-primary font-semibold"
                         : "text-muted-foreground"
                     }`}
                     style={{ fontFamily: "var(--font-mono)" }}

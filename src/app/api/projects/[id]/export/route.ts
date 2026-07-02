@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { getUserPermissions, getProjectMembership } from "@/lib/permissions";
 import { Permission } from "@/generated/prisma";
 import { getOrgSettings } from "@/lib/org";
+import { themePrimaryHex } from "@/lib/themes";
 import { getDisplayName } from "@/lib/utils";
 
 export async function GET(
@@ -59,8 +60,10 @@ export async function GET(
     return new NextResponse("Not Found", { status: 404 });
   }
 
+  const org = await getOrgSettings();
+  const headerArgb = `FF${themePrimaryHex(org.themePreset).slice(1)}`;
   const workbook = new ExcelJS.Workbook();
-  workbook.creator = (await getOrgSettings()).appName;
+  workbook.creator = org.appName;
   workbook.created = new Date();
 
   // ── Sheet 1: Timeline ────────────────────────────────────────────────────
@@ -79,7 +82,7 @@ export async function GET(
   tlSheet.getRow(1).fill = {
     type: "pattern",
     pattern: "solid",
-    fgColor: { argb: "FF2E4034" },
+    fgColor: { argb: headerArgb },
   };
 
   const addDeliverableRows = (d: (typeof project.deliverables)[number], type: string) => {
@@ -136,7 +139,7 @@ export async function GET(
   suSheet.getRow(1).fill = {
     type: "pattern",
     pattern: "solid",
-    fgColor: { argb: "FF2E4034" },
+    fgColor: { argb: headerArgb },
   };
 
   for (const u of project.statusUpdates) {
@@ -166,7 +169,7 @@ export async function GET(
   mrSheet.getRow(1).fill = {
     type: "pattern",
     pattern: "solid",
-    fgColor: { argb: "FF2E4034" },
+    fgColor: { argb: headerArgb },
   };
 
   for (const r of project.meetingRecords) {

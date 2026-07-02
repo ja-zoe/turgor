@@ -49,7 +49,7 @@ export function DeliverableProgress({ deliverables }: DeliverableProgressProps) 
                 className="h-full rounded-full transition-all duration-500"
                 style={{
                   width: `${pct}%`,
-                  backgroundColor: d.completed ? "#588157" : pct > 50 ? "#A3B18A" : "#2E4034",
+                  backgroundColor: d.completed ? "var(--on-track)" : pct > 50 ? "var(--chart-3)" : "var(--primary)",
                 }}
               />
             </div>

@@ -87,6 +87,7 @@ async function main() {
       orgLogoUrl: "/seed-logo-transparent.png",
       signInLabel: "Rutgers NetID",
       periodLabel: "Semester",
+      themePreset: "forest",
     },
     update: {},
   });
