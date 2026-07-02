@@ -18,12 +18,15 @@ export function SemesterField({
   options,
   testId,
   monoFont = true,
+  label = "semester",
 }: {
   value: string;
   onChange: (v: string) => void;
   options: string[];
   testId?: string;
   monoFont?: boolean;
+  /** Lowercase org period label ("semester", "quarter"…) for the picker's copy. */
+  label?: string;
 }) {
   const [mode, setMode] = useState<"select" | "new">(
     options.length === 0 || (value !== "" && !options.includes(value)) ? "new" : "select"
@@ -53,7 +56,7 @@ export function SemesterField({
             className="text-xs text-muted-foreground clickable-icon"
             style={font}
           >
-            ← Choose an existing semester
+            ← Choose an existing {label}
           </button>
         )}
       </div>
@@ -75,13 +78,13 @@ export function SemesterField({
       style={font}
       data-testid={testId}
     >
-      {!options.includes(value) && <option value="" disabled>Select a semester…</option>}
+      {!options.includes(value) && <option value="" disabled>Select a {label}…</option>}
       {options.map((s) => (
         <option key={s} value={s}>
           {s}
         </option>
       ))}
-      <option value={NEW}>+ New semester…</option>
+      <option value={NEW}>+ New {label}…</option>
     </select>
   );
 }
@@ -95,17 +98,19 @@ export function SemesterFormField({
   defaultValue = "",
   options,
   testId,
+  label,
 }: {
   name: string;
   defaultValue?: string;
   options: string[];
   testId?: string;
+  label?: string;
 }) {
   const [value, setValue] = useState(defaultValue);
   return (
     <>
       <input type="hidden" name={name} value={value} />
-      <SemesterField value={value} onChange={setValue} options={options} testId={testId} />
+      <SemesterField value={value} onChange={setValue} options={options} testId={testId} label={label} />
     </>
   );
 }

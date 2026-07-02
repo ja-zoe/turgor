@@ -372,6 +372,8 @@ model Settings {
   orgInstitution String @default("Rutgers University–New Brunswick")
   orgLogoUrl     String @default("/seed-logo-transparent.png")
   signInLabel    String @default("Rutgers NetID")
+  // What a project cycle is called (R24.2) — display labels only; Project.semester stays generic.
+  periodLabel    String @default("Semester")
 
   updatedAt DateTime @updatedAt
 }

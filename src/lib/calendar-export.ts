@@ -38,16 +38,17 @@ function fold(line: string): string {
 }
 
 /**
- * Build an RFC-5545 ICS document for the given events. `appName` brands the PRODID
- * (passed by the caller — this module stays free of DB imports). Event UIDs keep the
- * fixed `@seed-tracker` suffix on purpose: UIDs are opaque identifiers, and changing
- * them on a rebrand would duplicate every event in subscribers' calendars.
+ * Build an RFC-5545 ICS document for the given events. `appName` and `periodLabel`
+ * brand the PRODID (passed by the caller — this module stays free of DB imports).
+ * Event UIDs keep the fixed `@seed-tracker` suffix on purpose: UIDs are opaque
+ * identifiers, and changing them on a rebrand would duplicate every event in
+ * subscribers' calendars.
  */
-export function buildIcs(events: ExportEvent[], appName: string): string {
+export function buildIcs(events: ExportEvent[], appName: string, periodLabel = "Semester"): string {
   const lines: string[] = [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",
-    `PRODID:-//${appName}//Semester Calendar//EN`,
+    `PRODID:-//${appName}//${periodLabel} Calendar//EN`,
     "CALSCALE:GREGORIAN",
   ];
   const stamp = toUtcStamp(new Date());

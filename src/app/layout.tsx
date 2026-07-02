@@ -28,7 +28,7 @@ export async function generateMetadata(): Promise<Metadata> {
   const org = await getOrgSettings();
   return {
     title: org.appFullName,
-    description: `Weekly accountability and semester progress tracking for ${org.orgName}.`,
+    description: `Weekly accountability and ${org.periodLabelLower} progress tracking for ${org.orgName}.`,
   };
 }
 

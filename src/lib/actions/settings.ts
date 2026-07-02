@@ -44,16 +44,18 @@ export async function updateOrgSettings(formData: FormData) {
   const orgNameRaw = ((formData.get("orgName") as string) ?? "").trim();
   const signInLabelRaw = ((formData.get("signInLabel") as string) ?? "").trim();
   const orgLogoUrlRaw = ((formData.get("orgLogoUrl") as string) ?? "").trim();
+  const periodLabelRaw = ((formData.get("periodLabel") as string) ?? "").trim();
 
-  // orgName / signInLabel / orgLogoUrl render in the shell and must never be blank:
-  // an emptied field keeps its current value instead of erroring.
+  // orgName / signInLabel / orgLogoUrl / periodLabel render in the shell and must never
+  // be blank: an emptied field keeps its current value instead of erroring.
   const orgName = orgNameRaw || current?.orgName || "SEED";
   const signInLabel = signInLabelRaw || current?.signInLabel || "Rutgers NetID";
   const orgLogoUrl = orgLogoUrlRaw || current?.orgLogoUrl || "/seed-logo-transparent.png";
+  const periodLabel = periodLabelRaw || current?.periodLabel || "Semester";
   const orgFullName = ((formData.get("orgFullName") as string) ?? "").trim();
   const orgInstitution = ((formData.get("orgInstitution") as string) ?? "").trim();
 
-  const data = { orgName, orgFullName, orgInstitution, orgLogoUrl, signInLabel };
+  const data = { orgName, orgFullName, orgInstitution, orgLogoUrl, signInLabel, periodLabel };
 
   await prisma.settings.upsert({
     where: { id: "singleton" },

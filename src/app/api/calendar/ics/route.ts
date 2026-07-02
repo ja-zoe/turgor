@@ -29,8 +29,8 @@ export async function GET(req: NextRequest) {
     select: { id: true, title: true, startsAt: true, endsAt: true, allDay: true, location: true, description: true },
   });
 
-  const { orgName, appName } = await getOrgSettings();
-  const ics = buildIcs(events, appName);
+  const { orgName, appName, periodLabel } = await getOrgSettings();
+  const ics = buildIcs(events, appName, periodLabel);
   const slug = orgSlug(orgName);
   const filename = semester ? `${slug}-${semester.replace(/\s+/g, "-")}.ics` : `${slug}-calendar.ics`;
   return new NextResponse(ics, {

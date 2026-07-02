@@ -27,16 +27,19 @@ interface SidebarProps {
   appName: string;
   orgName: string;
   orgLogoUrl: string;
+  periodLabel: string;
   permissions: Permission[];
   signOutAction: () => Promise<void>;
 }
 
+// The calendar label is org-configurable ("Semester Calendar", "Quarter Calendar"…),
+// so it's filled in per render from the periodLabel prop.
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: Plant },
   { href: "/projects", label: "Projects", icon: Folders },
   { href: "/my-tasks", label: "My Tasks", icon: CheckSquare },
   { href: "/action-items", label: "Action Items", icon: ListChecks },
-  { href: "/calendar", label: "Semester Calendar", icon: CalendarDots },
+  { href: "/calendar", label: null, icon: CalendarDots },
   { href: "/account", label: "Account", icon: UserCircle },
 ];
 
@@ -67,6 +70,7 @@ export function Sidebar({
   appName,
   orgName,
   orgLogoUrl,
+  periodLabel,
   permissions,
   signOutAction,
 }: SidebarProps) {
@@ -95,7 +99,7 @@ export function Sidebar({
             }`}
           >
             <Icon size={16} weight={isActive(href) ? "fill" : "regular"} />
-            {label}
+            {label ?? `${periodLabel} Calendar`}
           </Link>
         ))}
 

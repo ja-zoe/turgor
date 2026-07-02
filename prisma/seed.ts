@@ -86,6 +86,7 @@ async function main() {
       orgInstitution: "Rutgers University–New Brunswick",
       orgLogoUrl: "/seed-logo-transparent.png",
       signInLabel: "Rutgers NetID",
+      periodLabel: "Semester",
     },
     update: {},
   });

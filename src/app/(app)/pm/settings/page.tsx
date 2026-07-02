@@ -148,6 +148,24 @@ export default async function SettingsPage() {
                 Shown on the sign-in button, e.g. &ldquo;Rutgers NetID&rdquo;.
               </p>
             </div>
+            <div>
+              <label
+                className="block text-xs text-muted-foreground mb-1"
+                style={{ fontFamily: "var(--font-mono)" }}
+              >
+                Period label
+              </label>
+              <input
+                name="periodLabel"
+                defaultValue={org.periodLabel}
+                required
+                className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
+                data-testid="org-period-label"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                What a project cycle is called — &ldquo;Semester&rdquo;, &ldquo;Quarter&rdquo;, &ldquo;Cycle&rdquo;…
+              </p>
+            </div>
             <div className="flex items-end">
               <div className="flex items-center gap-2.5" data-testid="org-preview">
                 <Image

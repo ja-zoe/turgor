@@ -38,6 +38,7 @@ export function ProjectModal({
   allSemesters,
   trigger,
   canDelete = true,
+  periodLabel = "Semester",
 }: {
   project: EditableProject;
   allSemesters: string[];
@@ -45,6 +46,8 @@ export function ProjectModal({
   /** Whether to show the Delete button. Deleting is PM-only, so leads editing
    *  their own project should not see it. */
   canDelete?: boolean;
+  /** Org period label ("Semester", "Quarter"…) for the semester field's copy. */
+  periodLabel?: string;
 }) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState(project.name);
@@ -74,7 +77,7 @@ export function ProjectModal({
 
   function submit() {
     if (!name.trim()) { setError("Name is required"); return; }
-    if (!semester.trim()) { setError("Semester is required"); return; }
+    if (!semester.trim()) { setError(`${periodLabel} is required`); return; }
     if (!isValidDateInput(startDate)) { setError("Start date is not a valid date"); return; }
     if (!isValidDateInput(endDate)) { setError("End date is not a valid date"); return; }
     if (startDate && endDate && endDate < startDate) { setError("End date must be after start date"); return; }
@@ -128,12 +131,13 @@ export function ProjectModal({
               />
             </div>
             <div>
-              <label className={labelClass} style={{ fontFamily: "var(--font-mono)" }}>Semester *</label>
+              <label className={labelClass} style={{ fontFamily: "var(--font-mono)" }}>{periodLabel} *</label>
               <SemesterField
                 value={semester}
                 onChange={setSemester}
                 options={allSemesters}
                 testId="project-modal-semester"
+                label={periodLabel.toLowerCase()}
               />
             </div>
           </div>
