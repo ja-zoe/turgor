@@ -121,6 +121,6 @@ Changes are tracked under `changes/` by the **spec-driven-dev skill**. The skill
 - `changes/CONTEXT.md` — project-wide invariants. **Read this first** in any session.
 - `changes/N-slug/` — one directory per revision set, containing `_set.md` (status checklist + roll-up log) and one `RN.M-slug.md` file per feature (spec + notes). Large features with attachments become a `RN.M-slug/` directory instead.
 
-To resume work: read `CONTEXT.md` + the target set's `_set.md`, then load only the feature file(s) you're touching. The latest set is the highest-numbered `changes/N-*` directory (currently `changes/21-gnhf-lead-usability-parity/`, complete — a retroactive record of an autonomous fix run).
+To resume work: read `CONTEXT.md` + the target set's `_set.md`, then load only the feature file(s) you're touching. The latest set is the highest-numbered `changes/N-*` directory (currently `changes/22-backlog-md-calendar-feedback/`, complete).
 
 **Branching:** `main` is the single integration branch (no `develop`). Each set → `feat/setN-<slug>` off `main`; each feature → `feat/setN/RN.M-<slug>` off the set branch. A feature merges into the set branch only after passing its tests/verification; the set merges into `main` only after every feature passes, the app boots, and the user approves.
