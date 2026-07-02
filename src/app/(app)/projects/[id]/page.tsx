@@ -283,6 +283,7 @@ export default async function ProjectDetailPage({
             targetDate: d.targetDate.toISOString(),
             startDate: d.startDate?.toISOString() ?? null,
             completed: d.completed,
+            backlog: d.backlog,
             subtasks: d.subtasks.map((s) => ({
               id: s.id,
               title: s.title,

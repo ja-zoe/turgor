@@ -6,7 +6,7 @@ import Link from "next/link";
 import {
   Plus, SortAscending, ArrowsDownUp, XCircle,
   PencilSimple, CalendarBlank, UserCircle, CheckFat, LockSimple, NotePencil,
-  CaretUp, CaretDown,
+  CaretUp, CaretDown, Archive, ArrowCounterClockwise,
 } from "@phosphor-icons/react";
 import { SubtaskModal } from "@/components/subtask-modal";
 import { DeliverableModal } from "@/components/deliverable-modal";
@@ -26,6 +26,7 @@ import {
   updateDeliverableDescription,
   updateDeliverablePriority,
   moveDeliverable,
+  setDeliverableBacklog,
 } from "@/lib/actions/deliverables";
 import { isValidDateInput } from "@/lib/date";
 import { getDisplayName } from "@/lib/utils";
@@ -73,6 +74,7 @@ interface Deliverable {
   targetDate: string;
   startDate: string | null;
   completed: boolean;
+  backlog: boolean;
   subtasks: Subtask[];
 }
 
@@ -842,16 +844,26 @@ export function SortableDeliverables({
     startMoveTransition(async () => { await moveDeliverable(id, dir); });
   }
 
+  // Backlog: deferred deliverables live in a collapsed section below the active list.
+  const [backlogOpen, setBacklogOpen] = useState(false);
+  const [isBacklogPending, startBacklogTransition] = useTransition();
+  function setBacklog(id: string, backlog: boolean) {
+    startBacklogTransition(async () => { await setDeliverableBacklog(id, backlog); });
+  }
+
+  const activeDeliverables = deliverables.filter((d) => !d.backlog);
+  const backlogDeliverables = deliverables.filter((d) => d.backlog);
+
   // Default within-group order: priority DESC (HIGH on top), then manual orderIndex.
   const byPriorityThenOrder = (a: Deliverable, b: Deliverable) =>
     PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority] || a.orderIndex - b.orderIndex;
 
   const filteredDeliverables =
     groupFilter === "ALL"
-      ? deliverables
+      ? activeDeliverables
       : groupFilter === "UNGROUPED"
-        ? deliverables.filter((d) => !d.group)
-        : deliverables.filter((d) => d.group === groupFilter);
+        ? activeDeliverables.filter((d) => !d.group)
+        : activeDeliverables.filter((d) => d.group === groupFilter);
 
   const sorted = sortByStatus
     ? [...filteredDeliverables].sort((a, b) => STATUS_ORDER[a.status] - STATUS_ORDER[b.status])
@@ -922,9 +934,13 @@ export function SortableDeliverables({
         </div>
       </div>
 
-      {deliverables.length === 0 ? (
+      {activeDeliverables.length === 0 ? (
         <div className="p-8 border border-dashed border-border rounded-xl text-center">
-          <p className="text-sm text-muted-foreground">No deliverables yet.</p>
+          <p className="text-sm text-muted-foreground">
+            {backlogDeliverables.length > 0
+              ? "No active deliverables — everything is in the backlog."
+              : "No deliverables yet."}
+          </p>
           {canManage && (
             <Link
               href={`/projects/${projectId}/deliverables/new`}
@@ -1278,6 +1294,7 @@ export function SortableDeliverables({
                                 group: deliverable.group,
                                 startDate: deliverable.startDate,
                                 targetDate: deliverable.targetDate,
+                                backlog: deliverable.backlog,
                               }}
                               groups={allGroups}
                               hasSubtasks={deliverable.subtasks.length > 0}
@@ -1292,6 +1309,17 @@ export function SortableDeliverables({
                                 </button>
                               }
                             />
+                            <button
+                              type="button"
+                              onClick={() => setBacklog(deliverable.id, true)}
+                              disabled={isBacklogPending}
+                              className="text-xs text-muted-foreground clickable-icon disabled:opacity-50"
+                              style={{ fontFamily: "var(--font-mono)" }}
+                              title="Move to backlog — off the timeline until restored"
+                              data-testid="deliverable-backlog"
+                            >
+                              Backlog
+                            </button>
                             {confirmingDeliverableDelete === deliverable.id ? (
                               <span
                                 className="inline-flex items-center gap-1 text-xs text-muted-foreground"
@@ -1811,6 +1839,71 @@ export function SortableDeliverables({
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Backlog — deferred deliverables, collapsed by default; off the timeline & red-flag math */}
+      {backlogDeliverables.length > 0 && (
+        <div className="mt-6" data-testid="backlog-section">
+          <button
+            type="button"
+            onClick={() => setBacklogOpen((o) => !o)}
+            className="w-full flex items-center gap-3 clickable"
+            aria-expanded={backlogOpen}
+            data-testid="backlog-toggle"
+          >
+            <span
+              className="inline-flex items-center gap-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-widest"
+              style={{ fontFamily: "var(--font-mono)" }}
+            >
+              <Archive size={12} weight="bold" />
+              Backlog
+            </span>
+            <div className="flex-1 h-px bg-border" />
+            <span className="text-xs text-muted-foreground" style={{ fontFamily: "var(--font-mono)" }}>
+              {backlogDeliverables.length}
+            </span>
+            {backlogOpen ? (
+              <CaretUp size={11} weight="bold" className="text-muted-foreground" />
+            ) : (
+              <CaretDown size={11} weight="bold" className="text-muted-foreground" />
+            )}
+          </button>
+
+          {backlogOpen && (
+            <div className="mt-2 space-y-2">
+              {backlogDeliverables.map((d) => (
+                <div
+                  key={d.id}
+                  data-deliverable-id={d.id}
+                  data-testid="backlog-row"
+                  className="flex items-center justify-between gap-3 px-4 py-2.5 border border-border rounded-xl bg-card opacity-70"
+                >
+                  <div className="min-w-0">
+                    <p className="text-sm text-foreground truncate">{d.title}</p>
+                    <p className="text-xs text-muted-foreground" style={{ fontFamily: "var(--font-mono)" }}>
+                      Target: {formatDate(d.targetDate)}
+                      {d.subtasks.length > 0 && <> &middot; {d.subtasks.length} subtask{d.subtasks.length === 1 ? "" : "s"}</>}
+                    </p>
+                  </div>
+                  {canManage && (
+                    <button
+                      type="button"
+                      onClick={() => setBacklog(d.id, false)}
+                      disabled={isBacklogPending}
+                      className="inline-flex items-center gap-1 text-xs text-muted-foreground clickable-icon disabled:opacity-50"
+                      style={{ fontFamily: "var(--font-mono)" }}
+                      title="Restore to active deliverables"
+                      data-testid="backlog-restore"
+                    >
+                      <ArrowCounterClockwise size={11} weight="bold" />
+                      Restore
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
     </div>

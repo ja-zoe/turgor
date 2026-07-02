@@ -24,6 +24,7 @@ interface EditableDeliverable {
   group: string | null;
   startDate: string | null; // ISO
   targetDate: string; // ISO
+  backlog: boolean;
 }
 
 const STATUS_OPTIONS: { value: TimelineStatus; label: string }[] = [
@@ -65,6 +66,7 @@ export function DeliverableModal({
   const [startDate, setStartDate] = useState(toDateInput(deliverable.startDate));
   const [targetDate, setTargetDate] = useState(toDateInput(deliverable.targetDate));
   const [status, setStatus] = useState<TimelineStatus>(deliverable.status);
+  const [backlog, setBacklog] = useState(deliverable.backlog);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
@@ -79,6 +81,7 @@ export function DeliverableModal({
       setStartDate(toDateInput(deliverable.startDate));
       setTargetDate(toDateInput(deliverable.targetDate));
       setStatus(deliverable.status);
+      setBacklog(deliverable.backlog);
       setError(null);
     }
   }
@@ -98,6 +101,7 @@ export function DeliverableModal({
     fd.set("startDate", startDate);
     fd.set("group", group);
     fd.set("priority", priority);
+    fd.set("backlog", backlog ? "true" : "false");
     if (!hasSubtasks) fd.set("status", status);
 
     startTransition(async () => {
@@ -208,6 +212,20 @@ export function DeliverableModal({
                 ))}
               </select>
             )}
+          </div>
+
+          <div>
+            <label className="flex items-center gap-2 text-sm text-foreground cursor-pointer">
+              <input
+                type="checkbox"
+                checked={backlog}
+                onChange={(e) => setBacklog(e.target.checked)}
+                className="accent-[#2E4034] cursor-pointer"
+                data-testid="deliv-modal-backlog"
+              />
+              In backlog
+              <span className="text-xs text-muted-foreground">— off the timeline until restored</span>
+            </label>
           </div>
 
           <div>

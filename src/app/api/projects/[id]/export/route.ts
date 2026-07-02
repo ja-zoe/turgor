@@ -81,9 +81,9 @@ export async function GET(
     fgColor: { argb: "FF2E4034" },
   };
 
-  for (const d of project.deliverables) {
+  const addDeliverableRows = (d: (typeof project.deliverables)[number], type: string) => {
     tlSheet.addRow({
-      type: "Deliverable",
+      type,
       title: d.title,
       status: d.status,
       startDate: d.startDate ?? "",
@@ -103,6 +103,19 @@ export async function GET(
           ? getDisplayName(s.assignee)
           : "",
       });
+    }
+  };
+
+  for (const d of project.deliverables.filter((d) => !d.backlog)) {
+    addDeliverableRows(d, "Deliverable");
+  }
+  // Backlogged deliverables export under their own divider rather than silently dropping.
+  const backlogDelivs = project.deliverables.filter((d) => d.backlog);
+  if (backlogDelivs.length > 0) {
+    const divider = tlSheet.addRow({ type: "Backlog", title: "— deferred deliverables —" });
+    divider.font = { bold: true, color: { argb: "FF787774" } };
+    for (const d of backlogDelivs) {
+      addDeliverableRows(d, "Backlog");
     }
   }
 
