@@ -146,6 +146,9 @@ model Role {
   id          String       @id @default(cuid())
   name        String       @unique
   isBuiltIn   Boolean      @default(false)
+  // Stable identity for seeded roles ('pm' | 'lead' | 'viewer' | 'eboard') so code
+  // never depends on the PM-editable display name. NULL for custom roles.
+  builtInKey  String?      @unique
   permissions Permission[]
 
   users User[]

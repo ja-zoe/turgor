@@ -7,6 +7,24 @@ import { UserStatus } from "@/generated/prisma";
 import { notifyNewSignup } from "@/lib/notifications";
 import authConfig from "./auth.config";
 
+/**
+ * The built-in Project Manager role, by its stable key — the display name is
+ * PM-editable, so never look it up by name. The name fallback covers a DB that
+ * predates the builtInKey backfill.
+ */
+async function findPmRoleId(): Promise<string | null> {
+  const byKey = await prisma.role.findUnique({
+    where: { builtInKey: "pm" },
+    select: { id: true },
+  });
+  if (byKey) return byKey.id;
+  const byName = await prisma.role.findFirst({
+    where: { name: "Project Manager" },
+    select: { id: true },
+  });
+  return byName?.id ?? null;
+}
+
 export const { handlers, auth, signIn, signOut } = NextAuth({
   ...authConfig,
   adapter: PrismaAdapter(prisma as Parameters<typeof PrismaAdapter>[0]),
@@ -36,15 +54,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
         if (!user) {
           const isPM = email === process.env.PM_ADMIN_EMAIL;
-          let roleId: string | null = null;
-
-          if (isPM) {
-            const pmRole = await prisma.role.findFirst({
-              where: { name: "Project Manager" },
-              select: { id: true },
-            });
-            roleId = pmRole?.id ?? null;
-          }
+          const roleId = isPM ? await findPmRoleId() : null;
 
           user = await prisma.user.create({
             data: {
@@ -68,13 +78,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           email === process.env.PM_ADMIN_EMAIL
         ) {
           // PM signed in before seed ran — activate them now
-          const pmRole = await prisma.role.findFirst({
-            where: { name: "Project Manager" },
-            select: { id: true },
-          });
+          const pmRoleId = await findPmRoleId();
           user = await prisma.user.update({
             where: { id: user.id },
-            data: { status: UserStatus.ACTIVE, roleId: pmRole?.id ?? user.roleId },
+            data: { status: UserStatus.ACTIVE, roleId: pmRoleId ?? user.roleId },
             select: { id: true, email: true, name: true, status: true, roleId: true },
           });
         } else if (
