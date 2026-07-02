@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Robot, Copy, Check, ArrowClockwise, Trash, Key } from "@phosphor-icons/react";
 import { generateMcpToken, revokeMcpToken } from "@/lib/actions/account";
-import { formatRelative } from "@/lib/utils";
+import { formatRelative, orgSlug } from "@/lib/utils";
 import { ActionSpinner } from "@/components/action-feedback";
 
 export interface McpConnectionDTO {
@@ -32,7 +32,7 @@ export function MpcTokenSection({ hasToken, orgName, appUrl, connections }: Prop
   const configJson = JSON.stringify(
     {
       mcpServers: {
-        "seed-tracker": {
+        [`${orgSlug(orgName)}-tracker`]: {
           url: mcpUrl,
           headers: { Authorization: `Bearer ${newToken ?? "<your-token>"}` },
         },
