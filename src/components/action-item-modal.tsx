@@ -12,6 +12,7 @@ import {
 import { createActionItem, updateActionItem, deleteActionItem } from "@/lib/actions/action-items";
 import { isValidDateInput } from "@/lib/date";
 import { InlineConfirm } from "@/components/sortable-deliverables";
+import { ActionSpinner, SuccessCheck, successDelay } from "@/components/action-feedback";
 
 export interface ActionItemDTO {
   id: string;
@@ -54,6 +55,7 @@ export function ActionItemModal({
   const [error, setError] = useState<string | null>(null);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const [saved, setSaved] = useState(false);
 
   function resetForCreate() {
     setDescription("");
@@ -96,8 +98,12 @@ export function ActionItemModal({
       try {
         if (mode === "create") await createActionItem(projectId, fd);
         else if (item) await updateActionItem(item.id, fd);
+        setSaved(true);
+        await successDelay();
         setOpen(false);
+        setSaved(false);
       } catch (e) {
+        setSaved(false);
         setError((e as Error)?.message ?? "Could not save the action item");
       }
     });
@@ -211,9 +217,22 @@ export function ActionItemModal({
               onClick={submit}
               disabled={isPending}
               data-testid="action-item-modal-submit"
-              className="rounded-md cursor-pointer bg-primary text-primary-foreground text-sm font-medium px-4 py-2 hover:bg-primary/80 disabled:opacity-50 transition-colors"
+              data-state={saved ? "success" : isPending ? "pending" : "idle"}
+              className="rounded-md cursor-pointer bg-primary text-primary-foreground text-sm font-medium px-4 py-2 hover:bg-primary/80 disabled:opacity-50 transition-colors inline-flex items-center gap-1.5"
             >
-              {isPending ? "Saving…" : mode === "create" ? "Add action item" : "Save changes"}
+              {saved ? (
+                <>
+                  <SuccessCheck />
+                  {mode === "create" ? "Added" : "Saved"}
+                </>
+              ) : isPending ? (
+                <>
+                  <ActionSpinner />
+                  Saving…
+                </>
+              ) : (
+                mode === "create" ? "Add action item" : "Save changes"
+              )}
             </button>
             </div>
           </div>

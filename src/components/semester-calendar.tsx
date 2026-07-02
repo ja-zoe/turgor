@@ -17,6 +17,7 @@ import {
 } from "@phosphor-icons/react";
 import { createEvent, updateEvent, deleteEvent } from "@/lib/actions/calendar";
 import { googleCalendarUrl } from "@/lib/calendar-export";
+import { ActionSpinner } from "@/components/action-feedback";
 
 type EventType = "PROJECT_MEETING" | "NON_PROJECT_EVENT" | "LEAD_MEETING" | "EBOARD_MEETING";
 
@@ -389,9 +390,9 @@ function EventEditor({ event, defaultDate, semester, allSemesters, projects, can
                 <button
                   type="submit"
                   disabled={isPending || (isMultiSemester && pinnedSemesters.length === 0)}
-                  className="rounded-md cursor-pointer bg-primary text-primary-foreground text-sm font-medium px-4 py-2 hover:bg-primary/80 transition-colors disabled:opacity-50"
+                  className="rounded-md cursor-pointer bg-primary text-primary-foreground text-sm font-medium px-4 py-2 hover:bg-primary/80 transition-colors disabled:opacity-50 inline-flex items-center gap-1.5"
                 >
-                  {isPending ? "Saving…" : isNew ? "Add Event" : "Save"}
+                  {isPending ? (<><ActionSpinner /> Saving…</>) : isNew ? "Add Event" : "Save"}
                 </button>
                 <button
                   type="button"
@@ -409,9 +410,10 @@ function EventEditor({ event, defaultDate, semester, allSemesters, projects, can
                         type="button"
                         onClick={handleDelete}
                         disabled={isPending}
-                        className="cursor-pointer text-xs text-[#A4503C] hover:text-[#A4503C]/70 transition-colors"
+                        className="cursor-pointer text-xs text-[#A4503C] hover:text-[#A4503C]/70 transition-colors inline-flex items-center gap-1"
                         style={{ fontFamily: "var(--font-mono)" }}
                       >
+                        {isPending && <ActionSpinner size={11} />}
                         Confirm delete
                       </button>
                       <button

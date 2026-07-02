@@ -3,6 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { Permission, TriggerType, Channel, RecipientGroup } from "@/generated/prisma";
 import { updateSettings, createNotificationRule, toggleNotificationRule, deleteNotificationRule } from "@/lib/actions/settings";
 import { Bell, Gauge, Trash } from "@phosphor-icons/react/dist/ssr";
+import { SubmitButton } from "@/components/submit-button";
+import { PendingIconButton } from "@/components/action-feedback";
 
 const TRIGGER_LABELS: Record<TriggerType, string> = {
   MISSING_SUBMISSION: "Missing Project Standing",
@@ -151,12 +153,11 @@ export default async function SettingsPage() {
             </div>
           </div>
           <div className="pt-2">
-            <button
-              type="submit"
-              className="rounded-md cursor-pointer bg-primary text-primary-foreground text-sm font-medium px-4 py-2 hover:bg-primary/80 transition-colors"
-            >
-              Save thresholds
-            </button>
+            <SubmitButton
+              label="Save thresholds"
+              pendingLabel="Saving…"
+              className="rounded-md cursor-pointer bg-primary text-primary-foreground text-sm font-medium px-4 py-2 hover:bg-primary/80 transition-colors disabled:opacity-50"
+            />
           </div>
         </form>
       </section>
@@ -197,17 +198,16 @@ export default async function SettingsPage() {
                     await toggleNotificationRule(rule.id, !rule.enabled);
                   }}
                 >
-                  <button
-                    type="submit"
-                    className={`cursor-pointer text-xs px-2.5 py-1 rounded border transition-colors ${
+                  <PendingIconButton
+                    spinnerSize={12}
+                    className={`cursor-pointer text-xs px-2.5 py-1 rounded border transition-colors disabled:opacity-50 ${
                       rule.enabled
                         ? "border-[#588157] text-[#588157] hover:bg-[#EDF3EC]"
                         : "border-border text-muted-foreground hover:text-foreground"
                     }`}
-                    style={{ fontFamily: "var(--font-mono)" }}
                   >
                     {rule.enabled ? "Enabled" : "Disabled"}
-                  </button>
+                  </PendingIconButton>
                 </form>
                 <form
                   action={async () => {
@@ -215,13 +215,13 @@ export default async function SettingsPage() {
                     await deleteNotificationRule(rule.id);
                   }}
                 >
-                  <button
-                    type="submit"
-                    className="text-muted-foreground clickable-danger"
+                  <PendingIconButton
                     title="Delete rule"
+                    spinnerSize={14}
+                    className="text-muted-foreground clickable-danger disabled:opacity-50"
                   >
                     <Trash size={14} />
-                  </button>
+                  </PendingIconButton>
                 </form>
               </div>
             ))}
@@ -308,12 +308,12 @@ export default async function SettingsPage() {
             </div>
 
             <div className="col-span-2">
-              <button
-                type="submit"
-                className="rounded-md cursor-pointer bg-primary text-primary-foreground text-sm font-medium px-4 py-2 hover:bg-primary/80 transition-colors"
-              >
-                Add rule
-              </button>
+              <SubmitButton
+                label="Add rule"
+                pendingLabel="Adding…"
+                successLabel="Added"
+                className="rounded-md cursor-pointer bg-primary text-primary-foreground text-sm font-medium px-4 py-2 hover:bg-primary/80 transition-colors disabled:opacity-50"
+              />
             </div>
           </form>
         </details>

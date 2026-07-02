@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Robot, Copy, Check, ArrowClockwise, Trash, Key } from "@phosphor-icons/react";
 import { generateMcpToken, revokeMcpToken } from "@/lib/actions/account";
 import { formatRelative } from "@/lib/utils";
+import { ActionSpinner } from "@/components/action-feedback";
 
 export interface McpConnectionDTO {
   type: "ACCESS_TOKEN" | "OAUTH";
@@ -147,7 +148,7 @@ export function MpcTokenSection({ hasToken, appUrl, connections }: Props) {
             className="cursor-pointer flex items-center gap-1.5 text-xs font-medium text-foreground bg-[#2E4034] text-white rounded-md px-3 py-1.5 hover:bg-[#2E4034]/80 transition-colors disabled:opacity-50 disabled:cursor-default"
           >
             {loading === "generate" ? (
-              <span className="w-3 h-3 border border-white/40 border-t-white rounded-full animate-spin" />
+              <ActionSpinner size={13} />
             ) : (
               <ArrowClockwise size={13} />
             )}
@@ -161,7 +162,7 @@ export function MpcTokenSection({ hasToken, appUrl, connections }: Props) {
               disabled={loading !== null}
               className="flex items-center gap-1.5 text-xs text-muted-foreground clickable-danger disabled:opacity-50"
             >
-              <Trash size={13} />
+              {loading === "revoke" ? <ActionSpinner size={13} /> : <Trash size={13} />}
               Revoke
             </button>
           )}

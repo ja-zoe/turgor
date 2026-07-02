@@ -30,6 +30,7 @@ import {
 } from "@/lib/actions/deliverables";
 import { isValidDateInput } from "@/lib/date";
 import { getDisplayName } from "@/lib/utils";
+import { ActionSpinner, SuccessCheck, useSettleFlash } from "@/components/action-feedback";
 import {
   Tooltip, TooltipTrigger, TooltipContent,
 } from "@/components/ui/tooltip";
@@ -265,7 +266,8 @@ export function InlineConfirm({
         title="Confirm"
         tabIndex={show ? 0 : -1}
       >
-        <CheckFat size={13} weight="fill" />
+        {/* While the confirmed action runs, the ✓ becomes a spinner in place. */}
+        {disabled ? <ActionSpinner size={13} /> : <CheckFat size={13} weight="fill" />}
       </button>
       <button
         type="button"
@@ -847,8 +849,13 @@ export function SortableDeliverables({
   // Backlog: deferred deliverables live in a collapsed section below the active list.
   const [backlogOpen, setBacklogOpen] = useState(false);
   const [isBacklogPending, startBacklogTransition] = useTransition();
+  // Which row's backlog move is in flight — the spinner belongs on that row only.
+  const [backlogPendingId, setBacklogPendingId] = useState<string | null>(null);
   function setBacklog(id: string, backlog: boolean) {
-    startBacklogTransition(async () => { await setDeliverableBacklog(id, backlog); });
+    setBacklogPendingId(id);
+    startBacklogTransition(async () => {
+      try { await setDeliverableBacklog(id, backlog); } finally { setBacklogPendingId(null); }
+    });
   }
 
   const activeDeliverables = deliverables.filter((d) => !d.backlog);
@@ -1313,11 +1320,12 @@ export function SortableDeliverables({
                               type="button"
                               onClick={() => setBacklog(deliverable.id, true)}
                               disabled={isBacklogPending}
-                              className="text-xs text-muted-foreground clickable-icon disabled:opacity-50"
+                              className="inline-flex items-center gap-1 text-xs text-muted-foreground clickable-icon disabled:opacity-50"
                               style={{ fontFamily: "var(--font-mono)" }}
                               title="Move to backlog — off the timeline until restored"
                               data-testid="deliverable-backlog"
                             >
+                              {backlogPendingId === deliverable.id && <ActionSpinner size={11} />}
                               Backlog
                             </button>
                             {confirmingDeliverableDelete === deliverable.id ? (
@@ -1896,7 +1904,11 @@ export function SortableDeliverables({
                       title="Restore to active deliverables"
                       data-testid="backlog-restore"
                     >
-                      <ArrowCounterClockwise size={11} weight="bold" />
+                      {backlogPendingId === d.id ? (
+                        <ActionSpinner size={11} />
+                      ) : (
+                        <ArrowCounterClockwise size={11} weight="bold" />
+                      )}
                       Restore
                     </button>
                   )}

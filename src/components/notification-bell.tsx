@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { Bell, X } from "@phosphor-icons/react";
+import { ActionSpinner } from "@/components/action-feedback";
 
 interface Notification {
   id: string;
@@ -83,14 +84,20 @@ export function NotificationBell() {
     }
   }
 
+  const [dismissingId, setDismissingId] = useState<string | null>(null);
   async function dismissOne(id: string, wasUnread: boolean) {
-    await fetch("/api/notifications/clear", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id }),
-    });
-    setNotifications((n) => n.filter((x) => x.id !== id));
-    if (wasUnread) setUnreadCount((c) => Math.max(0, c - 1));
+    setDismissingId(id);
+    try {
+      await fetch("/api/notifications/clear", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id }),
+      });
+      setNotifications((n) => n.filter((x) => x.id !== id));
+      if (wasUnread) setUnreadCount((c) => Math.max(0, c - 1));
+    } finally {
+      setDismissingId(null);
+    }
   }
 
   return (
@@ -130,10 +137,11 @@ export function NotificationBell() {
                 <button
                   onClick={clearAll}
                   disabled={loading}
-                  className="text-xs clickable-danger"
+                  className="text-xs clickable-danger inline-flex items-center gap-1 disabled:opacity-50"
                   style={{ fontFamily: "var(--font-mono)" }}
                   data-testid="notif-clear-all"
                 >
+                  {loading && <ActionSpinner size={10} />}
                   Clear all
                 </button>
               )}
@@ -195,11 +203,12 @@ export function NotificationBell() {
                     )}
                     <button
                       onClick={(e) => { e.preventDefault(); e.stopPropagation(); dismissOne(n.id, !n.read); }}
+                      disabled={dismissingId === n.id}
                       className="absolute top-2.5 right-2.5 text-muted-foreground clickable-icon"
                       aria-label="Dismiss notification"
                       data-testid="notif-dismiss"
                     >
-                      <X size={12} />
+                      {dismissingId === n.id ? <ActionSpinner size={12} /> : <X size={12} />}
                     </button>
                   </div>
                 );

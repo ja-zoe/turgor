@@ -2,6 +2,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import { updateProfile } from "@/lib/actions/profile";
+import { SubmitButton } from "@/components/submit-button";
 
 export default async function ProfileSetupPage() {
   const session = await auth();
@@ -63,12 +64,11 @@ export default async function ProfileSetupPage() {
               placeholder="Jay — shown as your display name"
             />
           </div>
-          <button
-            type="submit"
-            className="w-full cursor-pointer rounded-lg bg-[#2E4034] text-white text-sm font-medium py-2.5 hover:bg-[#2E4034]/80 transition-colors"
-          >
-            Save and continue
-          </button>
+          <SubmitButton
+            label="Save and continue"
+            pendingLabel="Saving…"
+            className="w-full cursor-pointer rounded-lg bg-[#2E4034] text-white text-sm font-medium py-2.5 hover:bg-[#2E4034]/80 transition-colors disabled:opacity-50"
+          />
         </form>
       </div>
     </div>

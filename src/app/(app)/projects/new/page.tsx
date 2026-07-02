@@ -3,6 +3,7 @@ import { Permission } from "@/generated/prisma";
 import { prisma } from "@/lib/prisma";
 import { createProject } from "@/lib/actions/projects";
 import { SemesterFormField } from "@/components/semester-field";
+import { SubmitButton } from "@/components/submit-button";
 
 export default async function NewProjectPage() {
   await requirePermission(Permission.MANAGE_PROJECTS);
@@ -68,12 +69,11 @@ export default async function NewProjectPage() {
         </div>
 
         <div className="flex items-center gap-3 pt-2">
-          <button
-            type="submit"
-            className="rounded-md cursor-pointer bg-primary text-primary-foreground text-sm font-medium px-5 py-2.5 hover:bg-primary/80 transition-colors"
-          >
-            Create Project
-          </button>
+          <SubmitButton
+            label="Create Project"
+            pendingLabel="Creating…"
+            className="rounded-md cursor-pointer bg-primary text-primary-foreground text-sm font-medium px-5 py-2.5 hover:bg-primary/80 transition-colors disabled:opacity-50"
+          />
           <a
             href="/projects"
             className="text-sm text-muted-foreground clickable-icon"
