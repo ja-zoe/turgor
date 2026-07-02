@@ -24,6 +24,9 @@ import { NotificationBell } from "@/components/notification-bell";
 interface SidebarProps {
   userName: string;
   userEmail: string;
+  appName: string;
+  orgName: string;
+  orgLogoUrl: string;
   permissions: Permission[];
   signOutAction: () => Promise<void>;
 }
@@ -61,6 +64,9 @@ const pmItems = [
 export function Sidebar({
   userName,
   userEmail,
+  appName,
+  orgName,
+  orgLogoUrl,
   permissions,
   signOutAction,
 }: SidebarProps) {
@@ -182,8 +188,8 @@ export function Sidebar({
             onClick={() => setMobileOpen(false)}
           >
             <Image
-              src="/seed-logo-transparent.png"
-              alt="SEED"
+              src={orgLogoUrl}
+              alt={orgName}
               width={36}
               height={36}
               unoptimized
@@ -193,7 +199,7 @@ export function Sidebar({
               className="text-lg font-semibold text-foreground tracking-tight"
               style={{ fontFamily: "var(--font-display)" }}
             >
-              SEED Tracker
+              {appName}
             </span>
           </Link>
           <button
@@ -211,8 +217,8 @@ export function Sidebar({
         <div className="px-5 py-5 border-b border-border">
           <Link href="/dashboard" className="flex items-center gap-2">
             <Image
-              src="/seed-logo-transparent.png"
-              alt="SEED"
+              src={orgLogoUrl}
+              alt={orgName}
               width={36}
               height={36}
               unoptimized
@@ -222,7 +228,7 @@ export function Sidebar({
               className="text-lg font-semibold text-foreground tracking-tight"
               style={{ fontFamily: "var(--font-display)" }}
             >
-              SEED Tracker
+              {appName}
             </span>
           </Link>
         </div>

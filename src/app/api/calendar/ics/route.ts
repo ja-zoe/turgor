@@ -4,6 +4,8 @@ import { getUserPermissions } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { Permission } from "@/generated/prisma";
 import { buildIcs } from "@/lib/calendar-export";
+import { getOrgSettings } from "@/lib/org";
+import { orgSlug } from "@/lib/utils";
 
 // GET /api/calendar/ics[?semester=...] — the requesting user's visible events as an
 // .ics download. Lead/eboard meetings are excluded for users without VIEW_LEAD_MEETINGS
@@ -27,8 +29,10 @@ export async function GET(req: NextRequest) {
     select: { id: true, title: true, startsAt: true, endsAt: true, allDay: true, location: true, description: true },
   });
 
-  const ics = buildIcs(events);
-  const filename = semester ? `seed-${semester.replace(/\s+/g, "-")}.ics` : "seed-calendar.ics";
+  const { orgName, appName } = await getOrgSettings();
+  const ics = buildIcs(events, appName);
+  const slug = orgSlug(orgName);
+  const filename = semester ? `${slug}-${semester.replace(/\s+/g, "-")}.ics` : `${slug}-calendar.ics`;
   return new NextResponse(ics, {
     status: 200,
     headers: {

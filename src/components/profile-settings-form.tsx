@@ -15,11 +15,13 @@ export function ProfileSettingsForm({
   lastName,
   nickname,
   email,
+  emailNote = "Managed by Rutgers CAS — can't be changed here.",
 }: {
   firstName: string;
   lastName: string;
   nickname: string;
   email: string;
+  emailNote?: string;
 }) {
   const [vals, setVals] = useState({ firstName, lastName, nickname });
   const [isPending, startTransition] = useTransition();
@@ -97,7 +99,7 @@ export function ProfileSettingsForm({
             className={`${inputClass} cursor-not-allowed text-muted-foreground`}
             data-testid="profile-email"
           />
-          <p className="text-xs text-muted-foreground mt-1">Managed by Rutgers CAS — can&apos;t be changed here.</p>
+          <p className="text-xs text-muted-foreground mt-1">{emailNote}</p>
         </div>
 
         {error && <p className="text-xs text-[#A4503C]">{error}</p>}

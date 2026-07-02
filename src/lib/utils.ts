@@ -14,6 +14,19 @@ export function getDisplayName(user: {
   return user.nickname ?? user.firstName ?? user.name ?? user.email.split("@")[0];
 }
 
+/**
+ * Kebab-case slug of an org name for machine-readable identifiers (download
+ * filenames, MCP config keys). "SEED" → "seed", "Robotics Club" → "robotics-club".
+ */
+export function orgSlug(name: string): string {
+  return (
+    name
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/(^-|-$)/g, "") || "org"
+  );
+}
+
 export function projectDuration(start: Date, end: Date | null): string {
   const to = end ?? new Date();
   const ms = to.getTime() - start.getTime();

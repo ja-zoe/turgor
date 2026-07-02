@@ -5,6 +5,7 @@ import { Permission, TimelineStatus, ActionItemStatus, CalendarEventType, Projec
 import { carryOverActionItems } from "@/lib/actions/action-items";
 import { getPendingLeadMeetings } from "@/lib/lead-meeting";
 import { runRedFlagDetection } from "@/lib/red-flag";
+import { getOrgSettings } from "@/lib/org";
 import { verifyOAuthAccessToken, looksLikeJwt, type McpUser } from "@/lib/mcp-oauth";
 
 // Lead/eboard meetings are hidden from users without VIEW_LEAD_MEETINGS — mirrors
@@ -19,7 +20,7 @@ const TOOLS = [
   // ── Read ──────────────────────────────────────────────────────────────────
   {
     name: "list_projects",
-    description: "List all SEED projects the current user has access to.",
+    description: "List all projects the current user has access to.",
     inputSchema: { type: "object", properties: {}, required: [] },
   },
   {
@@ -1348,12 +1349,14 @@ export async function POST(req: NextRequest) {
     Response.json({ jsonrpc: "2.0", id, error: { code, message } });
 
   switch (method) {
-    case "initialize":
+    case "initialize": {
+      const { appName } = await getOrgSettings();
       return ok({
         protocolVersion: "2024-11-05",
         capabilities: { tools: {} },
-        serverInfo: { name: "SEED Tracker", version: "2.4.0" },
+        serverInfo: { name: appName, version: "2.4.0" },
       });
+    }
 
     case "ping":
       return ok({});

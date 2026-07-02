@@ -4,6 +4,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { getUserPermissions, getProjectMembership } from "@/lib/permissions";
 import { Permission } from "@/generated/prisma";
+import { getOrgSettings } from "@/lib/org";
 import { getDisplayName } from "@/lib/utils";
 
 export async function GET(
@@ -59,7 +60,7 @@ export async function GET(
   }
 
   const workbook = new ExcelJS.Workbook();
-  workbook.creator = "SEED Tracker";
+  workbook.creator = (await getOrgSettings()).appName;
   workbook.created = new Date();
 
   // ── Sheet 1: Timeline ────────────────────────────────────────────────────

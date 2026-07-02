@@ -7,6 +7,7 @@ import { ScrollReveal } from "@/components/scroll-reveal";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { prisma } from "@/lib/prisma";
 import { getDisplayName } from "@/lib/utils";
+import { getOrgSettings } from "@/lib/org";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const session = await auth();
@@ -21,7 +22,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   });
   if (!dbUser?.firstName) redirect("/profile/setup");
 
-  const permissions = await getUserPermissions(session.user.roleId ?? null);
+  const [permissions, org] = await Promise.all([
+    getUserPermissions(session.user.roleId ?? null),
+    getOrgSettings(),
+  ]);
   const displayName = getDisplayName({
     firstName: dbUser.firstName,
     nickname: dbUser.nickname,
@@ -40,6 +44,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <Sidebar
         userName={displayName}
         userEmail={session.user.email ?? ""}
+        appName={org.appName}
+        orgName={org.orgName}
+        orgLogoUrl={org.orgLogoUrl}
         permissions={permissions}
         signOutAction={signOutAction}
       />

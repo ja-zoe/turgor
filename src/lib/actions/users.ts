@@ -1,6 +1,7 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
+import { getOrgSettings } from "@/lib/org";
 import { requirePermission } from "@/lib/permissions";
 import { Permission } from "@/generated/prisma";
 import { revalidatePath } from "next/cache";
@@ -14,12 +15,13 @@ export async function approveUser(userId: string, roleId: string) {
   });
 
   // In-app notification to the user
+  const { appFullName } = await getOrgSettings();
   await prisma.notification.create({
     data: {
       userId,
       type: "USER_APPROVAL",
       title: "Your account has been approved",
-      body: "You now have access to the SEED Project Tracker.",
+      body: `You now have access to the ${appFullName}.`,
       link: "/dashboard",
     },
   });

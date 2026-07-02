@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { getOrgSettings } from "@/lib/org";
 import { Channel, NotificationType, TriggerType } from "@/generated/prisma";
 
 interface NotificationPayload {
@@ -35,7 +36,8 @@ async function sendEmail(payloads: NotificationPayload[]) {
 
   const { Resend } = await import("resend");
   const resend = new Resend(apiKey);
-  const from = process.env.EMAIL_FROM ?? process.env.RESEND_FROM ?? "SEED Tracker <onboarding@resend.dev>";
+  const { appName } = await getOrgSettings();
+  const from = process.env.EMAIL_FROM ?? process.env.RESEND_FROM ?? `${appName} <onboarding@resend.dev>`;
 
   await Promise.allSettled(
     payloads.map(async (p) => {
@@ -45,7 +47,7 @@ async function sendEmail(payloads: NotificationPayload[]) {
         from,
         to: user.email,
         subject: p.title,
-        html: `<p>${p.body}</p>${p.link ? `<p><a href="${process.env.AUTH_URL ?? ""}${p.link}">View in SEED Tracker</a></p>` : ""}`,
+        html: `<p>${p.body}</p>${p.link ? `<p><a href="${process.env.AUTH_URL ?? ""}${p.link}">View in ${appName}</a></p>` : ""}`,
       });
     })
   );

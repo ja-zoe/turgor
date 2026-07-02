@@ -363,6 +363,13 @@ model Settings {
   statusSubmitWindowDays  Int     @default(3)
   statusLateWindowDays    Int     @default(3)
 
+  // Org identity (R23.1) — defaults keep a stock deployment rendering as SEED.
+  orgName        String @default("SEED")
+  orgFullName    String @default("Students for Environmental & Energy Development")
+  orgInstitution String @default("Rutgers University–New Brunswick")
+  orgLogoUrl     String @default("/seed-logo-transparent.png")
+  signInLabel    String @default("Rutgers NetID")
+
   updatedAt DateTime @updatedAt
 }
 
