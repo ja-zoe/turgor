@@ -108,6 +108,65 @@ export async function deleteProjects(ids: string[]) {
 }
 
 /**
+ * Period rollover: clone a project (name, description, member assignments with
+ * roles) into a new period with a fresh deliverables/standings slate, optionally
+ * archiving the source in the same gesture. Returns the new project's id so the
+ * dialog can navigate to it (no redirect — callers handle errors inline).
+ */
+export async function carryProjectToPeriod(projectId: string, formData: FormData) {
+  await requirePermission(Permission.MANAGE_PROJECTS);
+
+  const semester = (formData.get("semester") as string | null)?.trim();
+  const archiveSource = formData.get("archiveSource") === "on";
+  if (!semester) throw new Error("A new period is required");
+
+  const source = await prisma.project.findUnique({
+    where: { id: projectId },
+    include: { assignments: { select: { userId: true, role: true } } },
+  });
+  if (!source) throw new Error("Project not found");
+
+  const duplicate = await prisma.project.findFirst({
+    where: { name: source.name, semester },
+    select: { id: true },
+  });
+  if (duplicate) {
+    throw new Error(`"${source.name}" already exists in ${semester}`);
+  }
+
+  const created = await prisma.$transaction(async (tx) => {
+    const project = await tx.project.create({
+      data: {
+        name: source.name,
+        description: source.description,
+        semester,
+        assignments: {
+          createMany: {
+            data: source.assignments.map((a) => ({ userId: a.userId, role: a.role })),
+          },
+        },
+      },
+    });
+    if (archiveSource) {
+      await tx.project.update({
+        where: { id: projectId },
+        data: { archivedAt: new Date() },
+      });
+    }
+    return project;
+  });
+
+  revalidatePath("/projects");
+  revalidatePath(`/projects/${projectId}`);
+  revalidatePath("/dashboard");
+  revalidatePath("/my-tasks");
+  revalidatePath("/action-items");
+  revalidatePath("/pm/review");
+
+  return { id: created.id };
+}
+
+/**
  * Archive is a listing/engine filter, not a write lock: archived projects drop out
  * of listings, dashboards, red-flag and notification runs, but stay directly
  * accessible and editable (set-25 standing decision).

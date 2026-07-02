@@ -6,12 +6,14 @@ import { Permission } from "@/generated/prisma";
 import { ProjectStatusBadge, ArchivedBadge } from "@/components/status-badge";
 import { SortableDeliverables } from "@/components/sortable-deliverables";
 import { ProjectModal } from "@/components/project-modal";
+import { CarryProjectDialog } from "@/components/carry-project-dialog";
 import { StatusUpdateControls } from "@/components/status-update-controls";
 import { MeetingRecordControls } from "@/components/meeting-record-controls";
 import { getStatusSubmissionState } from "@/lib/lead-meeting";
 import {
   Archive,
   ArrowLeft,
+  ArrowsClockwise,
   ClipboardText,
   CalendarCheck,
   Users,
@@ -199,6 +201,25 @@ export default async function ProjectDetailPage({
           </div>
 
           <div className="flex items-center gap-2 flex-shrink-0">
+            {canManage && (
+              <CarryProjectDialog
+                projectId={id}
+                projectName={project.name}
+                memberCount={project.assignments.length}
+                allSemesters={allSemesters}
+                periodLabel={periodLabel}
+                trigger={
+                  <button
+                    type="button"
+                    className="inline-flex items-center gap-1.5 rounded-md cursor-pointer border border-border bg-card text-sm font-medium px-3 py-2 hover:bg-muted transition-colors"
+                    data-testid="carry-project"
+                  >
+                    <ArrowsClockwise size={14} />
+                    Carry into next {periodLabel.toLowerCase()}
+                  </button>
+                }
+              />
+            )}
             {canEditThisProject && (
               <ProjectModal
                 allSemesters={allSemesters}
