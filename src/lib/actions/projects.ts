@@ -107,6 +107,27 @@ export async function deleteProjects(ids: string[]) {
   revalidatePath("/projects");
 }
 
+/**
+ * Archive is a listing/engine filter, not a write lock: archived projects drop out
+ * of listings, dashboards, red-flag and notification runs, but stay directly
+ * accessible and editable (set-25 standing decision).
+ */
+export async function setProjectArchived(projectId: string, archived: boolean) {
+  await requirePermission(Permission.MANAGE_PROJECTS);
+
+  await prisma.project.update({
+    where: { id: projectId },
+    data: { archivedAt: archived ? new Date() : null },
+  });
+
+  revalidatePath("/projects");
+  revalidatePath(`/projects/${projectId}`);
+  revalidatePath("/dashboard");
+  revalidatePath("/my-tasks");
+  revalidatePath("/action-items");
+  revalidatePath("/pm/review");
+}
+
 export async function overrideProjectStatus(
   projectId: string,
   status: ProjectStatus,

@@ -17,6 +17,7 @@ export default async function MyTasksPage() {
       where: {
         assigneeId: user.id,
         status: { not: "COMPLETE" },
+        deliverable: { project: { archivedAt: null } },
       },
       include: {
         deliverable: {
@@ -32,6 +33,7 @@ export default async function MyTasksPage() {
       where: {
         ownerId: user.id,
         status: "OPEN",
+        project: { archivedAt: null },
       },
       include: {
         project: { select: { id: true, name: true } },

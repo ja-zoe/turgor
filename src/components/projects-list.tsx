@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState, useTransition } from "react";
 import { ArrowRight, Plant, CheckSquare, Square } from "@phosphor-icons/react";
-import { ProjectStatusBadge } from "@/components/status-badge";
+import { ProjectStatusBadge, ArchivedBadge } from "@/components/status-badge";
 import { deleteProjects } from "@/lib/actions/projects";
 import { ActionSpinner } from "@/components/action-feedback";
 import type { ProjectStatus } from "@/generated/prisma";
@@ -14,6 +14,7 @@ export interface ProjectCard {
   description: string | null;
   semester: string;
   status: ProjectStatus;
+  archived?: boolean;
   _count: { deliverables: number; assignments: number };
 }
 
@@ -43,6 +44,7 @@ function CardBody({ project }: { project: ProjectCard }) {
         </div>
       </div>
       <div className="flex items-center gap-2 flex-shrink-0">
+        {project.archived && <ArchivedBadge />}
         <ProjectStatusBadge status={project.status} />
         <ArrowRight
           size={14}

@@ -208,6 +208,7 @@ model Project {
   correctiveActionPlan String?       @db.Text
   startDate            DateTime?
   endDate              DateTime?
+  archivedAt           DateTime?
 
   assignments     ProjectAssignment[]
   deliverables    Deliverable[]

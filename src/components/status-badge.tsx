@@ -53,6 +53,19 @@ export function ProjectStatusBadge({ status }: { status: ProjectStatus }) {
   );
 }
 
+/** Neutral badge for archived projects — shown alongside the status badge. */
+export function ArchivedBadge() {
+  return (
+    <span
+      data-testid="archived-badge"
+      className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium tracking-wide uppercase bg-muted text-muted-foreground"
+      style={{ fontFamily: "var(--font-mono)", letterSpacing: "0.05em" }}
+    >
+      Archived
+    </span>
+  );
+}
+
 export function TimelineStatusBadge({ status }: { status: TimelineStatus }) {
   const { label, className } = TIMELINE_STATUS_MAP[status];
   return (
