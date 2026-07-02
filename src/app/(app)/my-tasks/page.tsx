@@ -7,6 +7,7 @@ import { CheckSquare, ListChecks, Check } from "@phosphor-icons/react/dist/ssr";
 import { closeActionItem } from "@/lib/actions/action-items";
 import { updateSubtaskStatus } from "@/lib/actions/deliverables";
 import { formatDateOnly } from "@/lib/utils";
+import { PendingIconButton } from "@/components/action-feedback";
 
 export default async function MyTasksPage() {
   const user = await requireAuth();
@@ -118,13 +119,12 @@ export default async function MyTasksPage() {
                         await closeActionItem(item.id);
                       }}
                     >
-                      <button
-                        type="submit"
+                      <PendingIconButton
                         title="Mark done"
-                        className="cursor-pointer flex-shrink-0 w-6 h-6 rounded border border-border hover:border-[#588157] hover:bg-[#EDF3EC] transition-colors flex items-center justify-center text-muted-foreground hover:text-[#588157]"
+                        className="cursor-pointer flex-shrink-0 w-6 h-6 rounded border border-border hover:border-[#588157] hover:bg-[#EDF3EC] transition-colors flex items-center justify-center text-muted-foreground hover:text-[#588157] disabled:opacity-50"
                       >
                         <Check size={12} />
-                      </button>
+                      </PendingIconButton>
                     </form>
                   </div>
                 ))}
@@ -179,13 +179,12 @@ export default async function MyTasksPage() {
                           await updateSubtaskStatus(subtask.id, TimelineStatus.COMPLETE);
                         }}
                       >
-                        <button
-                          type="submit"
+                        <PendingIconButton
                           title="Mark complete"
-                          className="cursor-pointer flex-shrink-0 w-6 h-6 rounded border border-border hover:border-[#588157] hover:bg-[#EDF3EC] transition-colors flex items-center justify-center text-muted-foreground hover:text-[#588157]"
+                          className="cursor-pointer flex-shrink-0 w-6 h-6 rounded border border-border hover:border-[#588157] hover:bg-[#EDF3EC] transition-colors flex items-center justify-center text-muted-foreground hover:text-[#588157] disabled:opacity-50"
                         >
                           <Check size={12} />
-                        </button>
+                        </PendingIconButton>
                       </form>
                     </div>
                   </div>

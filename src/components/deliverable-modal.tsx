@@ -11,6 +11,7 @@ import {
 import { updateDeliverable } from "@/lib/actions/deliverables";
 import { isValidDateInput } from "@/lib/date";
 import { MarkdownEditor } from "@/components/markdown-editor";
+import { ActionSpinner, SuccessCheck, successDelay } from "@/components/action-feedback";
 
 type TimelineStatus = "NOT_STARTED" | "IN_PROGRESS" | "BLOCKED" | "COMPLETE";
 type Priority = "LOW" | "MEDIUM" | "HIGH";
@@ -69,6 +70,7 @@ export function DeliverableModal({
   const [backlog, setBacklog] = useState(deliverable.backlog);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const [saved, setSaved] = useState(false);
 
   function onOpenChange(next: boolean) {
     setOpen(next);
@@ -107,8 +109,13 @@ export function DeliverableModal({
     startTransition(async () => {
       try {
         await updateDeliverable(deliverable.id, fd);
+        // Flash the confirmation before the modal closes so the save is actually seen.
+        setSaved(true);
+        await successDelay();
         setOpen(false);
+        setSaved(false);
       } catch (e) {
+        setSaved(false);
         setError((e as Error)?.message ?? "Could not save the deliverable");
       }
     });
@@ -255,9 +262,22 @@ export function DeliverableModal({
               onClick={submit}
               disabled={isPending}
               data-testid="deliv-modal-submit"
-              className="rounded-md cursor-pointer bg-primary text-primary-foreground text-sm font-medium px-4 py-2 hover:bg-primary/80 disabled:opacity-50 transition-colors"
+              data-state={saved ? "success" : isPending ? "pending" : "idle"}
+              className="rounded-md cursor-pointer bg-primary text-primary-foreground text-sm font-medium px-4 py-2 hover:bg-primary/80 disabled:opacity-50 transition-colors inline-flex items-center gap-1.5"
             >
-              {isPending ? "Saving…" : "Save changes"}
+              {saved ? (
+                <>
+                  <SuccessCheck />
+                  Saved
+                </>
+              ) : isPending ? (
+                <>
+                  <ActionSpinner />
+                  Saving…
+                </>
+              ) : (
+                "Save changes"
+              )}
             </button>
           </div>
         </div>
