@@ -23,6 +23,7 @@ import { ActionItemsSection } from "@/components/action-items-section";
 import { deleteDeliverable } from "@/lib/actions/deliverables";
 import { removeMember } from "@/lib/actions/projects";
 import { getDisplayName, projectDuration, formatProjectDate, formatDateOnly } from "@/lib/utils";
+import { getOrgSettings } from "@/lib/org";
 
 export default async function ProjectDetailPage({
   params,
@@ -88,6 +89,7 @@ export default async function ProjectDetailPage({
   if (!membership && !canViewAll) notFound();
 
   const submissionState = await getStatusSubmissionState(id);
+  const { periodLabel } = await getOrgSettings();
   const allSemesters = (
     await prisma.project.findMany({
       select: { semester: true },
@@ -198,6 +200,7 @@ export default async function ProjectDetailPage({
                 allSemesters={allSemesters}
                 project={editableProject}
                 canDelete={canManage}
+                periodLabel={periodLabel}
                 trigger={
                   <button
                     type="button"
@@ -251,6 +254,7 @@ export default async function ProjectDetailPage({
                     allSemesters={allSemesters}
                     project={editableProject}
                     canDelete={canManage}
+                    periodLabel={periodLabel}
                     trigger={
                       <button type="button" className="underline clickable-danger">
                         Add one

@@ -9,25 +9,97 @@ import { UserRowControls } from "@/components/user-row-controls";
 import { SubmitButton } from "@/components/submit-button";
 import { PendingIconButton } from "@/components/action-feedback";
 
-const ALL_PERMISSIONS: { value: Permission; label: string }[] = [
-  { value: Permission.VIEW_ALL_PROJECTS, label: "View all projects" },
-  { value: Permission.VIEW_ASSIGNED_PROJECTS, label: "View assigned projects" },
-  { value: Permission.SUBMIT_STATUS_UPDATES, label: "Submit status updates" },
-  { value: Permission.EDIT_OWN_PROJECT, label: "Edit own project" },
-  { value: Permission.POST_MEETING_TRACKING, label: "Post-meeting tracking" },
-  { value: Permission.MANAGE_PROJECTS, label: "Manage projects" },
-  { value: Permission.MANAGE_MILESTONES, label: "Manage milestones / deliverables" },
-  { value: Permission.ASSIGN_ACTION_ITEMS, label: "Assign action items" },
-  { value: Permission.CLOSE_ACTION_ITEMS, label: "Close action items" },
-  { value: Permission.VIEW_MONTHLY_REVIEW, label: "View monthly review" },
-  { value: Permission.CONFIGURE_NOTIFICATIONS, label: "Configure notifications" },
-  { value: Permission.MANAGE_USERS, label: "Manage users" },
-  { value: Permission.MANAGE_ROLES, label: "Manage roles" },
-  { value: Permission.MANAGE_CALENDAR, label: "Manage calendar" },
-  { value: Permission.VIEW_LEAD_MEETINGS, label: "View lead / eboard meetings" },
-  { value: Permission.MANAGE_STATUS_UPDATES, label: "Manage status updates" },
-  { value: Permission.MANAGE_MEETING_RECORDS, label: "Manage meeting records" },
-  { value: Permission.DELETE_USERS, label: "Delete users" },
+const ALL_PERMISSIONS: { value: Permission; label: string; description: string }[] = [
+  {
+    value: Permission.VIEW_ALL_PROJECTS,
+    label: "View all projects",
+    description: "Browse every project and its history, not just own assignments.",
+  },
+  {
+    value: Permission.VIEW_ASSIGNED_PROJECTS,
+    label: "View assigned projects",
+    description: "Baseline visibility into projects the user is a member of.",
+  },
+  {
+    value: Permission.SUBMIT_STATUS_UPDATES,
+    label: "Submit status updates",
+    description: "Submit project standing updates for any project (leads can always submit for their own).",
+  },
+  {
+    value: Permission.EDIT_OWN_PROJECT,
+    label: "Edit own project",
+    description: "Edit the name, description, and dates of projects the user leads.",
+  },
+  {
+    value: Permission.POST_MEETING_TRACKING,
+    label: "Post-meeting tracking",
+    description: "Record post-meeting tracking entries for any project.",
+  },
+  {
+    value: Permission.MANAGE_PROJECTS,
+    label: "Manage projects",
+    description: "Create, edit, and delete any project; manage members and override status.",
+  },
+  {
+    value: Permission.MANAGE_MILESTONES,
+    label: "Manage milestones / deliverables",
+    description: "Create, edit, and delete deliverables and subtasks on any project.",
+  },
+  {
+    value: Permission.ASSIGN_ACTION_ITEMS,
+    label: "Assign action items",
+    description: "Create and edit action items on any project and assign owners.",
+  },
+  {
+    value: Permission.CLOSE_ACTION_ITEMS,
+    label: "Close action items",
+    description: "Mark action items complete or reopen them.",
+  },
+  {
+    value: Permission.VIEW_MONTHLY_REVIEW,
+    label: "View monthly review",
+    description: "Access the Monthly Review dashboard under PM Tools.",
+  },
+  {
+    value: Permission.CONFIGURE_NOTIFICATIONS,
+    label: "Configure notifications",
+    description: "Edit organization settings, red-flag thresholds, and notification rules.",
+  },
+  {
+    value: Permission.MANAGE_USERS,
+    label: "Manage users",
+    description: "Approve sign-ups, suspend users, and assign roles on this page.",
+  },
+  {
+    value: Permission.MANAGE_ROLES,
+    label: "Manage roles",
+    description: "Create, edit, and delete roles in this Role Builder.",
+  },
+  {
+    value: Permission.MANAGE_CALENDAR,
+    label: "Manage calendar",
+    description: "Create, edit, and delete calendar events for any project.",
+  },
+  {
+    value: Permission.VIEW_LEAD_MEETINGS,
+    label: "View lead / eboard meetings",
+    description: "See lead and eboard meetings on the calendar and in calendar exports.",
+  },
+  {
+    value: Permission.MANAGE_STATUS_UPDATES,
+    label: "Manage status updates",
+    description: "Edit or delete any status update, not just own submissions.",
+  },
+  {
+    value: Permission.MANAGE_MEETING_RECORDS,
+    label: "Manage meeting records",
+    description: "Edit or delete any post-meeting tracking entry.",
+  },
+  {
+    value: Permission.DELETE_USERS,
+    label: "Delete users",
+    description: "Permanently delete user accounts (their records are anonymized).",
+  },
 ];
 
 // Completeness guard: every Permission must have a Role-Builder checkbox, otherwise
@@ -326,20 +398,26 @@ export default async function UsersPage() {
                     </label>
                     <input
                       name="name"
+                      required
                       defaultValue={role.name}
                       className="mt-1 w-full max-w-xs rounded-md border border-border bg-card px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
                     />
                   </div>
-                  <div className="grid grid-cols-2 gap-2 mb-4">
-                    {ALL_PERMISSIONS.map(({ value, label }) => (
-                      <label key={value} className="flex items-center gap-2 cursor-pointer">
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-2.5 mb-4">
+                    {ALL_PERMISSIONS.map(({ value, label, description }) => (
+                      <label key={value} className="flex items-start gap-2 cursor-pointer">
                         <input
                           type="checkbox"
                           name={`perm_${value}`}
                           defaultChecked={role.permissions.includes(value)}
-                          className="rounded accent-primary"
+                          className="mt-0.5 rounded accent-primary"
                         />
-                        <span className="text-xs text-foreground">{label}</span>
+                        <span className="min-w-0">
+                          <span className="block text-xs text-foreground">{label}</span>
+                          <span className="block text-[11px] leading-snug text-muted-foreground">
+                            {description}
+                          </span>
+                        </span>
                       </label>
                     ))}
                   </div>
@@ -392,15 +470,20 @@ export default async function UsersPage() {
                   className="mt-1 w-full max-w-xs rounded-md border border-border bg-card px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
                 />
               </div>
-              <div className="grid grid-cols-2 gap-2 mb-4">
-                {ALL_PERMISSIONS.map(({ value, label }) => (
-                  <label key={value} className="flex items-center gap-2 cursor-pointer">
+              <div className="grid grid-cols-2 gap-x-4 gap-y-2.5 mb-4">
+                {ALL_PERMISSIONS.map(({ value, label, description }) => (
+                  <label key={value} className="flex items-start gap-2 cursor-pointer">
                     <input
                       type="checkbox"
                       name={`perm_${value}`}
-                      className="rounded accent-primary"
+                      className="mt-0.5 rounded accent-primary"
                     />
-                    <span className="text-xs text-foreground">{label}</span>
+                    <span className="min-w-0">
+                      <span className="block text-xs text-foreground">{label}</span>
+                      <span className="block text-[11px] leading-snug text-muted-foreground">
+                        {description}
+                      </span>
+                    </span>
                   </label>
                 ))}
               </div>

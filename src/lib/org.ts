@@ -7,10 +7,18 @@ export type OrgSettings = {
   orgInstitution: string;
   orgLogoUrl: string;
   signInLabel: string;
+  /** What a project cycle is called — "Semester", "Quarter", "Cycle"… Display-only;
+   *  the `Project.semester` data field and form/query names stay `semester`. */
+  periodLabel: string;
+  /** Curated color theme id (see src/lib/themes.ts). Unknown values fall back to "forest". */
+  themePreset: string;
   /** Derived: `${orgName} Tracker` — short app name (sidebar, metadata title). */
   appName: string;
   /** Derived: `${orgName} Project Tracker` — full app name (landing hero, emails). */
   appFullName: string;
+  /** Derived: `periodLabel.toLowerCase()` — for mid-sentence use ("built for the semester").
+   *  Plural forms are naive `+s` at the call site ("semesters", "quarters"). */
+  periodLabelLower: string;
 };
 
 const DEFAULTS = {
@@ -19,6 +27,8 @@ const DEFAULTS = {
   orgInstitution: "Rutgers University–New Brunswick",
   orgLogoUrl: "/seed-logo-transparent.png",
   signInLabel: "Rutgers NetID",
+  periodLabel: "Semester",
+  themePreset: "forest",
 } as const;
 
 /**
@@ -35,6 +45,8 @@ export const getOrgSettings = cache(async (): Promise<OrgSettings> => {
       orgInstitution: true,
       orgLogoUrl: true,
       signInLabel: true,
+      periodLabel: true,
+      themePreset: true,
     },
   });
 
@@ -43,5 +55,6 @@ export const getOrgSettings = cache(async (): Promise<OrgSettings> => {
     ...base,
     appName: `${base.orgName} Tracker`,
     appFullName: `${base.orgName} Project Tracker`,
+    periodLabelLower: base.periodLabel.toLowerCase(),
   };
 });

@@ -9,7 +9,7 @@ export default function AppNotFound() {
   return (
     <div className="min-h-[60vh] flex items-center justify-center px-6 py-16">
       <div className="w-full max-w-md text-center">
-        <div className="mx-auto mb-5 flex h-12 w-12 items-center justify-center rounded-full bg-[#EDF3EC]">
+        <div className="mx-auto mb-5 flex h-12 w-12 items-center justify-center rounded-full bg-accent">
           <Compass size={22} weight="fill" className="text-primary" />
         </div>
         <h1

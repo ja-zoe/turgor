@@ -227,7 +227,7 @@ export function DeliverableModal({
                 type="checkbox"
                 checked={backlog}
                 onChange={(e) => setBacklog(e.target.checked)}
-                className="accent-[#2E4034] cursor-pointer"
+                className="accent-primary cursor-pointer"
                 data-testid="deliv-modal-backlog"
               />
               In backlog

@@ -3,6 +3,7 @@
 import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/permissions";
 import { Permission, Channel, RecipientGroup, TriggerType } from "@/generated/prisma";
+import { isThemePresetId } from "@/lib/themes";
 import { revalidatePath } from "next/cache";
 
 export async function updateSettings(formData: FormData) {
@@ -44,16 +45,24 @@ export async function updateOrgSettings(formData: FormData) {
   const orgNameRaw = ((formData.get("orgName") as string) ?? "").trim();
   const signInLabelRaw = ((formData.get("signInLabel") as string) ?? "").trim();
   const orgLogoUrlRaw = ((formData.get("orgLogoUrl") as string) ?? "").trim();
+  const periodLabelRaw = ((formData.get("periodLabel") as string) ?? "").trim();
 
-  // orgName / signInLabel / orgLogoUrl render in the shell and must never be blank:
-  // an emptied field keeps its current value instead of erroring.
+  // orgName / signInLabel / orgLogoUrl / periodLabel render in the shell and must never
+  // be blank: an emptied field keeps its current value instead of erroring.
   const orgName = orgNameRaw || current?.orgName || "SEED";
   const signInLabel = signInLabelRaw || current?.signInLabel || "Rutgers NetID";
   const orgLogoUrl = orgLogoUrlRaw || current?.orgLogoUrl || "/seed-logo-transparent.png";
+  const periodLabel = periodLabelRaw || current?.periodLabel || "Semester";
   const orgFullName = ((formData.get("orgFullName") as string) ?? "").trim();
   const orgInstitution = ((formData.get("orgInstitution") as string) ?? "").trim();
 
-  const data = { orgName, orgFullName, orgInstitution, orgLogoUrl, signInLabel };
+  // Only curated preset ids are accepted; anything else keeps the current theme.
+  const themePresetRaw = ((formData.get("themePreset") as string) ?? "").trim();
+  const themePreset = isThemePresetId(themePresetRaw)
+    ? themePresetRaw
+    : current?.themePreset ?? "forest";
+
+  const data = { orgName, orgFullName, orgInstitution, orgLogoUrl, signInLabel, periodLabel, themePreset };
 
   await prisma.settings.upsert({
     where: { id: "singleton" },

@@ -48,10 +48,12 @@ interface Props {
   semester: string;
   allSemesters: string[];
   projects: Project[];
+  /** Org period label ("Semester", "Quarter"…) — brands the heading and editor copy. */
+  periodLabel: string;
 }
 
 const TYPE_COLOR: Record<EventType, { bg: string; text: string; border: string }> = {
-  PROJECT_MEETING: { bg: "bg-[#EDF3EC]", text: "text-[#2E4034]", border: "border-[#2E4034]/20" },
+  PROJECT_MEETING: { bg: "bg-accent", text: "text-primary", border: "border-primary/20" },
   NON_PROJECT_EVENT: { bg: "bg-[#FBF3DB]", text: "text-[#7A5C00]", border: "border-[#C99846]/30" },
   LEAD_MEETING: { bg: "bg-[#E1F3FE]", text: "text-[#1F6C9F]", border: "border-[#1F6C9F]/30" },
   EBOARD_MEETING: { bg: "bg-[#F3E8FF]", text: "text-[#6B3FA0]", border: "border-[#6B3FA0]/30" },
@@ -107,13 +109,15 @@ interface EditorProps {
   allSemesters: string[];
   projects: Project[];
   canEdit: boolean;
+  periodLabel: string;
   onClose: () => void;
 }
 
 /** Types that govern Project Standing across whole semesters (not a single project). */
 const MULTI_SEMESTER_TYPES: EventType[] = ["LEAD_MEETING", "EBOARD_MEETING"];
 
-function EventEditor({ event, defaultDate, semester, allSemesters, projects, canEdit, onClose }: EditorProps) {
+function EventEditor({ event, defaultDate, semester, allSemesters, projects, canEdit, periodLabel, onClose }: EditorProps) {
+  const periodLower = periodLabel.toLowerCase();
   const [isPending, startTransition] = useTransition();
   const [confirmDelete, setConfirmDelete] = useState(false);
   const backdropRef = useRef<HTMLDivElement>(null);
@@ -286,14 +290,14 @@ function EventEditor({ event, defaultDate, semester, allSemesters, projects, can
             {isMultiSemester && (
               <div>
                 <label className="block text-xs font-medium text-muted-foreground uppercase tracking-widest mb-1.5" style={{ fontFamily: "var(--font-mono)" }}>
-                  Applies to semesters
+                  {`Applies to ${periodLower}s`}
                 </label>
                 <p className="text-[11px] text-muted-foreground mb-2">
-                  Opens Project Standing submissions for every project in the selected semesters.
+                  {`Opens Project Standing submissions for every project in the selected ${periodLower}s.`}
                 </p>
                 <div className="space-y-1.5 max-h-40 overflow-y-auto rounded-md border border-border p-2" data-testid="meeting-semesters">
                   {semesterOptions.length === 0 ? (
-                    <p className="text-xs text-muted-foreground">No semesters yet — create a project first.</p>
+                    <p className="text-xs text-muted-foreground">{`No ${periodLower}s yet — create a project first.`}</p>
                   ) : (
                     semesterOptions.map((s) => (
                       <label key={s} className="flex items-center gap-2 text-sm text-foreground cursor-pointer" style={{ fontFamily: "var(--font-mono)" }}>
@@ -310,7 +314,7 @@ function EventEditor({ event, defaultDate, semester, allSemesters, projects, can
                   )}
                 </div>
                 {pinnedSemesters.length === 0 && (
-                  <p className="text-[11px] text-[#A4503C] mt-1">Select at least one semester.</p>
+                  <p className="text-[11px] text-[#A4503C] mt-1">{`Select at least one ${periodLower}.`}</p>
                 )}
               </div>
             )}
@@ -498,7 +502,7 @@ function MonthGrid({
               key={i}
               className={`border-r border-b border-border min-h-[80px] p-1 ${
                 day && canEdit ? "cursor-pointer hover:bg-muted/50 transition-colors" : ""
-              } ${isToday ? "bg-[#EDF3EC]/40" : ""}`}
+              } ${isToday ? "bg-accent/40" : ""}`}
               onClick={() => {
                 if (day && canEdit) {
                   onDayClick(`${year}-${String(month + 1).padStart(2, "0")}-${String(day.getDate()).padStart(2, "0")}`);
@@ -510,7 +514,7 @@ function MonthGrid({
                   <p
                     className={`text-[11px] mb-0.5 font-mono ${
                       isToday
-                        ? "text-[#2E4034] font-semibold"
+                        ? "text-primary font-semibold"
                         : "text-muted-foreground"
                     }`}
                     style={{ fontFamily: "var(--font-mono)" }}
@@ -652,8 +656,9 @@ function AgendaView({
 
 // ── Main component ─────────────────────────────────────────────────────────
 
-export function SemesterCalendar({ events, canEdit, semester, allSemesters, projects }: Props) {
+export function SemesterCalendar({ events, canEdit, semester, allSemesters, projects, periodLabel }: Props) {
   const router = useRouter();
+  const periodLower = periodLabel.toLowerCase();
   const [view, setView] = useState<"month" | "agenda">(() => {
     if (typeof window !== "undefined") {
       return (localStorage.getItem("calendar-view") as "month" | "agenda") ?? "month";
@@ -722,7 +727,7 @@ export function SemesterCalendar({ events, canEdit, semester, allSemesters, proj
             className="text-3xl text-foreground"
             style={{ fontFamily: "var(--font-display), Georgia, serif", letterSpacing: "-0.02em", lineHeight: 1.1 }}
           >
-            Semester Calendar
+            {`${periodLabel} Calendar`}
           </h1>
         </div>
         <div className="flex items-center gap-3 flex-wrap">
@@ -790,7 +795,7 @@ export function SemesterCalendar({ events, canEdit, semester, allSemesters, proj
       {/* Empty semester */}
       {!semester && (
         <div className="py-12 text-center border border-dashed border-border rounded-xl">
-          <p className="text-sm text-muted-foreground">No semester selected. Create a project first.</p>
+          <p className="text-sm text-muted-foreground">{`No ${periodLower} selected. Create a project first.`}</p>
         </div>
       )}
 
@@ -863,6 +868,7 @@ export function SemesterCalendar({ events, canEdit, semester, allSemesters, proj
           allSemesters={allSemesters}
           projects={projects}
           canEdit={canEdit}
+          periodLabel={periodLabel}
           onClose={() => setEditorOpen(false)}
         />
       )}

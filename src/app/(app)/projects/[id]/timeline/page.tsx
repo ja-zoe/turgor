@@ -212,7 +212,7 @@ export default async function ProjectTimelinePage({
               const isOverdue = !d.completed && d.targetDate < now;
               const hasBar = !!d.startDate && d.startDate < d.targetDate;
               const startPct = d.startDate ? pct(d.startDate) : null;
-              const barColor = d.completed ? "#588157" : isOverdue ? "#A4503C" : "#2E4034";
+              const barColor = d.completed ? "var(--on-track)" : isOverdue ? "var(--behind)" : "var(--primary)";
 
               return (
                 <div key={d.id}>
@@ -248,7 +248,7 @@ export default async function ProjectTimelinePage({
                       {/* Target marker line */}
                       <div
                         className="absolute top-0 bottom-0 w-0.5"
-                        style={{ left: `${targetPct}%`, backgroundColor: isOverdue ? "#A4503C" : "#2E4034" }}
+                        style={{ left: `${targetPct}%`, backgroundColor: isOverdue ? "var(--behind)" : "var(--primary)" }}
                       />
                       {/* Today line */}
                       <div

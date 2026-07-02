@@ -46,7 +46,8 @@ const features = [
   },
   {
     icon: Leaf,
-    title: "Semester timeline",
+    // Title is org-configurable ("Semester timeline", "Quarter timeline"…) — filled in per render.
+    title: null,
     body: "Deliverables as major milestones, subtasks as assignable steps. Excel export. Acceptance criteria in Markdown with live preview.",
   },
 ];
@@ -123,7 +124,7 @@ export function LandingContent({ org }: { org: OrgSettings }) {
           >
             Project accountability,
             <br />
-            built for the semester.
+            {`built for the ${org.periodLabelLower}.`}
           </h1>
           <p
             data-hero-line
@@ -166,23 +167,26 @@ export function LandingContent({ org }: { org: OrgSettings }) {
         </h2>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-px bg-border rounded-xl overflow-hidden border border-border">
-          {features.map(({ icon: Icon, title, body }) => (
-            <div
-              key={title}
-              data-feature-card
-              className="bg-card p-7 card-hover group"
-            >
-              <div className="w-9 h-9 rounded-lg bg-accent flex items-center justify-center mb-5">
-                <Icon size={18} weight="bold" className="text-primary" />
+          {features.map(({ icon: Icon, title, body }) => {
+            const cardTitle = title ?? `${org.periodLabel} timeline`;
+            return (
+              <div
+                key={cardTitle}
+                data-feature-card
+                className="bg-card p-7 card-hover group"
+              >
+                <div className="w-9 h-9 rounded-lg bg-accent flex items-center justify-center mb-5">
+                  <Icon size={18} weight="bold" className="text-primary" />
+                </div>
+                <h3 className="text-sm font-semibold text-foreground mb-2 tracking-tight">
+                  {cardTitle}
+                </h3>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  {body}
+                </p>
               </div>
-              <h3 className="text-sm font-semibold text-foreground mb-2 tracking-tight">
-                {title}
-              </h3>
-              <p className="text-sm text-muted-foreground leading-relaxed">
-                {body}
-              </p>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </section>
 

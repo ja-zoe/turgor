@@ -289,7 +289,7 @@ const TOOLS = [
   {
     name: "update_deliverable",
     description:
-      "Update a deliverable's title, dates, status, group, priority, or backlog state (backlog: true defers it off the semester timeline and red-flag detection; false restores it). Requires MANAGE_MILESTONES or project LEAD/SUBLEAD.",
+      "Update a deliverable's title, dates, status, group, priority, or backlog state (backlog: true defers it off the project timeline and red-flag detection; false restores it). Requires MANAGE_MILESTONES or project LEAD/SUBLEAD.",
     inputSchema: {
       type: "object",
       properties: {

@@ -4,15 +4,19 @@ import { prisma } from "@/lib/prisma";
 import { createProject } from "@/lib/actions/projects";
 import { SemesterFormField } from "@/components/semester-field";
 import { SubmitButton } from "@/components/submit-button";
+import { getOrgSettings } from "@/lib/org";
 
 export default async function NewProjectPage() {
   await requirePermission(Permission.MANAGE_PROJECTS);
 
-  const existing = await prisma.project.findMany({
-    select: { semester: true },
-    distinct: ["semester"],
-    orderBy: { semester: "desc" },
-  });
+  const [existing, { periodLabel, periodLabelLower }] = await Promise.all([
+    prisma.project.findMany({
+      select: { semester: true },
+      distinct: ["semester"],
+      orderBy: { semester: "desc" },
+    }),
+    getOrgSettings(),
+  ]);
   const semesters = existing.map((p) => p.semester).filter(Boolean);
 
   return (
@@ -51,9 +55,9 @@ export default async function NewProjectPage() {
 
         <div>
           <label className="block text-xs font-medium text-muted-foreground uppercase tracking-widest mb-2" style={{ fontFamily: "var(--font-mono)" }}>
-            Semester *
+            {periodLabel} *
           </label>
-          <SemesterFormField name="semester" options={semesters} testId="project-semester" />
+          <SemesterFormField name="semester" options={semesters} testId="project-semester" label={periodLabelLower} />
         </div>
 
         <div>

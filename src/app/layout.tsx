@@ -28,18 +28,20 @@ export async function generateMetadata(): Promise<Metadata> {
   const org = await getOrgSettings();
   return {
     title: org.appFullName,
-    description: `Weekly accountability and semester progress tracking for ${org.orgName}.`,
+    description: `Weekly accountability and ${org.periodLabelLower} progress tracking for ${org.orgName}.`,
   };
 }
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const org = await getOrgSettings();
   return (
     <html
       lang="en"
+      data-theme={org.themePreset === "forest" ? undefined : org.themePreset}
       className={`${geistSans.variable} ${instrumentSerif.variable} ${jetbrainsMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">

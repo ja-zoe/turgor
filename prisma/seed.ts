@@ -54,29 +54,22 @@ const EBOARD_PERMISSIONS: Permission[] = [
 async function main() {
   console.log("Seeding roles...");
 
-  await prisma.role.upsert({
-    where: { name: "Project Manager" },
-    create: { name: "Project Manager", isBuiltIn: true, permissions: PM_PERMISSIONS },
-    update: { isBuiltIn: true, permissions: PM_PERMISSIONS },
-  });
+  // Keyed by builtInKey, not name — the PM may rename built-in roles, and a re-run
+  // must update the same rows (never recreate them under the default names).
+  const builtInRoles: { key: string; defaultName: string; permissions: Permission[] }[] = [
+    { key: "pm", defaultName: "Project Manager", permissions: PM_PERMISSIONS },
+    { key: "lead", defaultName: "Project Lead", permissions: LEAD_PERMISSIONS },
+    { key: "viewer", defaultName: "Viewer", permissions: VIEWER_PERMISSIONS },
+    { key: "eboard", defaultName: "Eboard", permissions: EBOARD_PERMISSIONS },
+  ];
 
-  await prisma.role.upsert({
-    where: { name: "Project Lead" },
-    create: { name: "Project Lead", isBuiltIn: true, permissions: LEAD_PERMISSIONS },
-    update: { isBuiltIn: true, permissions: LEAD_PERMISSIONS },
-  });
-
-  await prisma.role.upsert({
-    where: { name: "Viewer" },
-    create: { name: "Viewer", isBuiltIn: true, permissions: VIEWER_PERMISSIONS },
-    update: { isBuiltIn: true, permissions: VIEWER_PERMISSIONS },
-  });
-
-  await prisma.role.upsert({
-    where: { name: "Eboard" },
-    create: { name: "Eboard", isBuiltIn: true, permissions: EBOARD_PERMISSIONS },
-    update: { isBuiltIn: true, permissions: EBOARD_PERMISSIONS },
-  });
+  for (const { key, defaultName, permissions } of builtInRoles) {
+    await prisma.role.upsert({
+      where: { builtInKey: key },
+      create: { builtInKey: key, name: defaultName, isBuiltIn: true, permissions },
+      update: { isBuiltIn: true, permissions },
+    });
+  }
 
   console.log("Seeding Settings singleton...");
 
@@ -93,6 +86,8 @@ async function main() {
       orgInstitution: "Rutgers University–New Brunswick",
       orgLogoUrl: "/seed-logo-transparent.png",
       signInLabel: "Rutgers NetID",
+      periodLabel: "Semester",
+      themePreset: "forest",
     },
     update: {},
   });

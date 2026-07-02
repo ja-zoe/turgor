@@ -31,7 +31,11 @@ export async function updateRole(roleId: string, formData: FormData) {
   const name = (formData.get("name") as string).trim();
   const permissions = parsePermissions(formData);
 
-  await prisma.role.update({ where: { id: roleId }, data: { name, permissions } });
+  // Never-blank: an emptied name keeps the current one (same idiom as updateOrgSettings).
+  await prisma.role.update({
+    where: { id: roleId },
+    data: { ...(name ? { name } : {}), permissions },
+  });
   revalidatePath("/pm/users");
 }
 

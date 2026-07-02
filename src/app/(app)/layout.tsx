@@ -47,6 +47,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         appName={org.appName}
         orgName={org.orgName}
         orgLogoUrl={org.orgLogoUrl}
+        periodLabel={org.periodLabel}
         permissions={permissions}
         signOutAction={signOutAction}
       />

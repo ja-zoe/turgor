@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { Permission, TriggerType, Channel, RecipientGroup } from "@/generated/prisma";
 import { updateSettings, updateOrgSettings, createNotificationRule, toggleNotificationRule, deleteNotificationRule } from "@/lib/actions/settings";
 import { getOrgSettings } from "@/lib/org";
+import { THEME_PRESETS } from "@/lib/themes";
 import { Bell, Buildings, Gauge, Trash } from "@phosphor-icons/react/dist/ssr";
 import { SubmitButton } from "@/components/submit-button";
 import { PendingIconButton } from "@/components/action-feedback";
@@ -146,6 +147,55 @@ export default async function SettingsPage() {
               />
               <p className="text-xs text-muted-foreground mt-1">
                 Shown on the sign-in button, e.g. &ldquo;Rutgers NetID&rdquo;.
+              </p>
+            </div>
+            <div>
+              <label
+                className="block text-xs text-muted-foreground mb-1"
+                style={{ fontFamily: "var(--font-mono)" }}
+              >
+                Period label
+              </label>
+              <input
+                name="periodLabel"
+                defaultValue={org.periodLabel}
+                required
+                className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
+                data-testid="org-period-label"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                What a project cycle is called — &ldquo;Semester&rdquo;, &ldquo;Quarter&rdquo;, &ldquo;Cycle&rdquo;…
+              </p>
+            </div>
+            <div>
+              <label
+                className="block text-xs text-muted-foreground mb-1"
+                style={{ fontFamily: "var(--font-mono)" }}
+              >
+                Theme
+              </label>
+              <div className="flex items-center gap-4 pt-1.5" data-testid="org-theme">
+                {THEME_PRESETS.map((preset) => (
+                  <label key={preset.id} className="flex items-center gap-1.5 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="themePreset"
+                      value={preset.id}
+                      defaultChecked={org.themePreset === preset.id}
+                      className="accent-primary cursor-pointer"
+                      data-testid={`theme-${preset.id}`}
+                    />
+                    <span
+                      aria-hidden
+                      className="inline-block w-3.5 h-3.5 rounded-full border border-border"
+                      style={{ backgroundColor: preset.primary }}
+                    />
+                    <span className="text-sm text-foreground">{preset.label}</span>
+                  </label>
+                ))}
+              </div>
+              <p className="text-xs text-muted-foreground mt-1.5">
+                Swaps the primary color across the app. Status colors stay the same.
               </p>
             </div>
             <div className="flex items-end">

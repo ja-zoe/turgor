@@ -121,6 +121,50 @@
   --sidebar-ring: #2E4034;
 }
 
+/* ─── Theme presets (R24.3) ──────────────────────────────────────
+   Curated token-level palettes selected via Settings.themePreset and applied
+   as data-theme on <html>. Only hue-bearing tokens swap: primary, its soft
+   accent tint, and focus rings. Canvas, card, borders, typography, and the
+   semantic status colors are identical across presets. "forest" is the
+   default (:root above) and has no block. Swatch hexes are mirrored in
+   src/lib/themes.ts for non-CSS surfaces — keep them in sync. */
+
+[data-theme="slate"] {
+  --primary: #2E3A4E;
+  --accent: #EAEFF5;
+  --accent-foreground: #2E3A4E;
+  --ring: #2E3A4E;
+  --chart-2: #2E3A4E;
+  --sidebar-primary: #2E3A4E;
+  --sidebar-accent: #EAEFF5;
+  --sidebar-accent-foreground: #2E3A4E;
+  --sidebar-ring: #2E3A4E;
+}
+
+[data-theme="plum"] {
+  --primary: #45304C;
+  --accent: #F1EBF4;
+  --accent-foreground: #45304C;
+  --ring: #45304C;
+  --chart-2: #45304C;
+  --sidebar-primary: #45304C;
+  --sidebar-accent: #F1EBF4;
+  --sidebar-accent-foreground: #45304C;
+  --sidebar-ring: #45304C;
+}
+
+[data-theme="clay"] {
+  --primary: #7C452E;
+  --accent: #F7ECE4;
+  --accent-foreground: #7C452E;
+  --ring: #7C452E;
+  --chart-2: #7C452E;
+  --sidebar-primary: #7C452E;
+  --sidebar-accent: #F7ECE4;
+  --sidebar-accent-foreground: #7C452E;
+  --sidebar-ring: #7C452E;
+}
+
 /* Paper-grain texture on body — imperceptible but present */
 @layer base {
   * {

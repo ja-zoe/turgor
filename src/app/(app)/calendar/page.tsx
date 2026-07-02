@@ -2,6 +2,7 @@ import { requireAuth, getUserPermissions } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { Permission, type CalendarEventType } from "@/generated/prisma";
 import { SemesterCalendar } from "@/components/semester-calendar";
+import { getOrgSettings } from "@/lib/org";
 
 export default async function CalendarPage({
   searchParams,
@@ -19,10 +20,11 @@ export default async function CalendarPage({
     : { type: { notIn: ["LEAD_MEETING", "EBOARD_MEETING"] as CalendarEventType[] } };
 
   // Collect all known semesters from both Projects and CalendarEvents
-  const [projectSemesters, eventSemesters, datedEvents] = await Promise.all([
+  const [projectSemesters, eventSemesters, datedEvents, { periodLabel }] = await Promise.all([
     prisma.project.findMany({ select: { semester: true }, distinct: ["semester"] }),
     prisma.calendarEvent.findMany({ select: { semester: true }, distinct: ["semester"] }),
     prisma.calendarEvent.findMany({ select: { semester: true, semesters: true, startsAt: true } }),
+    getOrgSettings(),
   ]);
 
   const projectSemesterSet = new Set(projectSemesters.map((p) => p.semester));
@@ -89,6 +91,7 @@ export default async function CalendarPage({
       semester={activeSemester}
       allSemesters={allSemesters}
       projects={projects}
+      periodLabel={periodLabel}
     />
   );
 }

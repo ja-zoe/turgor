@@ -146,6 +146,9 @@ model Role {
   id          String       @id @default(cuid())
   name        String       @unique
   isBuiltIn   Boolean      @default(false)
+  // Stable identity for seeded roles ('pm' | 'lead' | 'viewer' | 'eboard') so code
+  // never depends on the PM-editable display name. NULL for custom roles.
+  builtInKey  String?      @unique
   permissions Permission[]
 
   users User[]
@@ -369,6 +372,10 @@ model Settings {
   orgInstitution String @default("Rutgers University–New Brunswick")
   orgLogoUrl     String @default("/seed-logo-transparent.png")
   signInLabel    String @default("Rutgers NetID")
+  // What a project cycle is called (R24.2) — display labels only; Project.semester stays generic.
+  periodLabel    String @default("Semester")
+  // Color theme (R24.3) — one of the curated preset ids in src/lib/themes.ts.
+  themePreset    String @default("forest")
 
   updatedAt DateTime @updatedAt
 }
