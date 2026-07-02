@@ -169,12 +169,15 @@ export async function updateDeliverable(deliverableId: string, formData: FormDat
     data: {
       title, description, targetDate, startDate, group,
       ...(priorityRaw ? { priority: priorityRaw as Priority } : {}),
+      // Only written when the caller submits it (the edit modal) — partial callers can't clear it.
+      ...(formData.has("backlog") ? { backlog: formData.get("backlog") === "true" } : {}),
       ...statusUpdate,
     },
   });
 
   // No redirect — the edit modal closes itself; revalidate refreshes in place.
   revalidatePath(`/projects/${deliverable.projectId}`);
+  revalidatePath(`/projects/${deliverable.projectId}/timeline`);
 }
 
 export async function deleteDeliverable(deliverableId: string) {
@@ -193,6 +196,28 @@ export async function deleteDeliverable(deliverableId: string) {
   await prisma.deliverable.delete({ where: { id: deliverableId } });
 
   revalidatePath(`/projects/${deliverable.projectId}`);
+}
+
+export async function setDeliverableBacklog(deliverableId: string, backlog: boolean) {
+  const user = await requireAuth();
+
+  const deliverable = await prisma.deliverable.findUniqueOrThrow({
+    where: { id: deliverableId },
+    select: { projectId: true },
+  });
+
+  const membership = await getProjectMembership(user.id, deliverable.projectId);
+  const canManage = membership?.role === "LEAD" || membership?.role === "SUBLEAD";
+  if (!canManage) await requirePermission(Permission.MANAGE_MILESTONES);
+
+  await prisma.deliverable.update({
+    where: { id: deliverableId },
+    data: { backlog },
+  });
+
+  // Backlogged items leave the timeline Gantt too, not just the active list.
+  revalidatePath(`/projects/${deliverable.projectId}`);
+  revalidatePath(`/projects/${deliverable.projectId}/timeline`);
 }
 
 export async function createSubtask(deliverableId: string, formData: FormData) {

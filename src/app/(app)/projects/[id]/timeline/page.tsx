@@ -38,6 +38,8 @@ export default async function ProjectTimelinePage({
     where: { id },
     include: {
       deliverables: {
+        // Backlogged deliverables are deferred out of the semester plan — keep them off the Gantt.
+        where: { backlog: false },
         orderBy: { orderIndex: "asc" },
         include: {
           subtasks: {

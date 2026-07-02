@@ -17,7 +17,8 @@ export async function shouldFlagBehind(projectId: string): Promise<boolean> {
       select: {
         statusOverride: true,
         deliverables: {
-          where: { completed: false },
+          // Backlogged deliverables are deliberately deferred — they don't count as "behind".
+          where: { completed: false, backlog: false },
           select: { targetDate: true },
         },
         meetingRecords: {
