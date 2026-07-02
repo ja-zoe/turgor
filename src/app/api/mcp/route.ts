@@ -140,6 +140,23 @@ const TOOLS = [
       required: ["projectId"],
     },
   },
+  {
+    name: "carry_project",
+    description:
+      "Carry a project into a new period: clones its name, description, and member assignments into the given semester with a fresh deliverables/standings slate, archiving the source project by default. Requires MANAGE_PROJECTS permission.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        projectId: { type: "string" },
+        semester: { type: "string", description: "The new period, e.g. 'Spring 2027'" },
+        archiveSource: {
+          type: "boolean",
+          description: "Archive the source project (default true)",
+        },
+      },
+      required: ["projectId", "semester"],
+    },
+  },
   // ── Action items ──────────────────────────────────────────────────────────
   {
     name: "create_action_item",
@@ -802,6 +819,55 @@ async function executeTool(
         select: { id: true, name: true, semester: true, startDate: true, endDate: true, archivedAt: true },
       });
       return { updated };
+    }
+
+    // ── carry_project ────────────────────────────────────────────────────────
+    case "carry_project": {
+      if (!permissions.includes(Permission.MANAGE_PROJECTS)) {
+        return { error: "Requires MANAGE_PROJECTS permission" };
+      }
+      const pid = args.projectId as string;
+      const semester = (args.semester as string | undefined)?.trim();
+      if (!semester) return { error: "semester is required" };
+      const archiveSource = args.archiveSource !== false;
+
+      const source = await prisma.project.findUnique({
+        where: { id: pid },
+        include: { assignments: { select: { userId: true, role: true } } },
+      });
+      if (!source) return { error: "Project not found" };
+
+      const duplicate = await prisma.project.findFirst({
+        where: { name: source.name, semester },
+        select: { id: true },
+      });
+      if (duplicate) {
+        return { error: `"${source.name}" already exists in ${semester}` };
+      }
+
+      const created = await prisma.$transaction(async (tx) => {
+        const project = await tx.project.create({
+          data: {
+            name: source.name,
+            description: source.description,
+            semester,
+            assignments: {
+              createMany: {
+                data: source.assignments.map((a) => ({ userId: a.userId, role: a.role })),
+              },
+            },
+          },
+          select: { id: true, name: true, semester: true },
+        });
+        if (archiveSource) {
+          await tx.project.update({
+            where: { id: pid },
+            data: { archivedAt: new Date() },
+          });
+        }
+        return project;
+      });
+      return { created, sourceArchived: archiveSource };
     }
 
     // ── create_action_item ───────────────────────────────────────────────────
