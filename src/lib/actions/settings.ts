@@ -36,6 +36,36 @@ export async function updateSettings(formData: FormData) {
   revalidatePath("/pm/settings");
 }
 
+export async function updateOrgSettings(formData: FormData) {
+  await requirePermission(Permission.CONFIGURE_NOTIFICATIONS);
+
+  const current = await prisma.settings.findUnique({ where: { id: "singleton" } });
+
+  const orgNameRaw = ((formData.get("orgName") as string) ?? "").trim();
+  const signInLabelRaw = ((formData.get("signInLabel") as string) ?? "").trim();
+  const orgLogoUrlRaw = ((formData.get("orgLogoUrl") as string) ?? "").trim();
+
+  // orgName / signInLabel / orgLogoUrl render in the shell and must never be blank:
+  // an emptied field keeps its current value instead of erroring.
+  const orgName = orgNameRaw || current?.orgName || "SEED";
+  const signInLabel = signInLabelRaw || current?.signInLabel || "Rutgers NetID";
+  const orgLogoUrl = orgLogoUrlRaw || current?.orgLogoUrl || "/seed-logo-transparent.png";
+  const orgFullName = ((formData.get("orgFullName") as string) ?? "").trim();
+  const orgInstitution = ((formData.get("orgInstitution") as string) ?? "").trim();
+
+  const data = { orgName, orgFullName, orgInstitution, orgLogoUrl, signInLabel };
+
+  await prisma.settings.upsert({
+    where: { id: "singleton" },
+    update: data,
+    create: { id: "singleton", ...data },
+  });
+
+  // Branding renders on every page (sidebar, metadata), not just the settings page.
+  revalidatePath("/", "layout");
+  revalidatePath("/pm/settings");
+}
+
 export async function createNotificationRule(formData: FormData) {
   await requirePermission(Permission.CONFIGURE_NOTIFICATIONS);
 

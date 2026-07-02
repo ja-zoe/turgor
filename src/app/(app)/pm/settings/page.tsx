@@ -1,10 +1,12 @@
 import { requirePermission } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { Permission, TriggerType, Channel, RecipientGroup } from "@/generated/prisma";
-import { updateSettings, createNotificationRule, toggleNotificationRule, deleteNotificationRule } from "@/lib/actions/settings";
-import { Bell, Gauge, Trash } from "@phosphor-icons/react/dist/ssr";
+import { updateSettings, updateOrgSettings, createNotificationRule, toggleNotificationRule, deleteNotificationRule } from "@/lib/actions/settings";
+import { getOrgSettings } from "@/lib/org";
+import { Bell, Buildings, Gauge, Trash } from "@phosphor-icons/react/dist/ssr";
 import { SubmitButton } from "@/components/submit-button";
 import { PendingIconButton } from "@/components/action-feedback";
+import Image from "next/image";
 
 const TRIGGER_LABELS: Record<TriggerType, string> = {
   MISSING_SUBMISSION: "Missing Project Standing",
@@ -29,9 +31,10 @@ const RECIPIENT_LABELS: Record<RecipientGroup, string> = {
 export default async function SettingsPage() {
   await requirePermission(Permission.CONFIGURE_NOTIFICATIONS);
 
-  const [settings, rules] = await Promise.all([
+  const [settings, rules, org] = await Promise.all([
     prisma.settings.findUnique({ where: { id: "singleton" } }),
     prisma.notificationRule.findMany({ orderBy: { createdAt: "asc" } }),
+    getOrgSettings(),
   ]);
 
   return (
@@ -54,6 +57,126 @@ export default async function SettingsPage() {
           Settings
         </h1>
       </div>
+
+      {/* Organization */}
+      <section>
+        <div className="flex items-center gap-2 mb-4">
+          <Buildings size={15} className="text-muted-foreground" />
+          <h2 className="text-sm font-semibold text-foreground">Organization</h2>
+        </div>
+        <form action={updateOrgSettings} className="p-5 bg-card border border-border rounded-xl space-y-5">
+          <div className="grid grid-cols-2 gap-5">
+            <div>
+              <label
+                className="block text-xs text-muted-foreground mb-1"
+                style={{ fontFamily: "var(--font-mono)" }}
+              >
+                Organization short name
+              </label>
+              <input
+                name="orgName"
+                defaultValue={org.orgName}
+                required
+                className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
+                data-testid="org-name"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Used everywhere the app names itself, e.g. &ldquo;{org.appName}&rdquo;.
+              </p>
+            </div>
+            <div>
+              <label
+                className="block text-xs text-muted-foreground mb-1"
+                style={{ fontFamily: "var(--font-mono)" }}
+              >
+                Full name
+              </label>
+              <input
+                name="orgFullName"
+                defaultValue={org.orgFullName}
+                className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
+                data-testid="org-full-name"
+              />
+            </div>
+            <div>
+              <label
+                className="block text-xs text-muted-foreground mb-1"
+                style={{ fontFamily: "var(--font-mono)" }}
+              >
+                Institution (optional)
+              </label>
+              <input
+                name="orgInstitution"
+                defaultValue={org.orgInstitution}
+                className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
+                data-testid="org-institution"
+              />
+            </div>
+            <div>
+              <label
+                className="block text-xs text-muted-foreground mb-1"
+                style={{ fontFamily: "var(--font-mono)" }}
+              >
+                Logo URL
+              </label>
+              <input
+                name="orgLogoUrl"
+                defaultValue={org.orgLogoUrl}
+                required
+                className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
+                data-testid="org-logo-url"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                A path under /public or any hosted image URL.
+              </p>
+            </div>
+            <div>
+              <label
+                className="block text-xs text-muted-foreground mb-1"
+                style={{ fontFamily: "var(--font-mono)" }}
+              >
+                Sign-in label
+              </label>
+              <input
+                name="signInLabel"
+                defaultValue={org.signInLabel}
+                required
+                className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
+                data-testid="org-sign-in-label"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Shown on the sign-in button, e.g. &ldquo;Rutgers NetID&rdquo;.
+              </p>
+            </div>
+            <div className="flex items-end">
+              <div className="flex items-center gap-2.5" data-testid="org-preview">
+                <Image
+                  src={org.orgLogoUrl}
+                  alt={org.orgName}
+                  width={24}
+                  height={24}
+                  unoptimized
+                  className="object-contain"
+                />
+                <span className="text-sm font-medium text-foreground">{org.appName}</span>
+                <span
+                  className="text-xs text-muted-foreground"
+                  style={{ fontFamily: "var(--font-mono)" }}
+                >
+                  sidebar preview
+                </span>
+              </div>
+            </div>
+          </div>
+          <div className="pt-2">
+            <SubmitButton
+              label="Save organization"
+              pendingLabel="Saving…"
+              className="rounded-md cursor-pointer bg-primary text-primary-foreground text-sm font-medium px-4 py-2 hover:bg-primary/80 transition-colors disabled:opacity-50"
+            />
+          </div>
+        </form>
+      </section>
 
       {/* Detection thresholds */}
       <section>

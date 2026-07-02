@@ -88,6 +88,11 @@ async function main() {
       missedGoalsInARow: 2,
       requireBoth: false,
       submissionDeadlineHours: 24,
+      orgName: "SEED",
+      orgFullName: "Students for Environmental & Energy Development",
+      orgInstitution: "Rutgers University–New Brunswick",
+      orgLogoUrl: "/seed-logo-transparent.png",
+      signInLabel: "Rutgers NetID",
     },
     update: {},
   });
