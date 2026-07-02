@@ -83,6 +83,20 @@ function isSameDay(a: Date, b: Date) {
   return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
 }
 
+/** Local-time midnight of a date — for date-only span comparisons. */
+function dayFloor(d: Date): number {
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+}
+
+/** Whether an event covers `day`: any day from startsAt through endsAt (endsAt-less events are single-day). */
+function eventCoversDay(e: { startsAt: string; endsAt: string | null }, day: Date): boolean {
+  const start = new Date(e.startsAt);
+  if (isSameDay(start, day)) return true;
+  if (!e.endsAt) return false;
+  const d = dayFloor(day);
+  return d >= dayFloor(start) && d <= dayFloor(new Date(e.endsAt));
+}
+
 // ── Event editor modal ─────────────────────────────────────────────────────
 
 interface EditorProps {
@@ -460,7 +474,7 @@ function MonthGrid({
   while (days.length % 7 !== 0) days.push(null);
 
   const eventsOnDay = (day: Date) =>
-    events.filter((e) => isSameDay(new Date(e.startsAt), day));
+    events.filter((e) => eventCoversDay(e, day));
 
   return (
     <div>
@@ -504,16 +518,21 @@ function MonthGrid({
                   <div className="space-y-0.5">
                     {dayEvents.slice(0, 3).map((e) => {
                       const c = TYPE_COLOR[e.type];
+                      const isContinuation = !isSameDay(new Date(e.startsAt), day);
                       return (
                         <button
                           key={e.id}
                           type="button"
                           onClick={(ev) => { ev.stopPropagation(); onEventClick(e); }}
-                          className={`w-full text-left text-[10px] px-1.5 py-0.5 cursor-pointer rounded truncate flex items-center gap-1 ${c.bg} ${c.text} border ${c.border} hover:opacity-80 transition-opacity`}
+                          className={`w-full text-left text-[10px] px-1.5 py-0.5 cursor-pointer rounded truncate flex items-center gap-1 ${c.bg} ${c.text} border ${c.border} hover:opacity-80 transition-opacity ${isContinuation ? "opacity-80" : ""}`}
                           style={{ fontFamily: "var(--font-mono)" }}
+                          data-event-day={isContinuation ? "continuation" : "start"}
                         >
                           {TYPE_ICON[e.type]}
-                          <span className="truncate">{e.title}</span>
+                          <span className="truncate">
+                            {isContinuation && <span className="opacity-70">(cont.) </span>}
+                            {e.title}
+                          </span>
                         </button>
                       );
                     })}
