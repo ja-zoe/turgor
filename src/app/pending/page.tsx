@@ -2,11 +2,13 @@ import { auth } from "@/auth";
 import { signOut } from "@/auth";
 import { Leaf, Clock, SignOut } from "@phosphor-icons/react/dist/ssr";
 import { redirect } from "next/navigation";
+import { getOrgSettings } from "@/lib/org";
 
 export default async function PendingPage() {
   const session = await auth();
   if (!session?.user) redirect("/dev-login");
   if (session.user.status === "ACTIVE") redirect("/dashboard");
+  const org = await getOrgSettings();
 
   async function handleSignOut() {
     "use server";
@@ -20,7 +22,7 @@ export default async function PendingPage() {
         <div className="flex items-center gap-2 mb-10">
           <Leaf size={20} weight="fill" className="text-primary" />
           <span className="text-sm font-semibold tracking-tight text-foreground">
-            SEED Project Tracker
+            {org.appFullName}
           </span>
         </div>
 

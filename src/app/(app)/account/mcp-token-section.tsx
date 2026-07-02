@@ -14,13 +14,14 @@ export interface McpConnectionDTO {
 
 interface Props {
   hasToken: boolean;
+  orgName: string;
   appUrl: string;
   connections: McpConnectionDTO[];
 }
 
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
 
-export function MpcTokenSection({ hasToken, appUrl, connections }: Props) {
+export function MpcTokenSection({ hasToken, orgName, appUrl, connections }: Props) {
   const [newToken, setNewToken] = useState<string | null>(null);
   const [tokenExists, setTokenExists] = useState(hasToken);
   const [copied, setCopied] = useState(false);
@@ -87,9 +88,7 @@ export function MpcTokenSection({ hasToken, appUrl, connections }: Props) {
         <div>
           <p className="text-sm text-foreground font-medium mb-1">Personal access token</p>
           <p className="text-xs text-muted-foreground">
-            Generate a token and paste it into your MCP client (Claude Desktop, Cursor, etc.) to
-            give your AI assistant read and write access to your SEED projects under your role
-            permissions.
+            {`Generate a token and paste it into your MCP client (Claude Desktop, Cursor, etc.) to give your AI assistant read and write access to your ${orgName} projects under your role permissions.`}
           </p>
         </div>
 

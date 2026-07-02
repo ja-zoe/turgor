@@ -1,10 +1,12 @@
 import { requireAuth } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
+import { getOrgSettings } from "@/lib/org";
 import { MpcTokenSection } from "./mcp-token-section";
 import { ProfileSettingsForm } from "@/components/profile-settings-form";
 
 export default async function AccountPage() {
   const user = await requireAuth();
+  const org = await getOrgSettings();
   const [dbUser, connections] = await Promise.all([
     prisma.user.findUnique({
       where: { id: user.id },
@@ -46,10 +48,12 @@ export default async function AccountPage() {
         lastName={dbUser?.lastName ?? ""}
         nickname={dbUser?.nickname ?? ""}
         email={dbUser?.email ?? user.email}
+        emailNote={`Managed by ${org.signInLabel} sign-in — can't be changed here.`}
       />
 
       <MpcTokenSection
         hasToken={!!dbUser?.mcpToken}
+        orgName={org.orgName}
         appUrl={appUrl}
         connections={connections.map((c) => ({
           type: c.type,

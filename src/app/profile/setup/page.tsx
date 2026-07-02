@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import { updateProfile } from "@/lib/actions/profile";
 import { SubmitButton } from "@/components/submit-button";
+import { getOrgSettings } from "@/lib/org";
 
 export default async function ProfileSetupPage() {
   const session = await auth();
@@ -14,11 +15,13 @@ export default async function ProfileSetupPage() {
   });
   if (user?.firstName) redirect("/dashboard");
 
+  const org = await getOrgSettings();
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#F4F1EA]">
       <div className="w-full max-w-md px-6 py-10 bg-white border border-[#D5CFC0] rounded-2xl">
         <p className="text-xs text-[#787774] uppercase tracking-widest mb-1" style={{ fontFamily: "var(--font-mono)" }}>
-          SEED Project Tracker
+          {org.appFullName}
         </p>
         <h1
           className="text-2xl text-[#2E4034] mb-2"

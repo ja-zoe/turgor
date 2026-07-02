@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Instrument_Serif, JetBrains_Mono } from "next/font/google";
 import { GsapProvider } from "@/components/gsap-provider";
+import { getOrgSettings } from "@/lib/org";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -23,11 +24,13 @@ const jetbrainsMono = JetBrains_Mono({
   display: "swap",
 });
 
-export const metadata: Metadata = {
-  title: "SEED Project Tracker",
-  description:
-    "Weekly accountability and semester progress tracking for the SEED club at Rutgers.",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const org = await getOrgSettings();
+  return {
+    title: org.appFullName,
+    description: `Weekly accountability and semester progress tracking for ${org.orgName}.`,
+  };
+}
 
 export default function RootLayout({
   children,

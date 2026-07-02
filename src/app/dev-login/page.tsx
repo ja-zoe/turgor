@@ -3,6 +3,7 @@ import { AuthError } from "next-auth";
 import Image from "next/image";
 import { signIn } from "@/auth";
 import { mintHandoffToken } from "@/lib/handoff-token";
+import { getOrgSettings } from "@/lib/org";
 
 interface Props {
   searchParams: Promise<{ error?: string; service?: string }>;
@@ -19,6 +20,7 @@ const errorMessages: Record<string, string> = {
 
 export default async function DevLoginPage({ searchParams }: Props) {
   const { error } = await searchParams;
+  const org = await getOrgSettings();
 
   async function login(formData: FormData) {
     "use server";
@@ -45,9 +47,9 @@ export default async function DevLoginPage({ searchParams }: Props) {
       <div className="w-full max-w-sm">
         {/* Brand */}
         <div className="flex items-center gap-2 mb-10">
-          <Image src="/seed-logo-transparent.png" alt="SEED" width={24} height={24} unoptimized className="object-contain" />
+          <Image src={org.orgLogoUrl} alt={org.orgName} width={24} height={24} unoptimized className="object-contain" />
           <span className="text-sm font-semibold tracking-tight text-foreground">
-            SEED Project Tracker
+            {org.appFullName}
           </span>
         </div>
 
@@ -59,7 +61,7 @@ export default async function DevLoginPage({ searchParams }: Props) {
           Sign in
         </h1>
         <p className="text-sm text-muted-foreground mb-8">
-          Enter your Rutgers NetID to continue.
+          {`Enter your ${org.signInLabel} to continue.`}
         </p>
 
         {/* Error */}
@@ -97,7 +99,7 @@ export default async function DevLoginPage({ searchParams }: Props) {
             type="submit"
             className="w-full cursor-pointer rounded-md bg-primary text-primary-foreground text-sm font-medium py-2.5 hover:bg-primary/80 transition-colors"
           >
-            Sign in with Rutgers NetID
+            {`Sign in with ${org.signInLabel}`}
           </button>
         </form>
 
