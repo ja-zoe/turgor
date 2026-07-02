@@ -1,8 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
+import { MarkdownView } from "@/components/markdown-view";
 
 interface MarkdownEditorProps {
   /** Field name for `<form>` submission (uncontrolled usage). Optional when controlled. */
@@ -116,11 +115,11 @@ export function MarkdownEditor({
       {/* Editor / Preview area */}
       {mode === "md" && preview ? (
         <div
-          className="p-3 min-h-[100px] prose prose-sm max-w-none text-foreground"
+          className="p-3 min-h-[100px] text-sm text-foreground"
           style={{ minHeight: `${rows * 1.5}rem` }}
         >
           {value ? (
-            <ReactMarkdown remarkPlugins={[remarkGfm]}>{value}</ReactMarkdown>
+            <MarkdownView>{value}</MarkdownView>
           ) : (
             <p className="text-muted-foreground italic">Nothing to preview.</p>
           )}

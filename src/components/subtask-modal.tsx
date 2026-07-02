@@ -12,6 +12,7 @@ import { createSubtask, updateSubtask } from "@/lib/actions/deliverables";
 import { isValidDateInput } from "@/lib/date";
 import { getDisplayName } from "@/lib/utils";
 import { MarkdownEditor } from "@/components/markdown-editor";
+import { ActionSpinner, SuccessCheck, successDelay } from "@/components/action-feedback";
 
 type TimelineStatus = "NOT_STARTED" | "IN_PROGRESS" | "BLOCKED" | "COMPLETE";
 
@@ -78,6 +79,7 @@ export function SubtaskModal({
   const [status, setStatus] = useState<TimelineStatus>(subtask?.status ?? "NOT_STARTED");
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const [saved, setSaved] = useState(false);
 
   const maxDue = toDateInput(deliverableTarget);
   const minDue = toDateInput(deliverableStart);
@@ -136,8 +138,12 @@ export function SubtaskModal({
       try {
         if (mode === "create") await createSubtask(deliverableId, fd);
         else if (subtask) await updateSubtask(subtask.id, fd);
+        setSaved(true);
+        await successDelay();
         setOpen(false);
+        setSaved(false);
       } catch (e) {
+        setSaved(false);
         setError((e as Error)?.message ?? "Could not save the subtask");
       }
     });
@@ -272,9 +278,22 @@ export function SubtaskModal({
               onClick={submit}
               disabled={isPending}
               data-testid="subtask-modal-submit"
-              className="rounded-md cursor-pointer bg-primary text-primary-foreground text-sm font-medium px-4 py-2 hover:bg-primary/80 disabled:opacity-50 transition-colors"
+              data-state={saved ? "success" : isPending ? "pending" : "idle"}
+              className="rounded-md cursor-pointer bg-primary text-primary-foreground text-sm font-medium px-4 py-2 hover:bg-primary/80 disabled:opacity-50 transition-colors inline-flex items-center gap-1.5"
             >
-              {isPending ? "Saving…" : mode === "create" ? "Add subtask" : "Save changes"}
+              {saved ? (
+                <>
+                  <SuccessCheck />
+                  {mode === "create" ? "Added" : "Saved"}
+                </>
+              ) : isPending ? (
+                <>
+                  <ActionSpinner />
+                  Saving…
+                </>
+              ) : (
+                mode === "create" ? "Add subtask" : "Save changes"
+              )}
             </button>
           </div>
         </div>

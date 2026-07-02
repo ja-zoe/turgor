@@ -5,6 +5,7 @@ import { useState, useTransition } from "react";
 import { ArrowRight, Plant, CheckSquare, Square } from "@phosphor-icons/react";
 import { ProjectStatusBadge } from "@/components/status-badge";
 import { deleteProjects } from "@/lib/actions/projects";
+import { ActionSpinner } from "@/components/action-feedback";
 import type { ProjectStatus } from "@/generated/prisma";
 
 export interface ProjectCard {
@@ -180,9 +181,9 @@ export function ProjectsList({
                 onClick={doDelete}
                 disabled={isPending}
                 data-testid="bulk-delete-confirm"
-                className="cursor-pointer text-sm font-medium px-3 py-1.5 rounded-md bg-[#A4503C] text-white hover:bg-[#A4503C]/85 disabled:opacity-50 disabled:cursor-default transition-colors"
+                className="cursor-pointer text-sm font-medium px-3 py-1.5 rounded-md bg-[#A4503C] text-white hover:bg-[#A4503C]/85 disabled:opacity-50 disabled:cursor-default transition-colors inline-flex items-center gap-1.5"
               >
-                {isPending ? "Deleting…" : "Yes, delete"}
+                {isPending ? (<><ActionSpinner /> Deleting…</>) : "Yes, delete"}
               </button>
               <button
                 type="button"

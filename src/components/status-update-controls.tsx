@@ -6,6 +6,7 @@ import {
 } from "@/components/ui/dialog";
 import { InlineConfirm } from "@/components/sortable-deliverables";
 import { updateStatusUpdate, deleteStatusUpdate } from "@/lib/actions/status-updates";
+import { ActionSpinner, SuccessCheck, successDelay } from "@/components/action-feedback";
 
 interface StatusUpdateData {
   id: string;
@@ -32,6 +33,7 @@ function EditModal({ update, trigger }: { update: StatusUpdateData; trigger: Rea
   const [open, setOpen] = useState(false);
   const [vals, setVals] = useState(update);
   const [isPending, startTransition] = useTransition();
+  const [saved, setSaved] = useState(false);
 
   function onOpenChange(next: boolean) {
     setOpen(next);
@@ -47,7 +49,10 @@ function EditModal({ update, trigger }: { update: StatusUpdateData; trigger: Rea
     fd.set("helpNeeded", vals.helpNeeded ?? "");
     startTransition(async () => {
       await updateStatusUpdate(update.id, fd);
+      setSaved(true);
+      await successDelay();
       setOpen(false);
+      setSaved(false);
     });
   }
 
@@ -102,8 +107,9 @@ function EditModal({ update, trigger }: { update: StatusUpdateData; trigger: Rea
             <button type="button" onClick={() => setOpen(false)} disabled={isPending}
               className="text-sm text-muted-foreground clickable-icon">Cancel</button>
             <button type="button" onClick={submit} disabled={isPending} data-testid="status-edit-submit"
-              className="rounded-md cursor-pointer bg-primary text-primary-foreground text-sm font-medium px-4 py-2 hover:bg-primary/80 disabled:opacity-50 transition-colors">
-              {isPending ? "Saving…" : "Save changes"}
+              data-state={saved ? "success" : isPending ? "pending" : "idle"}
+              className="rounded-md cursor-pointer bg-primary text-primary-foreground text-sm font-medium px-4 py-2 hover:bg-primary/80 disabled:opacity-50 transition-colors inline-flex items-center gap-1.5">
+              {saved ? (<><SuccessCheck /> Saved</>) : isPending ? (<><ActionSpinner /> Saving…</>) : "Save changes"}
             </button>
           </div>
         </div>

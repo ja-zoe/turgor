@@ -6,6 +6,7 @@ import { closeActionItem, reopenActionItem, updateActionItem, deleteActionItem }
 import { isValidDateInput } from "@/lib/date";
 import { ActionItemModal, type ActionItemAssignee } from "@/components/action-item-modal";
 import { InlineConfirm } from "@/components/sortable-deliverables";
+import { ActionSpinner } from "@/components/action-feedback";
 
 export interface ActionItemRowDTO {
   id: string;
@@ -210,7 +211,7 @@ function ActionItemRow({
             title="Mark done"
             className="cursor-pointer flex-shrink-0 w-6 h-6 rounded border border-border hover:border-[#588157] hover:bg-[#EDF3EC] transition-colors flex items-center justify-center text-muted-foreground hover:text-[#588157] disabled:opacity-50 disabled:cursor-default"
           >
-            <Check size={12} />
+            {isPending ? <ActionSpinner size={12} /> : <Check size={12} />}
           </button>
         )}
         {canEdit && (
@@ -273,7 +274,7 @@ function ClosedActionItemRow({
             title="Re-open"
             className="text-muted-foreground clickable-icon disabled:opacity-50"
           >
-            <ArrowClockwise size={12} />
+            {isPending ? <ActionSpinner size={12} /> : <ArrowClockwise size={12} />}
           </button>
           {confirmingDelete ? (
             <span

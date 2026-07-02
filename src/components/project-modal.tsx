@@ -13,6 +13,7 @@ import { isValidDateInput } from "@/lib/date";
 import { MarkdownEditor } from "@/components/markdown-editor";
 import { InlineConfirm } from "@/components/sortable-deliverables";
 import { SemesterField } from "@/components/semester-field";
+import { ActionSpinner, SuccessCheck, successDelay } from "@/components/action-feedback";
 
 interface EditableProject {
   id: string;
@@ -55,6 +56,7 @@ export function ProjectModal({
   const [error, setError] = useState<string | null>(null);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const [saved, setSaved] = useState(false);
 
   function onOpenChange(next: boolean) {
     setOpen(next);
@@ -88,8 +90,12 @@ export function ProjectModal({
     startTransition(async () => {
       try {
         await updateProject(project.id, fd);
+        setSaved(true);
+        await successDelay();
         setOpen(false);
+        setSaved(false);
       } catch (e) {
+        setSaved(false);
         setError((e as Error)?.message ?? "Could not save the project");
       }
     });
@@ -189,6 +195,7 @@ export function ProjectModal({
               <span />
             ) : confirmingDelete ? (
               <span className="inline-flex items-center gap-1 text-xs text-[#A4503C]" data-testid="project-modal-delete-confirm">
+                {isPending ? <ActionSpinner size={11} /> : null}
                 Delete project?
                 <InlineConfirm show onConfirm={doDelete} onCancel={() => setConfirmingDelete(false)} disabled={isPending} />
               </span>
@@ -219,9 +226,22 @@ export function ProjectModal({
                 onClick={submit}
                 disabled={isPending}
                 data-testid="project-modal-submit"
-                className="rounded-md cursor-pointer bg-primary text-primary-foreground text-sm font-medium px-4 py-2 hover:bg-primary/80 disabled:opacity-50 transition-colors"
+                data-state={saved ? "success" : isPending ? "pending" : "idle"}
+                className="rounded-md cursor-pointer bg-primary text-primary-foreground text-sm font-medium px-4 py-2 hover:bg-primary/80 disabled:opacity-50 transition-colors inline-flex items-center gap-1.5"
               >
-                {isPending ? "Saving…" : "Save changes"}
+                {saved ? (
+                  <>
+                    <SuccessCheck />
+                    Saved
+                  </>
+                ) : isPending ? (
+                  <>
+                    <ActionSpinner />
+                    Saving…
+                  </>
+                ) : (
+                  "Save changes"
+                )}
               </button>
             </div>
           </div>

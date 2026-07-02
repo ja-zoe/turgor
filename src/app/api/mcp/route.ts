@@ -288,7 +288,7 @@ const TOOLS = [
   {
     name: "update_deliverable",
     description:
-      "Update a deliverable's title, dates, status, group, or priority. Requires MANAGE_MILESTONES or project LEAD/SUBLEAD.",
+      "Update a deliverable's title, dates, status, group, priority, or backlog state (backlog: true defers it off the semester timeline and red-flag detection; false restores it). Requires MANAGE_MILESTONES or project LEAD/SUBLEAD.",
     inputSchema: {
       type: "object",
       properties: {
@@ -306,6 +306,10 @@ const TOOLS = [
           type: "string",
           enum: ["LOW", "MEDIUM", "HIGH"],
           description: "Priority (LOW, MEDIUM, or HIGH)",
+        },
+        backlog: {
+          type: "boolean",
+          description: "true moves the deliverable to the backlog (deferred), false restores it to the active plan",
         },
       },
       required: ["deliverableId"],
@@ -563,6 +567,7 @@ async function executeTool(
             status: true,
             targetDate: true,
             group: true,
+            backlog: true,
             subtasks: {
               select: { id: true, title: true, status: true, dueDate: true, assigneeId: true },
               orderBy: { orderIndex: "asc" },
@@ -1082,8 +1087,9 @@ async function executeTool(
           ...(typeof args.priority === "string" && args.priority in Priority
             ? { priority: args.priority as Priority }
             : {}),
+          ...(typeof args.backlog === "boolean" ? { backlog: args.backlog } : {}),
         },
-        select: { id: true, title: true, status: true, targetDate: true, group: true, priority: true },
+        select: { id: true, title: true, status: true, targetDate: true, group: true, priority: true, backlog: true },
       });
       return { updated };
     }

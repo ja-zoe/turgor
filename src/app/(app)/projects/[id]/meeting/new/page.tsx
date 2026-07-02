@@ -5,6 +5,7 @@ import { Permission } from "@/generated/prisma";
 import { createMeetingRecord } from "@/lib/actions/meeting-records";
 import { ArrowLeft } from "@phosphor-icons/react/dist/ssr";
 import Link from "next/link";
+import { SubmitButton } from "@/components/submit-button";
 
 export default async function NewMeetingRecordPage({
   params,
@@ -156,12 +157,11 @@ export default async function NewMeetingRecordPage({
         </div>
 
         <div className="flex items-center gap-3 pt-2">
-          <button
-            type="submit"
-            className="rounded-md cursor-pointer bg-primary text-primary-foreground text-sm font-medium px-5 py-2.5 hover:bg-primary/80 transition-colors"
-          >
-            Save Record
-          </button>
+          <SubmitButton
+            label="Save Record"
+            pendingLabel="Saving…"
+            className="rounded-md cursor-pointer bg-primary text-primary-foreground text-sm font-medium px-5 py-2.5 hover:bg-primary/80 transition-colors disabled:opacity-50"
+          />
           <Link
             href={`/projects/${id}`}
             className="text-sm text-muted-foreground clickable-icon"

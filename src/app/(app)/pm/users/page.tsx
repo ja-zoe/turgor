@@ -6,6 +6,8 @@ import { createRole, updateRole, deleteRole } from "@/lib/actions/roles";
 import { CheckCircle, XCircle, PauseCircle, UserCircle, ShieldCheck } from "@phosphor-icons/react/dist/ssr";
 import { getDisplayName } from "@/lib/utils";
 import { UserRowControls } from "@/components/user-row-controls";
+import { SubmitButton } from "@/components/submit-button";
+import { PendingIconButton } from "@/components/action-feedback";
 
 const ALL_PERMISSIONS: { value: Permission; label: string }[] = [
   { value: Permission.VIEW_ALL_PROJECTS, label: "View all projects" },
@@ -131,13 +133,12 @@ export default async function UsersPage() {
                       </option>
                     ))}
                   </select>
-                  <button
-                    type="submit"
-                    className="flex items-center gap-1.5 rounded-md cursor-pointer bg-primary text-primary-foreground text-sm font-medium px-3 py-1.5 hover:bg-primary/80 transition-colors"
-                  >
-                    <CheckCircle size={13} weight="fill" />
-                    Approve
-                  </button>
+                  <SubmitButton
+                    label="Approve"
+                    pendingLabel="Approving…"
+                    successLabel="Approved"
+                    className="flex items-center gap-1.5 rounded-md cursor-pointer bg-primary text-primary-foreground text-sm font-medium px-3 py-1.5 hover:bg-primary/80 transition-colors disabled:opacity-50"
+                  />
                 </form>
                 <form
                   action={async () => {
@@ -145,13 +146,13 @@ export default async function UsersPage() {
                     await suspendUser(u.id);
                   }}
                 >
-                  <button
-                    type="submit"
-                    className="text-muted-foreground clickable-danger"
+                  <PendingIconButton
                     title="Reject"
+                    spinnerSize={16}
+                    className="text-muted-foreground clickable-danger disabled:opacity-50"
                   >
                     <XCircle size={16} />
-                  </button>
+                  </PendingIconButton>
                 </form>
               </div>
             ))}
@@ -205,13 +206,12 @@ export default async function UsersPage() {
                       </option>
                     ))}
                   </select>
-                  <button
-                    type="submit"
+                  <SubmitButton
+                    label="Save"
+                    pendingLabel="…"
+                    successLabel="Saved"
                     className="text-xs text-muted-foreground clickable-icon"
-                    style={{ fontFamily: "var(--font-mono)" }}
-                  >
-                    Save
-                  </button>
+                  />
                 </form>
                 {u.id !== me.id && (
                   <form
@@ -220,13 +220,13 @@ export default async function UsersPage() {
                       await suspendUser(u.id);
                     }}
                   >
-                    <button
-                      type="submit"
-                      className="text-muted-foreground clickable-danger"
+                    <PendingIconButton
                       title="Suspend"
+                      spinnerSize={15}
+                      className="text-muted-foreground clickable-danger disabled:opacity-50"
                     >
                       <PauseCircle size={15} />
-                    </button>
+                    </PendingIconButton>
                   </form>
                 )}
                 {canDeleteUsers && u.id !== me.id && <UserRowControls userId={u.id} />}
@@ -265,13 +265,11 @@ export default async function UsersPage() {
                     await reactivateUser(u.id);
                   }}
                 >
-                  <button
-                    type="submit"
-                    className="text-xs text-muted-foreground cursor-pointer hover:text-[#588157] transition-colors"
-                    style={{ fontFamily: "var(--font-mono)" }}
-                  >
-                    Reactivate
-                  </button>
+                  <SubmitButton
+                    label="Reactivate"
+                    pendingLabel="Reactivating…"
+                    className="text-xs text-muted-foreground cursor-pointer hover:text-[#588157] transition-colors disabled:opacity-50"
+                  />
                 </form>
               </div>
             ))}
@@ -346,12 +344,12 @@ export default async function UsersPage() {
                     ))}
                   </div>
                   <div className="flex items-center gap-3">
-                    <button
-                      type="submit"
-                      className="rounded-md cursor-pointer bg-primary text-primary-foreground text-sm font-medium px-4 py-2 hover:bg-primary/80 transition-colors"
-                    >
-                      Save role
-                    </button>
+                    <SubmitButton
+                      label="Save role"
+                      pendingLabel="Saving…"
+                      successLabel="Saved"
+                      className="rounded-md cursor-pointer bg-primary text-primary-foreground text-sm font-medium px-4 py-2 hover:bg-primary/80 transition-colors disabled:opacity-50"
+                    />
                   </div>
                 </form>
                 {!role.isBuiltIn && (
@@ -362,13 +360,11 @@ export default async function UsersPage() {
                         await deleteRole(role.id);
                       }}
                     >
-                      <button
-                        type="submit"
-                        className="cursor-pointer text-xs text-[#A4503C] hover:text-[#A4503C]/70 transition-colors"
-                        style={{ fontFamily: "var(--font-mono)" }}
-                      >
-                        Delete role
-                      </button>
+                      <SubmitButton
+                        label="Delete role"
+                        pendingLabel="Deleting…"
+                        className="cursor-pointer text-xs text-[#A4503C] hover:text-[#A4503C]/70 transition-colors disabled:opacity-50"
+                      />
                     </form>
                   </div>
                 )}
@@ -408,12 +404,12 @@ export default async function UsersPage() {
                   </label>
                 ))}
               </div>
-              <button
-                type="submit"
-                className="rounded-md cursor-pointer bg-primary text-primary-foreground text-sm font-medium px-4 py-2 hover:bg-primary/80 transition-colors"
-              >
-                Create role
-              </button>
+              <SubmitButton
+                label="Create role"
+                pendingLabel="Creating…"
+                successLabel="Created"
+                className="rounded-md cursor-pointer bg-primary text-primary-foreground text-sm font-medium px-4 py-2 hover:bg-primary/80 transition-colors disabled:opacity-50"
+              />
             </form>
           </details>
         </section>

@@ -7,6 +7,8 @@ import { MemberRoleControl } from "@/components/member-role-control";
 import { ArrowLeft, Trash } from "@phosphor-icons/react/dist/ssr";
 import Link from "next/link";
 import { getDisplayName } from "@/lib/utils";
+import { SubmitButton } from "@/components/submit-button";
+import { PendingIconButton } from "@/components/action-feedback";
 
 export default async function MembersPage({
   params,
@@ -89,12 +91,12 @@ export default async function MembersPage({
                     await removeMember(id, a.userId);
                   }}
                 >
-                  <button
-                    type="submit"
-                    className="text-muted-foreground clickable-danger"
+                  <PendingIconButton
+                    spinnerSize={14}
+                    className="text-muted-foreground clickable-danger disabled:opacity-50"
                   >
                     <Trash size={14} />
-                  </button>
+                  </PendingIconButton>
                 </form>
               </div>
             ))}
@@ -148,12 +150,12 @@ export default async function MembersPage({
                 <option value={ProjectMemberRole.MEMBER}>Member</option>
               </select>
             </div>
-            <button
-              type="submit"
-              className="rounded-md cursor-pointer bg-primary text-primary-foreground text-sm font-medium px-5 py-2.5 hover:bg-primary/80 transition-colors"
-            >
-              Add to Project
-            </button>
+            <SubmitButton
+              label="Add to Project"
+              pendingLabel="Adding…"
+              successLabel="Added"
+              className="rounded-md cursor-pointer bg-primary text-primary-foreground text-sm font-medium px-5 py-2.5 hover:bg-primary/80 transition-colors disabled:opacity-50"
+            />
           </form>
         </section>
       )}
