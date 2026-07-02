@@ -12,6 +12,7 @@ import {
   TrendDown,
   Wrench,
   ArrowRight,
+  DownloadSimple,
 } from "@phosphor-icons/react/dist/ssr";
 
 export default async function MonthlyReviewPage() {
@@ -106,27 +107,37 @@ export default async function MonthlyReviewPage() {
   return (
     <div className="space-y-10">
       {/* Header */}
-      <div>
-        <p
-          className="text-xs text-muted-foreground uppercase tracking-widest mb-1"
-          style={{ fontFamily: "var(--font-mono)" }}
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <p
+            className="text-xs text-muted-foreground uppercase tracking-widest mb-1"
+            style={{ fontFamily: "var(--font-mono)" }}
+          >
+            PM Tools
+          </p>
+          <h1
+            className="text-3xl text-foreground"
+            style={{
+              fontFamily: "var(--font-display), Georgia, serif",
+              letterSpacing: "-0.02em",
+              lineHeight: 1.1,
+            }}
+          >
+            Monthly Review
+          </h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            {projects.length} projects &middot;{" "}
+            {now.toLocaleDateString("en-US", { month: "long", year: "numeric" })}
+          </p>
+        </div>
+        <a
+          href="/api/export/all"
+          data-testid="export-all"
+          className="inline-flex items-center gap-1.5 rounded-md cursor-pointer border border-border bg-card text-sm font-medium px-3 py-2 hover:bg-muted transition-colors flex-shrink-0"
         >
-          PM Tools
-        </p>
-        <h1
-          className="text-3xl text-foreground"
-          style={{
-            fontFamily: "var(--font-display), Georgia, serif",
-            letterSpacing: "-0.02em",
-            lineHeight: 1.1,
-          }}
-        >
-          Monthly Review
-        </h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          {projects.length} projects &middot;{" "}
-          {now.toLocaleDateString("en-US", { month: "long", year: "numeric" })}
-        </p>
+          <DownloadSimple size={14} />
+          Export all (.xlsx)
+        </a>
       </div>
 
       {/* Flags */}
