@@ -1,10 +1,8 @@
-# SEED Project Tracker
+# Turgor
 
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-2E4034.svg)](LICENSE)
 
-A project tracking web app for student organizations. It was built for [SEED (Students for Environmental & Energy Development)](https://github.com/ja-zoe/seed-website) at Rutgers, and is being generalized so any club can run it for their own projects.
-
-> **Note:** as part of that generalization, this repository will be renamed in the future.
+A project tracker for project-based student teams - competition teams, design/build teams, hackathon orgs, and any club that runs real projects with deliverables and deadlines. Built for and battle-tested by [SEED (Students for Environmental & Energy Development)](https://github.com/ja-zoe/seed-website) at Rutgers.
 
 > **Adopting this for your org?** [SETUP.md](SETUP.md) walks a first admin through the whole setup - database, sign-in (campus CAS or email magic links), approving your team, and rebranding - in plain language.
 
@@ -27,8 +25,8 @@ Next.js 16 (App Router), React 19, TypeScript, Tailwind CSS v4, Prisma v7 on Sup
 ## Getting started
 
 ```bash
-git clone --recurse-submodules git@github.com:ja-zoe/seed-project-tracker.git
-cd seed-project-tracker
+git clone --recurse-submodules git@github.com:ja-zoe/turgor.git
+cd turgor
 pnpm install
 cp .env.example .env   # fill in database + auth values (see comments in the file)
 pnpm db:seed           # seed built-in roles and settings
