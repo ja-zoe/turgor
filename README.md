@@ -40,6 +40,7 @@ The agent asks whether you want local development or a live production site (Sup
 git clone --recurse-submodules git@github.com:ja-zoe/turgor.git
 cd turgor
 pnpm install
+docker compose up -d   # local Postgres (or use a free Supabase project — see SETUP.md)
 cp .env.example .env   # fill in DATABASE_URL + AUTH_SECRET (see comments in the file)
 pnpm db:migrate        # create the tables
 pnpm db:seed           # seed built-in roles and settings

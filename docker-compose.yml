@@ -1,0 +1,28 @@
+# Local development database (optional — a hosted Supabase project works too;
+# production deployments need a hosted database, see SETUP.md).
+#
+#   docker compose up -d        start Postgres 17 on localhost:5432
+#   docker compose down         stop it (data persists in the volume)
+#
+# Matching .env entry:
+#   DATABASE_URL="postgresql://turgor:turgor@localhost:5432/turgor"
+services:
+  db:
+    image: postgres:17-alpine
+    container_name: turgor-db
+    environment:
+      POSTGRES_USER: turgor
+      POSTGRES_PASSWORD: turgor
+      POSTGRES_DB: turgor
+    ports:
+      - "5432:5432"
+    volumes:
+      - turgor-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U turgor -d turgor"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  turgor-db-data:

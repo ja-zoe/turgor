@@ -66,7 +66,7 @@ Permission helpers live in `src/lib/permissions.ts`:
 
 ### Database
 
-Supabase Postgres connects via pgBouncer pooler (port 6543). **`prisma db push` and direct port 5432 both hang — never use them.** DDL ships as numbered migrations in `migrations/NNN-slug.sql`, applied with `pnpm db:migrate` (ledger table `_migrations`; `db:migrate:status` / `db:migrate:baseline` variants). After adding a migration, keep `prisma/schema.prisma` in sync and run `tsx scripts/verify-migrations.ts` (drift canary). `scripts/apply-schema.ts` (raw SQL from `/tmp/schema.sql`) remains for throwaway dev experiments only.
+Postgres, either Supabase (hosted; this repo's shared dev DB) or a local instance via `docker compose up -d` (Postgres 17 on `localhost:5432`, `turgor:turgor@localhost:5432/turgor`). On Supabase, connect via the pgBouncer pooler (port 6543) — **`prisma db push` and Supabase's direct port 5432 both hang, never use them** (a local Postgres at :5432 is fine; `db push` stays banned everywhere in favor of migrations). DDL ships as numbered migrations in `migrations/NNN-slug.sql`, applied with `pnpm db:migrate` (ledger table `_migrations`; `db:migrate:status` / `db:migrate:baseline` variants). After adding a migration, keep `prisma/schema.prisma` in sync and run `tsx scripts/verify-migrations.ts` (drift canary). `scripts/apply-schema.ts` (raw SQL from `/tmp/schema.sql`) remains for throwaway dev experiments only.
 
 Prisma v7 WASM engine requires the driver adapter — always construct the client as:
 ```ts

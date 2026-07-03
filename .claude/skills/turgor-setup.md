@@ -10,9 +10,9 @@ Automates initial setup for adopting organizations — local development **or** 
 
 The agent first asks whether you're setting up **local development**, **production**, or both, then handles as much as possible itself:
 
-1. **Supabase database** (both paths — there is no local-only database):
-   - Walks you through creating a free Supabase project in the browser
-   - Validates your connection string (catches the common pooler-vs-direct mistake) and tests the connection before proceeding
+1. **Database:**
+   - **Local dev:** starts a local Postgres itself via `docker compose up -d` — zero accounts, zero questions (Supabase also works if you prefer)
+   - **Production:** walks you through creating a free Supabase project in the browser, validates your connection string (catches the common pooler-vs-direct mistake), and tests the connection before proceeding
 2. **Environment** — asks one question at a time, generates what it can:
    - `AUTH_SECRET` generated automatically (cryptographic random)
    - `PM_ADMIN_EMAIL` (your email — auto-promoted to Project Manager)
@@ -27,9 +27,9 @@ The agent first asks whether you're setting up **local development**, **producti
 
 ## What you provide
 
-- A free [Supabase](https://supabase.com) account (the agent walks you through creating the project)
 - Your email address
-- For production: a free [Vercel](https://vercel.com) account and a free [Resend](https://resend.com) API key for sign-in emails
+- Local dev: Docker installed (or a free [Supabase](https://supabase.com) account instead)
+- For production: free [Supabase](https://supabase.com), [Vercel](https://vercel.com), and [Resend](https://resend.com) accounts (the agent walks you through each)
 - Your org's email domain (optional, to lock down sign-in)
 
 Everything else — secrets, `.env`, migrations, seeding, validation — the agent does itself.

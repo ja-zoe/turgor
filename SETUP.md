@@ -118,12 +118,23 @@ You now have a live, branded tracker. The rest of this file is optional.
 
 ## Part B - Run it locally
 
-To evaluate or develop on your own machine instead of deploying:
+To evaluate or develop on your own machine instead of deploying, you need a
+Postgres database first. Pick one:
+
+- **Docker (simplest):** run `docker compose up -d` in the repo - it starts a
+  local Postgres 17, and your `DATABASE_URL` is
+  `postgresql://turgor:turgor@localhost:5432/turgor`.
+- **Supabase:** create a free project as in A1 and use its pooled connection
+  string. (Production always uses a hosted database - a laptop Postgres isn't
+  reachable from a hosted site.)
+
+Then:
 
 ```bash
 git clone --recurse-submodules git@github.com:ja-zoe/turgor.git
 cd turgor
 pnpm install
+docker compose up -d      # if using the Docker database option
 cp .env.example .env      # fill in DATABASE_URL and AUTH_SECRET at minimum
 pnpm db:migrate           # create the tables
 pnpm db:seed              # seed built-in roles and settings

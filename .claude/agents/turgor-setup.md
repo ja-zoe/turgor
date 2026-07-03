@@ -8,27 +8,34 @@ Ask this before anything else:
 
 > "Are you setting up Turgor for **local development** (evaluate it on your machine) or **production** (a live site your team can use)? You can also do both — local first, then deploy."
 
-Both paths need a **Supabase database** — there is no local-only database, so even local dev starts with a free Supabase project. Production hosting is **Vercel** (free hobby tier works).
+Production hosting is **Vercel** + a **Supabase database** (both free tiers work) — a laptop database isn't reachable from a hosted site. Local dev can use either a **local Postgres via Docker** (zero accounts, the default) or a Supabase project.
 
 Path overview:
 
-- **Local dev:** Supabase project → `.env` → migrate + seed → `pnpm dev` → first sign-in (mock CAS is fine, no email service needed)
+- **Local dev:** database (Docker Postgres by default) → `.env` → migrate + seed → `pnpm dev` → first sign-in (mock CAS is fine, no email service needed)
 - **Production:** Supabase project → Vercel deploy with env vars → migrate + seed (run from this machine against the prod DB) → fix `AUTH_URL` → first sign-in (email magic links via Resend)
-- **Both:** do local first, then reuse the same Supabase project (or a second one) for the production steps.
+- **Both:** do local first (Docker DB), then run the production steps with a fresh Supabase project.
 
 Regardless of path, **always finish with the first sign-in walkthrough** — that is the moment setup is actually proven to work.
 
-## Step 1 — Supabase (both paths)
+## Step 1 — Database
 
-The user must create the project in the browser; walk them through it:
+**Local dev — default to Docker Postgres (you do everything, no questions needed):**
+
+1. Check Docker is available: `docker compose version`. If not installed, offer the choice: install Docker Desktop, or fall back to the Supabase flow below.
+2. Start the database yourself: `docker compose up -d` (the repo's `docker-compose.yml` runs Postgres 17 on `localhost:5432`).
+3. Wait for health: `docker compose ps` until the `db` service is healthy.
+4. The connection string is fixed — no user input required: `postgresql://turgor:turgor@localhost:5432/turgor`
+
+**Production (or local-with-Supabase) — the user creates the project in the browser; walk them through it:**
 
 1. Go to [supabase.com](https://supabase.com) → sign up (free) → **New project**. Any name; choose a region near your users; set a strong database password and save it.
 2. When the project finishes provisioning: **Connect** (top bar) → **Connection string** → pick the **Transaction pooler** URI (contains `:6543` and `pooler.supabase.com`).
 3. Ask them to paste it here, with the password filled in. Append `?pgbouncer=true` if missing.
 
-Validate what they paste: it must contain `:6543` and `pooler.supabase.com`, and must not be the direct `:5432` connection (that one hangs with this stack — see CLAUDE.md). If it looks wrong, explain and re-ask.
+Validate what they paste: it must contain `:6543` and `pooler.supabase.com`, and must not be Supabase's direct `:5432` connection (that one hangs with this stack — see CLAUDE.md; a *local* Postgres at `:5432` is fine).
 
-Test the connection before proceeding:
+Whichever database, test the connection before proceeding:
 
 ```bash
 DATABASE_URL="<their-url>" pnpm exec tsx -e "
@@ -101,7 +108,9 @@ This is the proof the setup works. Never skip it.
 
 ## Error handling
 
-- **Supabase connection fails:** re-check the URL is the pooled `:6543` connection with `?pgbouncer=true`; direct `:5432` hangs.
+- **Docker not running:** `docker compose up -d` fails with a daemon error — have them start Docker Desktop (or `sudo systemctl start docker` on Linux) and retry.
+- **Port 5432 already in use:** another Postgres is running locally — either use it directly (adjust `DATABASE_URL`) or stop it and retry.
+- **Supabase connection fails:** re-check the URL is the pooled `:6543` connection with `?pgbouncer=true`; Supabase's direct `:5432` hangs.
 - **Migration fails midway:** each migration runs in its own transaction; `pnpm db:migrate:status` shows where it stopped — re-run after fixing.
 - **Vercel build fails:** read them the build log error; most common cause is a missing env var.
 - **Sign-in email never arrives:** check the Resend dashboard → Logs; with `onboarding@resend.dev` the recipient must be the Resend account's own email until a domain is verified.
