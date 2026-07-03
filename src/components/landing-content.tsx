@@ -52,7 +52,15 @@ const features = [
   },
 ];
 
-export function LandingContent({ org }: { org: OrgSettings }) {
+export function LandingContent({
+  org,
+  signInHref = "/dev-login",
+  signInNote = null,
+}: {
+  org: OrgSettings;
+  signInHref?: string;
+  signInNote?: string | null;
+}) {
   const heroRef = useRef<HTMLDivElement>(null);
   const gridRef = useRef<HTMLDivElement>(null);
 
@@ -97,7 +105,7 @@ export function LandingContent({ org }: { org: OrgSettings }) {
             </span>
           </div>
           <Link
-            href="/dev-login"
+            href={signInHref}
             className="inline-flex items-center gap-1.5 text-sm font-medium text-primary-foreground bg-primary px-3 py-1.5 rounded-md hover:bg-primary/80 transition-colors"
           >
             Sign in
@@ -135,15 +143,15 @@ export function LandingContent({ org }: { org: OrgSettings }) {
           </p>
           <div data-hero-line className="flex items-center gap-4">
             <Link
-              href="/dev-login"
+              href={signInHref}
               className="inline-flex items-center gap-2 bg-primary text-primary-foreground px-5 py-2.5 rounded-md text-sm font-medium hover:bg-primary/80 transition-colors"
             >
               {`Sign in with ${org.signInLabel}`}
               <ArrowRight size={14} weight="bold" />
             </Link>
-            <span className="mono text-xs text-muted-foreground">
-              CAS mock mode active
-            </span>
+            {signInNote && (
+              <span className="mono text-xs text-muted-foreground">{signInNote}</span>
+            )}
           </div>
         </div>
       </section>

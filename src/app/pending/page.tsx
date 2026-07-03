@@ -3,10 +3,13 @@ import { signOut } from "@/auth";
 import { Leaf, Clock, SignOut } from "@phosphor-icons/react/dist/ssr";
 import { redirect } from "next/navigation";
 import { getOrgSettings } from "@/lib/org";
+import { getAuthProvider } from "@/lib/auth-provider";
 
 export default async function PendingPage() {
   const session = await auth();
-  if (!session?.user) redirect("/dev-login");
+  if (!session?.user) {
+    redirect(getAuthProvider() === "email" ? "/signin/email" : "/dev-login");
+  }
   if (session.user.status === "ACTIVE") redirect("/dashboard");
   const org = await getOrgSettings();
 

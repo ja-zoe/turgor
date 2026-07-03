@@ -61,6 +61,21 @@ The file explains every setting, but these are the ones you must fill in:
 The remaining settings (CAS server details, Stytch/ChatGPT OAuth, cron secret) are
 only needed for specific deployments - the comments in `.env.example` say when.
 
+### Choosing your sign-in method
+
+`AUTH_PROVIDER` picks how your members sign in:
+
+- **Your school runs CAS single sign-on** - leave `AUTH_PROVIDER` unset (CAS is the
+  default). Until your IT department registers the app's URL with the CAS server,
+  `CAS_MODE="mock"` gives you a working local sign-in screen for evaluation; switch
+  to `CAS_MODE="real"` once registered.
+- **No CAS, or a community club** - set `AUTH_PROVIDER="email"`. Members enter
+  their email and receive a single-use sign-in link (this requires
+  `RESEND_API_KEY`). `ALLOWED_EMAIL_DOMAINS` controls who may request a link: set
+  it to your school's domain to restrict sign-in, or leave it empty to allow any
+  address. Either way, every new account still waits for your approval before it
+  can do anything.
+
 ## 3. Initialize the database and start the app
 
 Create the tables. **Do not use `prisma db push`** - Supabase's connection pooler
@@ -119,7 +134,8 @@ Built-in roles can be renamed in **Users & Roles** (e.g. "Project Manager" →
 - **AI assistant access (MCP)** - each user can connect Claude, Cursor, or another
   MCP-capable AI client to the tracker: go to **Account**, generate a personal
   access token, and paste the shown client configuration into the AI tool. The
-  assistant then works with the tracker under that user's own permissions.
+  assistant then works with the tracker under that user's own permissions. Tokens
+  work identically whichever sign-in method you chose.
 - **Calendar subscription** - the calendar page offers an ICS export you can
   subscribe to from Google Calendar or Outlook.
 - **Real single sign-on** - if your school runs CAS, have IT register the app's

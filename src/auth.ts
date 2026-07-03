@@ -3,6 +3,7 @@ import Credentials from "next-auth/providers/credentials";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import { prisma } from "@/lib/prisma";
 import { verifyHandoffToken } from "@/lib/handoff-token";
+import { isEmailDomainAllowed } from "@/lib/auth-provider";
 import { UserStatus } from "@/generated/prisma";
 import { notifyNewSignup } from "@/lib/notifications";
 import authConfig from "./auth.config";
@@ -35,16 +36,28 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const raw = credentials?.token;
         if (typeof raw !== "string") return null;
 
-        const netId = verifyHandoffToken(raw);
-        if (!netId) return null;
+        const identity = verifyHandoffToken(raw);
+        if (!identity) return null;
 
-        const emailDomain = process.env.CAS_EMAIL_DOMAIN ?? "scarletmail.rutgers.edu";
-        const email = `${netId}@${emailDomain}`;
+        // R28.1: the email magic-link callback mints handoff tokens carrying a full
+        // verified email; the CAS paths carry a bare netId. Both converge on the
+        // same user pipeline below. The CAS branch is unchanged.
+        let email: string;
+        let netId: string;
+        if (identity.includes("@")) {
+          email = identity.toLowerCase();
+          netId = email.split("@")[0];
+          if (!isEmailDomainAllowed(email)) return null;
+        } else {
+          netId = identity;
+          const emailDomain = process.env.CAS_EMAIL_DOMAIN ?? "scarletmail.rutgers.edu";
+          email = `${netId}@${emailDomain}`;
 
-        const allowed = (process.env.ALLOWED_EMAIL_DOMAINS ?? "")
-          .split(",")
-          .map((d) => d.trim());
-        if (!allowed.includes(emailDomain)) return null;
+          const allowed = (process.env.ALLOWED_EMAIL_DOMAINS ?? "")
+            .split(",")
+            .map((d) => d.trim());
+          if (!allowed.includes(emailDomain)) return null;
+        }
 
         // Find or create the user
         let user = await prisma.user.findUnique({
