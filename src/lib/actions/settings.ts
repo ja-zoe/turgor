@@ -4,7 +4,56 @@ import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/permissions";
 import { Permission, Channel, RecipientGroup, TriggerType } from "@/generated/prisma";
 import { isThemePresetId } from "@/lib/themes";
+import { storageConfigured, uploadPublicAsset } from "@/lib/storage";
 import { revalidatePath } from "next/cache";
+
+const ALLOWED_LOGO_TYPES = new Set([
+  "image/png",
+  "image/jpeg",
+  "image/svg+xml",
+  "image/webp",
+]);
+const MAX_LOGO_BYTES = 2 * 1024 * 1024;
+
+/**
+ * R29.1 — upload an org logo to Supabase Storage and point Settings.orgLogoUrl at
+ * its public URL. Returns { error } instead of throwing so the uploader component
+ * can render failures inline.
+ */
+export async function uploadOrgLogo(formData: FormData): Promise<{ error?: string; url?: string }> {
+  await requirePermission(Permission.CONFIGURE_NOTIFICATIONS);
+
+  if (!storageConfigured()) {
+    return { error: "Uploads are not configured (SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY)." };
+  }
+  const file = formData.get("logoFile");
+  if (!(file instanceof File) || file.size === 0) {
+    return { error: "Choose an image file to upload." };
+  }
+  if (!ALLOWED_LOGO_TYPES.has(file.type)) {
+    return { error: "The logo must be a PNG, JPEG, SVG, or WebP image." };
+  }
+  if (file.size > MAX_LOGO_BYTES) {
+    return { error: "The logo must be 2 MB or smaller." };
+  }
+
+  let url: string;
+  try {
+    url = await uploadPublicAsset(file, "logo");
+  } catch (e) {
+    console.error("logo upload failed", e);
+    return { error: "Upload failed — check the storage configuration and try again." };
+  }
+
+  await prisma.settings.upsert({
+    where: { id: "singleton" },
+    update: { orgLogoUrl: url },
+    create: { id: "singleton", orgLogoUrl: url },
+  });
+  revalidatePath("/", "layout");
+  revalidatePath("/pm/settings");
+  return { url };
+}
 
 export async function updateSettings(formData: FormData) {
   await requirePermission(Permission.CONFIGURE_NOTIFICATIONS);

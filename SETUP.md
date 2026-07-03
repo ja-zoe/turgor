@@ -112,8 +112,11 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 Everything branded "SEED" is configurable. Go to **PM Tools → Settings**:
 
-- **Organization** - your org's short name, full name, institution, and logo URL.
-  These replace the SEED branding across the app, sign-in screen, and emails.
+- **Organization** - your org's short name, full name, institution, and logo.
+  Upload a logo image directly (add `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`
+  from your Supabase project's API settings to `.env` to enable uploads), or paste
+  an image URL. These replace the SEED branding across the app, sign-in screen,
+  and emails.
 - **Sign-in label** - what your login identity is called on the sign-in screen
   (e.g. "Rutgers NetID", "University ID", or just "Email").
 - **Period label** - what your org calls a planning period: Semester, Quarter,
