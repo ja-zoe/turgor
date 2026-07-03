@@ -9,16 +9,19 @@ import { createClient } from "@supabase/supabase-js";
  */
 const BUCKET = "org-assets";
 
+/** New-style secret key (sb_secret_…) preferred; legacy service_role JWT accepted. */
+function storageKey(): string | undefined {
+  return process.env.SUPABASE_SECRET_KEY ?? process.env.SUPABASE_SERVICE_ROLE_KEY;
+}
+
 export function storageConfigured(): boolean {
-  return Boolean(process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY);
+  return Boolean(process.env.SUPABASE_URL && storageKey());
 }
 
 export async function uploadPublicAsset(file: File, keyPrefix: string): Promise<string> {
-  const supabase = createClient(
-    process.env.SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { persistSession: false } }
-  );
+  const supabase = createClient(process.env.SUPABASE_URL!, storageKey()!, {
+    auth: { persistSession: false },
+  });
 
   // Create-if-missing so a fresh deployment needs no manual bucket setup.
   const { error: bucketError } = await supabase.storage.createBucket(BUCKET, {

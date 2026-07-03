@@ -92,7 +92,7 @@ export function LogoUploader({
         <p className="text-xs text-muted-foreground">
           {configured
             ? "PNG, JPEG, SVG, or WebP, up to 2 MB. Replaces the logo everywhere immediately."
-            : "Uploads need SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in the environment — until then, use the logo URL field below."}
+            : "Uploads need SUPABASE_URL and SUPABASE_SECRET_KEY (or the legacy SUPABASE_SERVICE_ROLE_KEY) in the environment — until then, use the logo URL field below."}
         </p>
       </div>
     </div>
