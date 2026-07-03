@@ -27,11 +27,11 @@ export type OrgSettings = {
 };
 
 const DEFAULTS = {
-  orgName: "SEED",
-  orgFullName: "Students for Environmental & Energy Development",
-  orgInstitution: "Rutgers University–New Brunswick",
-  orgLogoUrl: "/seed-logo-transparent.png",
-  signInLabel: "Rutgers NetID",
+  orgName: "Turgor",
+  orgFullName: "Turgor",
+  orgInstitution: "",
+  orgLogoUrl: "/turgor-logo.svg",
+  signInLabel: "Email",
   periodLabel: "Semester",
   themePreset: "forest",
   appName: null as string | null,
@@ -40,8 +40,10 @@ const DEFAULTS = {
 
 /**
  * Org identity for branding surfaces. Cached per request via React cache().
- * Falls back to the SEED defaults when the Settings row doesn't exist yet
- * (pre-seed boot), so branding consumers never crash.
+ * Falls back to the stock Turgor defaults when the Settings row doesn't exist
+ * yet (pre-seed boot), so branding consumers never crash. An adopting org
+ * overrides these in PM Tools → Settings; SEED's live deployment stores its own
+ * SEED values in the Settings row.
  */
 export const getOrgSettings = cache(async (): Promise<OrgSettings> => {
   const settings = await prisma.settings.findUnique({

@@ -15,7 +15,7 @@ export function ProfileSettingsForm({
   lastName,
   nickname,
   email,
-  emailNote = "Managed by Rutgers CAS — can't be changed here.",
+  emailNote = "Managed by your sign-in provider — can't be changed here.",
 }: {
   firstName: string;
   lastName: string;

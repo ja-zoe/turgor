@@ -384,11 +384,11 @@ model Settings {
   statusLateWindowDays    Int     @default(3)
 
   // Org identity (R23.1) — defaults keep a stock deployment rendering as SEED.
-  orgName        String @default("SEED")
-  orgFullName    String @default("Students for Environmental & Energy Development")
-  orgInstitution String @default("Rutgers University–New Brunswick")
-  orgLogoUrl     String @default("/seed-logo-transparent.png")
-  signInLabel    String @default("Rutgers NetID")
+  orgName        String @default("Turgor")
+  orgFullName    String @default("Turgor")
+  orgInstitution String @default("")
+  orgLogoUrl     String @default("/turgor-logo.svg")
+  signInLabel    String @default("Email")
   // What a project cycle is called (R24.2) — display labels only; Project.semester stays generic.
   periodLabel    String @default("Semester")
   // Color theme (R24.3) — one of the curated preset ids in src/lib/themes.ts,
