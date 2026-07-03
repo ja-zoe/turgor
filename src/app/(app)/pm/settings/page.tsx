@@ -7,6 +7,8 @@ import { THEME_PRESETS } from "@/lib/themes";
 import { Bell, Buildings, Gauge, Trash } from "@phosphor-icons/react/dist/ssr";
 import { SubmitButton } from "@/components/submit-button";
 import { PendingIconButton } from "@/components/action-feedback";
+import { LogoUploader } from "@/components/logo-uploader";
+import { storageConfigured } from "@/lib/storage";
 import Image from "next/image";
 
 const TRIGGER_LABELS: Record<TriggerType, string> = {
@@ -64,6 +66,20 @@ export default async function SettingsPage() {
         <div className="flex items-center gap-2 mb-4">
           <Buildings size={15} className="text-muted-foreground" />
           <h2 className="text-sm font-semibold text-foreground">Organization</h2>
+        </div>
+        {/* Logo upload lives outside the org form — forms can't nest (R29.1). */}
+        <div className="p-5 bg-card border border-border rounded-xl mb-4">
+          <p
+            className="block text-xs text-muted-foreground mb-3"
+            style={{ fontFamily: "var(--font-mono)" }}
+          >
+            Logo
+          </p>
+          <LogoUploader
+            currentUrl={org.orgLogoUrl}
+            orgName={org.orgName}
+            configured={storageConfigured()}
+          />
         </div>
         <form action={updateOrgSettings} className="p-5 bg-card border border-border rounded-xl space-y-5">
           <div className="grid grid-cols-2 gap-5">
@@ -137,7 +153,7 @@ export default async function SettingsPage() {
                 className="block text-xs text-muted-foreground mb-1"
                 style={{ fontFamily: "var(--font-mono)" }}
               >
-                Logo URL
+                Logo URL (advanced)
               </label>
               <input
                 name="orgLogoUrl"
@@ -147,7 +163,8 @@ export default async function SettingsPage() {
                 data-testid="org-logo-url"
               />
               <p className="text-xs text-muted-foreground mt-1">
-                A path under /public or any hosted image URL.
+                Prefer the upload control above; this accepts a /public path or any
+                hosted image URL.
               </p>
             </div>
             <div>
