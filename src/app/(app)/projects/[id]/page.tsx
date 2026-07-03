@@ -335,6 +335,8 @@ export default async function ProjectDetailPage({
           userId={user.id}
           members={project.assignments.map((a) => a.user)}
           deliverables={toSortableDeliverables(project.deliverables)}
+          maxVisible={5}
+          showAllHref={`/projects/${id}/deliverables`}
           deleteDeliverableAction={async (deliverableId: string) => {
             "use server";
             await deleteDeliverable(deliverableId);
@@ -362,6 +364,8 @@ export default async function ProjectDetailPage({
         <ActionItemsSection
           projectId={id}
           items={toActionItemRows(project.actionItems)}
+          maxVisible={5}
+          showAllHref={`/projects/${id}/action-items`}
           assignees={project.assignments.map((a) => ({ id: a.userId, name: getDisplayName(a.user) }))}
           canCreate={canCreateActionItem}
           canClose={canCloseActionItemsHere}
