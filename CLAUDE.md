@@ -45,10 +45,10 @@ src/app/
 
 ### Auth flow
 
-1. Middleware redirects unauthenticated requests to `/api/cas/login`.
-2. In mock mode (`CAS_MODE=mock`), that redirects to `/dev-login` where any netId can be entered.
-3. In real mode, browser goes to the Rutgers CAS server; on callback, `/cas/callback` mints a short-lived HMAC handoff token (`src/lib/handoff-token.ts`, 60 s TTL).
-4. The handoff token is passed to NextAuth's Credentials provider (`src/auth.ts`), which creates/finds the user and issues a JWT session.
+1. Middleware (`src/proxy.ts` — must live in `src/`, a root-level file is silently ignored) redirects unauthenticated requests to the deployment's sign-in flow: `/api/cas/login` (default) or `/signin/email` when `AUTH_PROVIDER=email` (R28 magic links via Resend + the NextAuth `VerificationToken` table).
+2. In mock mode (`CAS_MODE=mock`), the CAS route redirects to `/dev-login` where any netId can be entered. `/dev-login` refuses to run outside mock mode (real CAS and email mode redirect away).
+3. In real mode, browser goes to the Rutgers CAS server; on callback, `/cas/callback` mints a short-lived HMAC handoff token (`src/lib/handoff-token.ts`, 60 s TTL). The email magic-link callback mints the same token (full email as identity).
+4. The handoff token is passed via `/auth/handoff` (a route handler — Next 16 forbids `signIn()` during page render) to NextAuth's Credentials provider (`src/auth.ts`), which creates/finds the user and issues a JWT session.
 5. The first sign-in from `PM_ADMIN_EMAIL` auto-promotes the user to the "Project Manager" role.
 6. New users start as `PENDING` and land on `/pending` until a PM activates them.
 
@@ -121,6 +121,6 @@ Changes are tracked under `changes/` by the **spec-driven-dev skill**. The skill
 - `changes/CONTEXT.md` — project-wide invariants. **Read this first** in any session.
 - `changes/N-slug/` — one directory per revision set, containing `_set.md` (status checklist + roll-up log) and one `RN.M-slug.md` file per feature (spec + notes). Large features with attachments become a `RN.M-slug/` directory instead.
 
-To resume work: read `CONTEXT.md` + the target set's `_set.md`, then load only the feature file(s) you're touching. The latest set is the highest-numbered `changes/N-*` directory (currently `changes/28-auth-providers/`; sets 23–25 are merged to main; sets 26–28 are scaffolded specs awaiting implementation, intended order 26 → 27 → 28).
+To resume work: read `CONTEXT.md` + the target set's `_set.md`, then load only the feature file(s) you're touching. The latest set is the highest-numbered `changes/N-*` directory (currently `changes/28-auth-providers/`; sets 23–25 are merged to main; sets 26–28 are implemented and feature-complete on stacked branches `feat/set26-rbac-hygiene` → `feat/set27-search-prefs-onboarding` → `feat/set28-auth-providers`, awaiting the user's merge to main in that order).
 
 **Branching:** `main` is the single integration branch (no `develop`). Each set → `feat/setN-<slug>` off `main`; each feature → `feat/setN/RN.M-<slug>` off the set branch. A feature merges into the set branch only after passing its tests/verification; the set merges into `main` only after every feature passes, the app boots, and the user approves.
