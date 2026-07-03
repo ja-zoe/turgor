@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { Permission } from "@/generated/prisma";
 import { ProjectStatusBadge, ArchivedBadge } from "@/components/status-badge";
 import { SortableDeliverables } from "@/components/sortable-deliverables";
-import { toSortableDeliverables } from "@/lib/project-views";
+import { toSortableDeliverables, toActionItemRows } from "@/lib/project-views";
 import { ProjectModal } from "@/components/project-modal";
 import { CarryProjectDialog } from "@/components/carry-project-dialog";
 import { StatusUpdateControls } from "@/components/status-update-controls";
@@ -361,15 +361,7 @@ export default async function ProjectDetailPage({
 
         <ActionItemsSection
           projectId={id}
-          items={project.actionItems.map((item) => ({
-            id: item.id,
-            description: item.description,
-            ownerId: item.ownerId,
-            ownerName: item.owner ? getDisplayName(item.owner) : null,
-            deadline: item.deadline?.toISOString() ?? null,
-            status: item.status,
-            carriedOver: item.carriedOver,
-          }))}
+          items={toActionItemRows(project.actionItems)}
           assignees={project.assignments.map((a) => ({ id: a.userId, name: getDisplayName(a.user) }))}
           canCreate={canCreateActionItem}
           canClose={canCloseActionItemsHere}

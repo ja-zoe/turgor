@@ -7,6 +7,7 @@ import {
   type SessionUser,
 } from "@/lib/permissions";
 import { Permission } from "@/generated/prisma";
+import { getDisplayName } from "@/lib/utils";
 
 /**
  * Shared access + shaping for the project-scoped pages (R30.1/R30.2). The guard
@@ -100,6 +101,29 @@ export async function listSwitcherProjects(access: ProjectAccess) {
     name: p.name,
     semester: p.semester,
     archived: p.archivedAt !== null,
+  }));
+}
+
+type ActionItemRow = {
+  id: string;
+  description: string;
+  ownerId: string | null;
+  owner: { firstName: string | null; nickname: string | null; name: string | null; email: string } | null;
+  deadline: Date | null;
+  status: string;
+  carriedOver: boolean;
+};
+
+/** Shape action-item rows for ActionItemsSection — shared with the project page. */
+export function toActionItemRows(items: ActionItemRow[]) {
+  return items.map((item) => ({
+    id: item.id,
+    description: item.description,
+    ownerId: item.ownerId,
+    ownerName: item.owner ? getDisplayName(item.owner) : null,
+    deadline: item.deadline?.toISOString() ?? null,
+    status: item.status as "OPEN" | "DONE",
+    carriedOver: item.carriedOver,
   }));
 }
 

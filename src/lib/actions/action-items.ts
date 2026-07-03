@@ -32,7 +32,7 @@ export async function createActionItem(projectId: string, formData: FormData) {
     },
   });
 
-  revalidatePath(`/projects/${projectId}`);
+  revalidatePath(`/projects/${projectId}`, "layout");
 }
 
 export async function closeActionItem(actionItemId: string) {
@@ -58,7 +58,7 @@ export async function closeActionItem(actionItemId: string) {
     data: { status: "DONE", completedAt: new Date() },
   });
 
-  revalidatePath(`/projects/${item.projectId}`);
+  revalidatePath(`/projects/${item.projectId}`, "layout");
   revalidatePath("/action-items");
 }
 
@@ -82,7 +82,7 @@ export async function reopenActionItem(actionItemId: string) {
     data: { status: "OPEN", completedAt: null },
   });
 
-  revalidatePath(`/projects/${item.projectId}`);
+  revalidatePath(`/projects/${item.projectId}`, "layout");
   revalidatePath("/action-items");
 }
 
@@ -111,7 +111,7 @@ export async function updateActionItem(actionItemId: string, formData: FormData)
   });
 
   // No redirect — edits now happen in a modal / inline; just revalidate in place.
-  revalidatePath(`/projects/${item.projectId}`);
+  revalidatePath(`/projects/${item.projectId}`, "layout");
   revalidatePath("/action-items");
 }
 
@@ -131,7 +131,7 @@ export async function deleteActionItem(actionItemId: string) {
 
   await prisma.actionItem.delete({ where: { id: actionItemId } });
 
-  revalidatePath(`/projects/${item.projectId}`);
+  revalidatePath(`/projects/${item.projectId}`, "layout");
   revalidatePath("/action-items");
 }
 
