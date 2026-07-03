@@ -11,6 +11,13 @@ export type SessionUser = {
   roleId: string | null;
 };
 
+/**
+ * Retired permissions: still present in the Postgres enum (values can't be dropped
+ * without a table rewrite) but read by no gate and hidden from the Role Builder.
+ * parsePermissions in roles.ts strips them on every save.
+ */
+export const RETIRED_PERMISSIONS: readonly Permission[] = [Permission.VIEW_ASSIGNED_PROJECTS];
+
 /** Returns the session user or redirects. Does NOT check permissions. */
 export async function requireAuth(): Promise<SessionUser> {
   const session = await auth();

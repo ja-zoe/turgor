@@ -1,4 +1,4 @@
-import { requirePermission, getUserPermissions } from "@/lib/permissions";
+import { requirePermission, getUserPermissions, RETIRED_PERMISSIONS } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { Permission } from "@/generated/prisma";
 import { approveUser, updateUserRole, suspendUser, reactivateUser } from "@/lib/actions/users";
@@ -14,11 +14,6 @@ const ALL_PERMISSIONS: { value: Permission; label: string; description: string }
     value: Permission.VIEW_ALL_PROJECTS,
     label: "View all projects",
     description: "Browse every project and its history, not just own assignments.",
-  },
-  {
-    value: Permission.VIEW_ASSIGNED_PROJECTS,
-    label: "View assigned projects",
-    description: "Baseline visibility into projects the user is a member of.",
   },
   {
     value: Permission.SUBMIT_STATUS_UPDATES,
@@ -107,7 +102,9 @@ const ALL_PERMISSIONS: { value: Permission; label: string; description: string }
 // only submitted checkboxes). Fail loudly in dev if a future enum value lacks a label.
 if (process.env.NODE_ENV !== "production") {
   const listed = new Set(ALL_PERMISSIONS.map((p) => p.value));
-  const missing = Object.values(Permission).filter((p) => !listed.has(p));
+  const missing = Object.values(Permission).filter(
+    (p) => !listed.has(p) && !RETIRED_PERMISSIONS.includes(p)
+  );
   if (missing.length > 0) {
     throw new Error(
       `Role Builder is missing checkboxes for: ${missing.join(", ")}. Add them to ALL_PERMISSIONS — ` +
@@ -404,22 +401,42 @@ export default async function UsersPage() {
                     />
                   </div>
                   <div className="grid grid-cols-2 gap-x-4 gap-y-2.5 mb-4">
-                    {ALL_PERMISSIONS.map(({ value, label, description }) => (
-                      <label key={value} className="flex items-start gap-2 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          name={`perm_${value}`}
-                          defaultChecked={role.permissions.includes(value)}
-                          className="mt-0.5 rounded accent-primary"
-                        />
-                        <span className="min-w-0">
-                          <span className="block text-xs text-foreground">{label}</span>
-                          <span className="block text-[11px] leading-snug text-muted-foreground">
-                            {description}
+                    {ALL_PERMISSIONS.map(({ value, label, description }) => {
+                      // Self-lockout guard (cosmetic half — updateRole enforces it):
+                      // on your own role, MANAGE_ROLES is locked on. The hidden input
+                      // keeps the value in FormData (disabled inputs drop out).
+                      const lockedSelf =
+                        role.id === me.roleId && value === Permission.MANAGE_ROLES;
+                      return (
+                        <label
+                          key={value}
+                          className={`flex items-start gap-2 ${lockedSelf ? "" : "cursor-pointer"}`}
+                        >
+                          <input
+                            type="checkbox"
+                            name={`perm_${value}`}
+                            defaultChecked={role.permissions.includes(value)}
+                            disabled={lockedSelf}
+                            className="mt-0.5 rounded accent-primary"
+                          />
+                          {lockedSelf && (
+                            <input type="hidden" name={`perm_${value}`} value="on" />
+                          )}
+                          <span className="min-w-0">
+                            <span className="block text-xs text-foreground">{label}</span>
+                            <span className="block text-[11px] leading-snug text-muted-foreground">
+                              {description}
+                            </span>
+                            {lockedSelf && (
+                              <span className="block text-[11px] leading-snug text-muted-foreground italic">
+                                Your own role: role management cannot be removed from
+                                yourself.
+                              </span>
+                            )}
                           </span>
-                        </span>
-                      </label>
-                    ))}
+                        </label>
+                      );
+                    })}
                   </div>
                   <div className="flex items-center gap-3">
                     <SubmitButton
@@ -430,7 +447,7 @@ export default async function UsersPage() {
                     />
                   </div>
                 </form>
-                {!role.isBuiltIn && (
+                {!role.isBuiltIn && role.id !== me.roleId && (
                   <div className="border-t border-border px-4 py-2 bg-muted/10">
                     <form
                       action={async () => {
