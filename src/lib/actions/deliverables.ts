@@ -124,7 +124,7 @@ export async function createDeliverable(projectId: string, formData: FormData) {
     },
   });
 
-  revalidatePath(`/projects/${projectId}`);
+  revalidatePath(`/projects/${projectId}`, "layout");
   redirect(`/projects/${projectId}`);
 }
 
@@ -176,7 +176,7 @@ export async function updateDeliverable(deliverableId: string, formData: FormDat
   });
 
   // No redirect — the edit modal closes itself; revalidate refreshes in place.
-  revalidatePath(`/projects/${deliverable.projectId}`);
+  revalidatePath(`/projects/${deliverable.projectId}`, "layout");
   revalidatePath(`/projects/${deliverable.projectId}/timeline`);
 }
 
@@ -195,7 +195,7 @@ export async function deleteDeliverable(deliverableId: string) {
 
   await prisma.deliverable.delete({ where: { id: deliverableId } });
 
-  revalidatePath(`/projects/${deliverable.projectId}`);
+  revalidatePath(`/projects/${deliverable.projectId}`, "layout");
 }
 
 export async function setDeliverableBacklog(deliverableId: string, backlog: boolean) {
@@ -216,7 +216,7 @@ export async function setDeliverableBacklog(deliverableId: string, backlog: bool
   });
 
   // Backlogged items leave the timeline Gantt too, not just the active list.
-  revalidatePath(`/projects/${deliverable.projectId}`);
+  revalidatePath(`/projects/${deliverable.projectId}`, "layout");
   revalidatePath(`/projects/${deliverable.projectId}/timeline`);
 }
 
@@ -257,7 +257,7 @@ export async function createSubtask(deliverableId: string, formData: FormData) {
   await deriveDeliverableStatus(deliverableId);
 
   // No redirect — created from the in-page modal; revalidate refreshes the list.
-  revalidatePath(`/projects/${deliverable.projectId}`);
+  revalidatePath(`/projects/${deliverable.projectId}`, "layout");
 }
 
 export async function updateSubtask(subtaskId: string, formData: FormData) {
@@ -304,7 +304,7 @@ export async function updateSubtask(subtaskId: string, formData: FormData) {
   await deriveDeliverableStatus(subtask.deliverable.id);
 
   // No redirect — used by the in-page modal; the full-page edit form redirects itself.
-  revalidatePath(`/projects/${subtask.deliverable.projectId}`);
+  revalidatePath(`/projects/${subtask.deliverable.projectId}`, "layout");
 }
 
 export async function updateSubtaskStatus(subtaskId: string, status: TimelineStatus) {
@@ -329,7 +329,7 @@ export async function updateSubtaskStatus(subtaskId: string, status: TimelineSta
   // Derive the parent deliverable's status from all its subtasks after this update.
   await deriveDeliverableStatus(subtask.deliverable.id);
 
-  revalidatePath(`/projects/${subtask.deliverable.projectId}`);
+  revalidatePath(`/projects/${subtask.deliverable.projectId}`, "layout");
   // The subtask also surfaces on the assignee's My Tasks list; refresh it so a
   // completion done from there drops the item out of the open-work list.
   revalidatePath("/my-tasks");
@@ -354,7 +354,7 @@ export async function updateSubtaskTitle(subtaskId: string, title: string) {
     data: { title: trimmed },
   });
 
-  revalidatePath(`/projects/${subtask.deliverable.projectId}`);
+  revalidatePath(`/projects/${subtask.deliverable.projectId}`, "layout");
 }
 
 export async function deleteSubtask(subtaskId: string) {
@@ -373,7 +373,7 @@ export async function deleteSubtask(subtaskId: string) {
   // Removing a subtask changes the set → re-derive the deliverable's status.
   await deriveDeliverableStatus(subtask.deliverable.id);
 
-  revalidatePath(`/projects/${subtask.deliverable.projectId}`);
+  revalidatePath(`/projects/${subtask.deliverable.projectId}`, "layout");
 }
 
 export async function updateDeliverableStatus(deliverableId: string, status: TimelineStatus) {
@@ -397,7 +397,7 @@ export async function updateDeliverableStatus(deliverableId: string, status: Tim
     data: { status, completed: isComplete, completedDate: isComplete ? new Date() : null },
   });
 
-  revalidatePath(`/projects/${deliverable.projectId}`);
+  revalidatePath(`/projects/${deliverable.projectId}`, "layout");
 }
 
 export async function updateSubtaskAssignee(subtaskId: string, assigneeId: string | null) {
@@ -416,7 +416,7 @@ export async function updateSubtaskAssignee(subtaskId: string, assigneeId: strin
     data: { assigneeId: assigneeId ?? null },
   });
 
-  revalidatePath(`/projects/${subtask.deliverable.projectId}`);
+  revalidatePath(`/projects/${subtask.deliverable.projectId}`, "layout");
 }
 
 export async function updateSubtaskDescription(subtaskId: string, description: string | null) {
@@ -435,7 +435,7 @@ export async function updateSubtaskDescription(subtaskId: string, description: s
     data: { description: description?.trim() || null },
   });
 
-  revalidatePath(`/projects/${subtask.deliverable.projectId}`);
+  revalidatePath(`/projects/${subtask.deliverable.projectId}`, "layout");
 }
 
 export async function updateSubtaskDueDate(subtaskId: string, dueDate: string | null) {
@@ -457,7 +457,7 @@ export async function updateSubtaskDueDate(subtaskId: string, dueDate: string | 
     data: { dueDate: parsedDue },
   });
 
-  revalidatePath(`/projects/${subtask.deliverable.projectId}`);
+  revalidatePath(`/projects/${subtask.deliverable.projectId}`, "layout");
 }
 
 export async function updateDeliverableTitle(deliverableId: string, title: string) {
@@ -479,7 +479,7 @@ export async function updateDeliverableTitle(deliverableId: string, title: strin
     data: { title: trimmed },
   });
 
-  revalidatePath(`/projects/${deliverable.projectId}`);
+  revalidatePath(`/projects/${deliverable.projectId}`, "layout");
 }
 
 export async function updateDeliverableGroup(deliverableId: string, group: string | null) {
@@ -500,7 +500,7 @@ export async function updateDeliverableGroup(deliverableId: string, group: strin
     data: { group: trimmed },
   });
 
-  revalidatePath(`/projects/${deliverable.projectId}`);
+  revalidatePath(`/projects/${deliverable.projectId}`, "layout");
 }
 
 /**
@@ -538,7 +538,7 @@ export async function moveDeliverable(deliverableId: string, direction: "up" | "
     prisma.deliverable.update({ where: { id: swapWith.id }, data: { orderIndex: deliverable.orderIndex } }),
   ]);
 
-  revalidatePath(`/projects/${deliverable.projectId}`);
+  revalidatePath(`/projects/${deliverable.projectId}`, "layout");
 }
 
 export async function updateDeliverablePriority(deliverableId: string, priority: Priority) {
@@ -557,7 +557,7 @@ export async function updateDeliverablePriority(deliverableId: string, priority:
     data: { priority },
   });
 
-  revalidatePath(`/projects/${deliverable.projectId}`);
+  revalidatePath(`/projects/${deliverable.projectId}`, "layout");
 }
 
 export async function updateDeliverableDescription(deliverableId: string, description: string | null) {
@@ -576,7 +576,7 @@ export async function updateDeliverableDescription(deliverableId: string, descri
     data: { description: description?.trim() || null },
   });
 
-  revalidatePath(`/projects/${deliverable.projectId}`);
+  revalidatePath(`/projects/${deliverable.projectId}`, "layout");
 }
 
 export async function updateDeliverableDates(
@@ -604,5 +604,5 @@ export async function updateDeliverableDates(
     data: { startDate: start, targetDate: target },
   });
 
-  revalidatePath(`/projects/${deliverable.projectId}`);
+  revalidatePath(`/projects/${deliverable.projectId}`, "layout");
 }
