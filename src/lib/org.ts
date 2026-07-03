@@ -12,9 +12,11 @@ export type OrgSettings = {
   periodLabel: string;
   /** Curated color theme id (see src/lib/themes.ts). Unknown values fall back to "forest". */
   themePreset: string;
-  /** Derived: `${orgName} Tracker` — short app name (sidebar, metadata title). */
+  /** Short app name (sidebar, metadata title). The Settings.appName override wins
+   *  (R29.3); null derives `${orgName} Tracker`. */
   appName: string;
-  /** Derived: `${orgName} Project Tracker` — full app name (landing hero, emails). */
+  /** Full app name (landing hero, emails). Same override; derives
+   *  `${orgName} Project Tracker` when unset — setting appName replaces the whole line. */
   appFullName: string;
   /** Derived: `periodLabel.toLowerCase()` — for mid-sentence use ("built for the semester").
    *  Plural forms are naive `+s` at the call site ("semesters", "quarters"). */
@@ -29,6 +31,7 @@ const DEFAULTS = {
   signInLabel: "Rutgers NetID",
   periodLabel: "Semester",
   themePreset: "forest",
+  appName: null as string | null,
 } as const;
 
 /**
@@ -47,14 +50,15 @@ export const getOrgSettings = cache(async (): Promise<OrgSettings> => {
       signInLabel: true,
       periodLabel: true,
       themePreset: true,
+      appName: true,
     },
   });
 
   const base = settings ?? DEFAULTS;
   return {
     ...base,
-    appName: `${base.orgName} Tracker`,
-    appFullName: `${base.orgName} Project Tracker`,
+    appName: base.appName ?? `${base.orgName} Tracker`,
+    appFullName: base.appName ?? `${base.orgName} Project Tracker`,
     periodLabelLower: base.periodLabel.toLowerCase(),
   };
 });

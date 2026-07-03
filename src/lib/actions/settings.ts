@@ -55,6 +55,8 @@ export async function updateOrgSettings(formData: FormData) {
   const periodLabel = periodLabelRaw || current?.periodLabel || "Semester";
   const orgFullName = ((formData.get("orgFullName") as string) ?? "").trim();
   const orgInstitution = ((formData.get("orgInstitution") as string) ?? "").trim();
+  // App-name override (R29.3): empty means "derive <orgName> Tracker" — stored null.
+  const appName = ((formData.get("appName") as string) ?? "").trim() || null;
 
   // Only curated preset ids are accepted; anything else keeps the current theme.
   const themePresetRaw = ((formData.get("themePreset") as string) ?? "").trim();
@@ -62,7 +64,7 @@ export async function updateOrgSettings(formData: FormData) {
     ? themePresetRaw
     : current?.themePreset ?? "forest";
 
-  const data = { orgName, orgFullName, orgInstitution, orgLogoUrl, signInLabel, periodLabel, themePreset };
+  const data = { orgName, orgFullName, orgInstitution, orgLogoUrl, signInLabel, periodLabel, themePreset, appName };
 
   await prisma.settings.upsert({
     where: { id: "singleton" },
