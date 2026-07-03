@@ -7,7 +7,6 @@ const prisma = new PrismaClient({ adapter });
 
 const PM_PERMISSIONS: Permission[] = [
   Permission.VIEW_ALL_PROJECTS,
-  Permission.VIEW_ASSIGNED_PROJECTS,
   Permission.SUBMIT_STATUS_UPDATES,
   Permission.EDIT_OWN_PROJECT,
   Permission.POST_MEETING_TRACKING,
@@ -28,7 +27,6 @@ const PM_PERMISSIONS: Permission[] = [
 
 const LEAD_PERMISSIONS: Permission[] = [
   Permission.VIEW_ALL_PROJECTS,
-  Permission.VIEW_ASSIGNED_PROJECTS,
   Permission.SUBMIT_STATUS_UPDATES,
   Permission.EDIT_OWN_PROJECT,
   Permission.CLOSE_ACTION_ITEMS,
@@ -37,14 +35,12 @@ const LEAD_PERMISSIONS: Permission[] = [
 
 const VIEWER_PERMISSIONS: Permission[] = [
   Permission.VIEW_ALL_PROJECTS,
-  Permission.VIEW_ASSIGNED_PROJECTS,
 ];
 
 // Eboard: built-in role that can see + manage lead/eboard meetings, with broad
 // visibility. (R10.2 will also grant it privileged status-update edit/delete.)
 const EBOARD_PERMISSIONS: Permission[] = [
   Permission.VIEW_ALL_PROJECTS,
-  Permission.VIEW_ASSIGNED_PROJECTS,
   Permission.VIEW_MONTHLY_REVIEW,
   Permission.MANAGE_CALENDAR,
   Permission.VIEW_LEAD_MEETINGS,

@@ -11,7 +11,7 @@ datasource db {
 
 enum Permission {
   VIEW_ALL_PROJECTS
-  VIEW_ASSIGNED_PROJECTS
+  VIEW_ASSIGNED_PROJECTS // retired R26.1 — do not grant; no gate reads it. Kept because Postgres enum values can't be dropped safely.
   SUBMIT_STATUS_UPDATES
   EDIT_OWN_PROJECT
   POST_MEETING_TRACKING
