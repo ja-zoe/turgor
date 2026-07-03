@@ -1,12 +1,16 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
-import { requirePermission } from "@/lib/permissions";
+import { requirePermission, RETIRED_PERMISSIONS } from "@/lib/permissions";
 import { Permission } from "@/generated/prisma";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-const ALL_PERMISSIONS = Object.values(Permission);
+// Excluding retired values here both hides them from grantability and strips them
+// defensively from any submitted form.
+const ALL_PERMISSIONS = Object.values(Permission).filter(
+  (p) => !RETIRED_PERMISSIONS.includes(p)
+);
 
 function parsePermissions(formData: FormData): Permission[] {
   return ALL_PERMISSIONS.filter((p) => formData.get(`perm_${p}`) === "on");
