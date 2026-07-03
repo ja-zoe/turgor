@@ -26,7 +26,7 @@ src/app/
   layout.tsx              # root: font vars + GsapProvider
   (app)/                  # authenticated app shell (layout.tsx: sidebar + session)
     dashboard/
-    projects/[id]/        # sub-routes: deliverables, timeline, status, meeting, members, action-items, history
+    projects/[id]/        # sub-routes: deliverables/new, timeline, status/new, meeting/new, members, history
     my-tasks/
     action-items/
     account/              # MCP token generation + client config snippet
