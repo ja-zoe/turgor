@@ -87,6 +87,10 @@ interface SortableDeliverablesProps {
   userId: string;
   members: Member[];
   deleteDeliverableAction: (id: string) => Promise<void>;
+  /** R30.3 — cap the rendered rows (post sort/filter); shows a "Show all" link. */
+  maxVisible?: number;
+  /** Target of the "Show all" link when capped (the dedicated deliverables page). */
+  showAllHref?: string;
 }
 
 const STATUS_ORDER: Record<TimelineStatus, number> = {
@@ -631,6 +635,8 @@ export function SortableDeliverables({
   canEdit,
   members = [],
   deleteDeliverableAction,
+  maxVisible,
+  showAllHref,
 }: SortableDeliverablesProps) {
   const [sortByStatus, setSortByStatus] = useState(false);
   const [groupFilter, setGroupFilter] = useState<string>("ALL"); // "ALL" | "UNGROUPED" | <group>
@@ -892,6 +898,22 @@ export function SortableDeliverables({
     }));
   } else {
     sections = [{ label: null, items: sortByStatus ? sorted : [...sorted].sort(byPriorityThenOrder) }];
+  }
+
+  // R30.3 — project-page cap. Applied AFTER filtering/sorting/grouping so the
+  // visible rows are the ones the display order puts first; the dedicated
+  // deliverables page (no maxVisible) always shows everything.
+  const totalVisible = sections.reduce((n, s) => n + s.items.length, 0);
+  const capped = maxVisible != null && totalVisible > maxVisible;
+  if (capped) {
+    let remaining = maxVisible!;
+    sections = sections
+      .map((s) => {
+        const items = s.items.slice(0, Math.max(0, remaining));
+        remaining -= items.length;
+        return { ...s, items };
+      })
+      .filter((s) => s.items.length > 0);
   }
 
   // ── Render ─────────────────────────────────────────────────────────────────
@@ -1847,6 +1869,17 @@ export function SortableDeliverables({
               </div>
             </div>
           ))}
+
+          {capped && showAllHref && (
+            <Link
+              href={showAllHref}
+              className="inline-block text-xs text-muted-foreground clickable-icon"
+              style={{ fontFamily: "var(--font-mono)" }}
+              data-testid="show-all-deliverables"
+            >
+              Show all {activeDeliverables.length} deliverables →
+            </Link>
+          )}
         </div>
       )}
 

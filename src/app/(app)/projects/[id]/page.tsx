@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { Permission } from "@/generated/prisma";
 import { ProjectStatusBadge, ArchivedBadge } from "@/components/status-badge";
 import { SortableDeliverables } from "@/components/sortable-deliverables";
+import { toSortableDeliverables, toActionItemRows } from "@/lib/project-views";
 import { ProjectModal } from "@/components/project-modal";
 import { CarryProjectDialog } from "@/components/carry-project-dialog";
 import { StatusUpdateControls } from "@/components/status-update-controls";
@@ -333,28 +334,9 @@ export default async function ProjectDetailPage({
           canEdit={canManageMilestones || !!membership}
           userId={user.id}
           members={project.assignments.map((a) => a.user)}
-          deliverables={project.deliverables.map((d) => ({
-            id: d.id,
-            title: d.title,
-            description: d.description ?? null,
-            status: d.status as "NOT_STARTED" | "IN_PROGRESS" | "BLOCKED" | "COMPLETE",
-            priority: d.priority as "LOW" | "MEDIUM" | "HIGH",
-            group: d.group,
-            orderIndex: d.orderIndex,
-            targetDate: d.targetDate.toISOString(),
-            startDate: d.startDate?.toISOString() ?? null,
-            completed: d.completed,
-            backlog: d.backlog,
-            subtasks: d.subtasks.map((s) => ({
-              id: s.id,
-              title: s.title,
-              description: s.description ?? null,
-              status: s.status as "NOT_STARTED" | "IN_PROGRESS" | "BLOCKED" | "COMPLETE",
-              assignee: s.assignee,
-              startDate: s.startDate?.toISOString() ?? null,
-              dueDate: s.dueDate?.toISOString() ?? null,
-            })),
-          }))}
+          deliverables={toSortableDeliverables(project.deliverables)}
+          maxVisible={5}
+          showAllHref={`/projects/${id}/deliverables`}
           deleteDeliverableAction={async (deliverableId: string) => {
             "use server";
             await deleteDeliverable(deliverableId);
@@ -381,15 +363,9 @@ export default async function ProjectDetailPage({
 
         <ActionItemsSection
           projectId={id}
-          items={project.actionItems.map((item) => ({
-            id: item.id,
-            description: item.description,
-            ownerId: item.ownerId,
-            ownerName: item.owner ? getDisplayName(item.owner) : null,
-            deadline: item.deadline?.toISOString() ?? null,
-            status: item.status,
-            carriedOver: item.carriedOver,
-          }))}
+          items={toActionItemRows(project.actionItems)}
+          maxVisible={5}
+          showAllHref={`/projects/${id}/action-items`}
           assignees={project.assignments.map((a) => ({ id: a.userId, name: getDisplayName(a.user) }))}
           canCreate={canCreateActionItem}
           canClose={canCloseActionItemsHere}
