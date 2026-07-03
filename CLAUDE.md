@@ -10,7 +10,8 @@ pnpm build                 # production build
 pnpm db:seed               # seed built-in roles + Settings singleton
 pnpm db:studio             # open Prisma Studio
 pnpm notifications:run     # run notification engine once (for manual testing)
-tsx scripts/apply-schema.ts  # apply raw DDL to the DB (see DB section)
+pnpm db:migrate            # apply pending migrations/NNN-*.sql (also: :status, :baseline)
+tsx scripts/verify-migrations.ts  # drift canary: replayed migrations vs live schema
 ```
 
 There is no test suite.
@@ -65,7 +66,7 @@ Permission helpers live in `src/lib/permissions.ts`:
 
 ### Database
 
-Supabase Postgres connects via pgBouncer pooler (port 6543). **`prisma db push` and direct port 5432 both hang — never use them.** Apply DDL by writing raw SQL to `/tmp/schema.sql` then running `tsx scripts/apply-schema.ts`.
+Supabase Postgres connects via pgBouncer pooler (port 6543). **`prisma db push` and direct port 5432 both hang — never use them.** DDL ships as numbered migrations in `migrations/NNN-slug.sql`, applied with `pnpm db:migrate` (ledger table `_migrations`; `db:migrate:status` / `db:migrate:baseline` variants). After adding a migration, keep `prisma/schema.prisma` in sync and run `tsx scripts/verify-migrations.ts` (drift canary). `scripts/apply-schema.ts` (raw SQL from `/tmp/schema.sql`) remains for throwaway dev experiments only.
 
 Prisma v7 WASM engine requires the driver adapter — always construct the client as:
 ```ts
