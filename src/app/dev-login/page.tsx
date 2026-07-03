@@ -4,6 +4,17 @@ import Image from "next/image";
 import { signIn } from "@/auth";
 import { mintHandoffToken } from "@/lib/handoff-token";
 import { getOrgSettings } from "@/lib/org";
+import { getAuthProvider } from "@/lib/auth-provider";
+
+/**
+ * /dev-login is the CAS *mock* and must not exist as a sign-in path outside it:
+ * in real-CAS mode it would let anyone mint a session as any netId, and in email
+ * mode the magic link is the only door. Enforced in the page and the action.
+ */
+function assertMockCas() {
+  if (getAuthProvider() === "email") redirect("/signin/email");
+  if (process.env.CAS_MODE === "real") redirect("/api/cas/login");
+}
 
 interface Props {
   searchParams: Promise<{ error?: string; service?: string }>;
@@ -19,11 +30,13 @@ const errorMessages: Record<string, string> = {
 };
 
 export default async function DevLoginPage({ searchParams }: Props) {
+  assertMockCas();
   const { error } = await searchParams;
   const org = await getOrgSettings();
 
   async function login(formData: FormData) {
     "use server";
+    assertMockCas();
     const netId = (formData.get("netId") as string)?.trim().toLowerCase();
 
     if (!netId || !/^[a-z0-9]+$/.test(netId)) {
