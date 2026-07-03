@@ -98,9 +98,9 @@ export async function updateOrgSettings(formData: FormData) {
 
   // orgName / signInLabel / orgLogoUrl / periodLabel render in the shell and must never
   // be blank: an emptied field keeps its current value instead of erroring.
-  const orgName = orgNameRaw || current?.orgName || "SEED";
-  const signInLabel = signInLabelRaw || current?.signInLabel || "Rutgers NetID";
-  const orgLogoUrl = orgLogoUrlRaw || current?.orgLogoUrl || "/seed-logo-transparent.png";
+  const orgName = orgNameRaw || current?.orgName || "Turgor";
+  const signInLabel = signInLabelRaw || current?.signInLabel || "Email";
+  const orgLogoUrl = orgLogoUrlRaw || current?.orgLogoUrl || "/turgor-logo.svg";
   const periodLabel = periodLabelRaw || current?.periodLabel || "Semester";
   const orgFullName = ((formData.get("orgFullName") as string) ?? "").trim();
   const orgInstitution = ((formData.get("orgInstitution") as string) ?? "").trim();
