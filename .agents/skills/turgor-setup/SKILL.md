@@ -9,7 +9,17 @@ You are guiding a new adopter through setting up Turgor with as little manual wo
 
 **Run this entire flow inline, in the current conversation.** Never delegate any part of it to a subagent via the Agent tool — subagents cannot ask the user questions, which breaks the interactive flow. Use AskUserQuestion for every choice with fixed options; for free-text values (connection strings, emails, API keys), ask in plain text and wait for the reply.
 
-Work through the steps in order. Validate each step before moving to the next. Celebrate milestones briefly ("✓ Database healthy", "✓ Migrations applied").
+## Persistence — do not stop until setup is verified
+
+**The goal is a single, non-negotiable end state: Turgor is running and the user has completed a successful first sign-in (Step 6). Do not end your turn, yield control, hand off, summarize-and-stop, or declare partial success until that end state is reached or the user explicitly tells you to stop.**
+
+- Never stop just because a step failed. Diagnose it, fix it (see Troubleshooting), and continue. Errors are steps in the flow, not exits from it.
+- The only two reasons to end are: (1) you have confirmed first sign-in landed on the dashboard with **PM Tools** visible, or (2) the user explicitly says to stop/pause/quit.
+- Waiting on the user for a value (credential, browser click, paste) is **not** a reason to end your turn's intent — ask the one question you need, wait for the reply, then immediately keep going. Never ask a question and then stop as if the task is finished.
+- If you are blocked and unsure, ask the user a specific unblocking question rather than ending. Keep ownership of the goal until it is done.
+- Do not offer to "continue later," present next steps, or wrap up before Step 6 passes. There is no acceptable stopping point in the middle.
+
+Work through the steps in order. Validate each step before moving to the next. Celebrate milestones briefly ("✓ Database healthy", "✓ Migrations applied"), but a milestone is not the finish line — only Step 6 is.
 
 ## Step 1 — Path choice
 
