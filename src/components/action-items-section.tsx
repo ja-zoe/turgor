@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import Link from "next/link";
 import { Plus, Check, ArrowClockwise, PencilSimple, Trash } from "@phosphor-icons/react";
 import { closeActionItem, reopenActionItem, updateActionItem, deleteActionItem } from "@/lib/actions/action-items";
 import { isValidDateInput } from "@/lib/date";
@@ -314,6 +315,8 @@ export function ActionItemsSection({
   canCreate,
   canClose,
   currentUserId,
+  maxVisible,
+  showAllHref,
 }: {
   projectId: string;
   items: ActionItemRowDTO[];
@@ -321,9 +324,17 @@ export function ActionItemsSection({
   canCreate: boolean;
   canClose: boolean;
   currentUserId: string;
+  /** R30.3 — cap the open list; the done list collapses into the "Show all" link. */
+  maxVisible?: number;
+  /** Target of the "Show all" link when capped (the dedicated action-items page). */
+  showAllHref?: string;
 }) {
   const openItems = items.filter((i) => i.status === "OPEN");
   const doneItems = items.filter((i) => i.status === "DONE");
+  const visibleOpen = maxVisible != null ? openItems.slice(0, maxVisible) : openItems;
+  // Capped view: the dedicated page owns anything beyond the first open rows,
+  // including the completed history.
+  const capActive = maxVisible != null && (openItems.length > maxVisible || doneItems.length > 0);
 
   return (
     <div>
@@ -350,7 +361,7 @@ export function ActionItemsSection({
         <p className="text-sm text-muted-foreground">No action items yet.</p>
       ) : (
         <div className="space-y-2">
-          {openItems.map((item) => (
+          {visibleOpen.map((item) => (
             <ActionItemRow
               key={item.id}
               projectId={projectId}
@@ -362,20 +373,32 @@ export function ActionItemsSection({
             />
           ))}
 
-          {doneItems.length > 0 && (
-            <details className="mt-2">
-              <summary
-                className="cursor-pointer text-xs text-muted-foreground clickable-icon"
-                style={{ fontFamily: "var(--font-mono)" }}
-              >
-                {doneItems.length} completed item{doneItems.length !== 1 ? "s" : ""}
-              </summary>
-              <div className="mt-2 space-y-2">
-                {doneItems.map((item) => (
-                  <ClosedActionItemRow key={item.id} item={item} canClose={canClose} />
-                ))}
-              </div>
-            </details>
+          {capActive && showAllHref ? (
+            <Link
+              href={showAllHref}
+              className="inline-block pt-1 text-xs text-muted-foreground clickable-icon"
+              style={{ fontFamily: "var(--font-mono)" }}
+              data-testid="show-all-action-items"
+            >
+              Show all {items.length} action items →
+            </Link>
+          ) : (
+            doneItems.length > 0 &&
+            maxVisible == null && (
+              <details className="mt-2">
+                <summary
+                  className="cursor-pointer text-xs text-muted-foreground clickable-icon"
+                  style={{ fontFamily: "var(--font-mono)" }}
+                >
+                  {doneItems.length} completed item{doneItems.length !== 1 ? "s" : ""}
+                </summary>
+                <div className="mt-2 space-y-2">
+                  {doneItems.map((item) => (
+                    <ClosedActionItemRow key={item.id} item={item} canClose={canClose} />
+                  ))}
+                </div>
+              </details>
+            )
           )}
         </div>
       )}
