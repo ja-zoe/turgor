@@ -1,5 +1,6 @@
 import NextAuth from "next-auth";
-import authConfig from "./src/auth.config";
+import authConfig from "./auth.config";
+import { getAuthProvider } from "./lib/auth-provider";
 import { NextResponse } from "next/server";
 import type { NextAuthRequest } from "next-auth";
 
@@ -31,15 +32,18 @@ export default auth(function middleware(request: NextAuthRequest) {
   const session = request.auth;
 
   if (isPublic(pathname)) {
-    // Redirect already-signed-in users away from the login page
-    if (pathname === "/dev-login" && session?.user) {
-      return NextResponse.redirect(new URL("/dashboard", request.url));
-    }
+    // Note: /dev-login stays reachable while signed in — the CAS mock doubles as
+    // the identity switcher (sign in as someone else replaces the session), and a
+    // PENDING user whose approval landed mid-session re-logs in through it. The
+    // page itself locks down outside mock mode (assertMockCas, R28.2).
     return NextResponse.next();
   }
 
-  // Not signed in → CAS login
+  // Not signed in → the deployment's sign-in flow (R28.2)
   if (!session?.user) {
+    if (getAuthProvider() === "email") {
+      return NextResponse.redirect(new URL("/signin/email", request.url));
+    }
     const url = new URL("/api/cas/login", request.url);
     url.searchParams.set("service", request.url);
     return NextResponse.redirect(url);

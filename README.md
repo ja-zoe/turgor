@@ -4,7 +4,7 @@ A project tracking web app for student organizations. It was built for [SEED (St
 
 > **Note:** as part of that generalization, this repository will be renamed in the future.
 
-> **Adopting this for your org?** [SETUP.md](SETUP.md) walks a first admin through the whole setup - database, sign-in, approving your team, and rebranding - in plain language.
+> **Adopting this for your org?** [SETUP.md](SETUP.md) walks a first admin through the whole setup - database, sign-in (campus CAS or email magic links), approving your team, and rebranding - in plain language.
 
 ## What it does
 
@@ -16,7 +16,7 @@ A project tracking web app for student organizations. It was built for [SEED (St
 - **MCP server** - a built-in [Model Context Protocol](https://modelcontextprotocol.io) endpoint at `/api/mcp` so AI assistants can query the tracker, with token auth generated from the account page and OAuth support for ChatGPT connectors (via Stytch)
 - **Excel export** - export project data to spreadsheets
 
-Sign-in uses Rutgers CAS (SSO). For local development a mock CAS mode lets you log in as any user without touching the real CAS server.
+Sign-in uses Rutgers CAS (SSO) by default, or email magic links for orgs without CAS (`AUTH_PROVIDER=email`). For local development a mock CAS mode lets you log in as any user without touching the real CAS server.
 
 ## Stack
 
