@@ -52,3 +52,16 @@ yarn-error.log*
 /claude
 
 /src/generated/prisma
+# Claude Code + dev tooling
+.claude/
+.agents/
+
+# Spec-driven-dev (development tracking)
+changes/
+
+# End-to-end tests
+e2e/
+playwright.config.ts
+
+# Development artifacts
+.next/
