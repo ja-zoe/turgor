@@ -377,8 +377,15 @@ model Settings {
   signInLabel    String @default("Rutgers NetID")
   // What a project cycle is called (R24.2) — display labels only; Project.semester stays generic.
   periodLabel    String @default("Semester")
-  // Color theme (R24.3) — one of the curated preset ids in src/lib/themes.ts.
+  // Color theme (R24.3) — one of the curated preset ids in src/lib/themes.ts,
+  // or "custom" (R29.2) driven by customColors {primary, background, card}.
   themePreset    String @default("forest")
+  customColors   Json?
+  // Whole-app-name override (R29.3) — null derives "<orgName> Tracker".
+  appName        String?
+  // Sign-in mechanism (R29.4) — "email" | "cas". Env AUTH_PROVIDER, when set,
+  // overrides (operator/testing escape hatch). New orgs default to email.
+  authProvider   String @default("email")
 
   updatedAt DateTime @updatedAt
 }

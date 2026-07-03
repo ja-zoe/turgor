@@ -1,12 +1,35 @@
+import { prisma } from "@/lib/prisma";
+
 /**
- * R28.1: which sign-in mechanism this deployment uses. A deployment property, not
- * a Settings row — auth must work before DB-backed settings are reachable. CAS is
- * the default so SEED's deployment is untouched with AUTH_PROVIDER unset.
+ * R28.1/R29.4: which sign-in mechanism this deployment uses. Chosen in Org
+ * Settings (`Settings.authProvider`, default "email" — the product is no longer
+ * SEED-first); the AUTH_PROVIDER env var, when set, overrides it (operator and
+ * e2e escape hatch — it's how the email-mode test server is driven).
+ *
+ * This module touches the DB and is Node-only. The Edge proxy never calls it —
+ * it redirects unauthenticated traffic to the static `/signin` dispatcher, which
+ * resolves the provider here and forwards.
  */
 export type AuthProvider = "cas" | "email";
 
-export function getAuthProvider(): AuthProvider {
-  return process.env.AUTH_PROVIDER === "email" ? "email" : "cas";
+export function envAuthProviderOverride(): AuthProvider | null {
+  const v = process.env.AUTH_PROVIDER;
+  return v === "email" || v === "cas" ? v : null;
+}
+
+export async function getAuthProvider(): Promise<AuthProvider> {
+  const override = envAuthProviderOverride();
+  if (override) return override;
+  try {
+    const row = await prisma.settings.findUnique({
+      where: { id: "singleton" },
+      select: { authProvider: true },
+    });
+    return row?.authProvider === "cas" ? "cas" : "email";
+  } catch {
+    // Pre-seed / unreachable-DB bootstrap: fall back to the product default.
+    return "email";
+  }
 }
 
 /**

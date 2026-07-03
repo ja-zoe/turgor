@@ -1,5 +1,6 @@
 import { cache } from "react";
 import { prisma } from "@/lib/prisma";
+import { isCustomColors, type CustomColors } from "@/lib/themes";
 
 export type OrgSettings = {
   orgName: string;
@@ -10,11 +11,15 @@ export type OrgSettings = {
   /** What a project cycle is called — "Semester", "Quarter", "Cycle"… Display-only;
    *  the `Project.semester` data field and form/query names stay `semester`. */
   periodLabel: string;
-  /** Curated color theme id (see src/lib/themes.ts). Unknown values fall back to "forest". */
+  /** Curated color theme id (see src/lib/themes.ts) or "custom" (R29.2). */
   themePreset: string;
-  /** Derived: `${orgName} Tracker` — short app name (sidebar, metadata title). */
+  /** Validated custom palette when themePreset is "custom"; null otherwise/invalid. */
+  customColors: CustomColors | null;
+  /** Short app name (sidebar, metadata title). The Settings.appName override wins
+   *  (R29.3); null derives `${orgName} Tracker`. */
   appName: string;
-  /** Derived: `${orgName} Project Tracker` — full app name (landing hero, emails). */
+  /** Full app name (landing hero, emails). Same override; derives
+   *  `${orgName} Project Tracker` when unset — setting appName replaces the whole line. */
   appFullName: string;
   /** Derived: `periodLabel.toLowerCase()` — for mid-sentence use ("built for the semester").
    *  Plural forms are naive `+s` at the call site ("semesters", "quarters"). */
@@ -29,6 +34,8 @@ const DEFAULTS = {
   signInLabel: "Rutgers NetID",
   periodLabel: "Semester",
   themePreset: "forest",
+  appName: null as string | null,
+  customColors: null,
 } as const;
 
 /**
@@ -47,14 +54,17 @@ export const getOrgSettings = cache(async (): Promise<OrgSettings> => {
       signInLabel: true,
       periodLabel: true,
       themePreset: true,
+      appName: true,
+      customColors: true,
     },
   });
 
   const base = settings ?? DEFAULTS;
   return {
     ...base,
-    appName: `${base.orgName} Tracker`,
-    appFullName: `${base.orgName} Project Tracker`,
+    appName: base.appName ?? `${base.orgName} Tracker`,
+    appFullName: base.appName ?? `${base.orgName} Project Tracker`,
     periodLabelLower: base.periodLabel.toLowerCase(),
+    customColors: isCustomColors(base.customColors) ? base.customColors : null,
   };
 });

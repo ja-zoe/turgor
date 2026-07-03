@@ -63,18 +63,21 @@ only needed for specific deployments - the comments in `.env.example` say when.
 
 ### Choosing your sign-in method
 
-`AUTH_PROVIDER` picks how your members sign in:
+You pick this inside the app: **Org Settings → Sign-in method** (you can change it
+any time after your first sign-in; new installations default to email):
 
-- **Your school runs CAS single sign-on** - leave `AUTH_PROVIDER` unset (CAS is the
-  default). Until your IT department registers the app's URL with the CAS server,
-  `CAS_MODE="mock"` gives you a working local sign-in screen for evaluation; switch
-  to `CAS_MODE="real"` once registered.
-- **No CAS, or a community club** - set `AUTH_PROVIDER="email"`. Members enter
-  their email and receive a single-use sign-in link (this requires
-  `RESEND_API_KEY`). `ALLOWED_EMAIL_DOMAINS` controls who may request a link: set
-  it to your school's domain to restrict sign-in, or leave it empty to allow any
-  address. Either way, every new account still waits for your approval before it
-  can do anything.
+- **Email magic link** (the default) - members enter their email and receive a
+  single-use sign-in link (this requires `RESEND_API_KEY`).
+  `ALLOWED_EMAIL_DOMAINS` controls who may request a link: set it to your school's
+  domain to restrict sign-in, or leave it empty to allow any address. Either way,
+  every new account still waits for your approval before it can do anything.
+- **CAS single sign-on** - if your school runs CAS. Until your IT department
+  registers the app's URL with the CAS server, `CAS_MODE="mock"` gives you a
+  working local sign-in screen for evaluation; switch to `CAS_MODE="real"` once
+  registered.
+
+(Advanced: setting the `AUTH_PROVIDER` environment variable forces a method and
+locks the Org Settings control - useful for testing, rarely needed otherwise.)
 
 ## 3. Initialize the database and start the app
 
@@ -112,8 +115,11 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 Everything branded "SEED" is configurable. Go to **PM Tools → Settings**:
 
-- **Organization** - your org's short name, full name, institution, and logo URL.
-  These replace the SEED branding across the app, sign-in screen, and emails.
+- **Organization** - your org's short name, full name, institution, and logo.
+  Upload a logo image directly (add `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`
+  from your Supabase project's API settings to `.env` to enable uploads), or paste
+  an image URL. These replace the SEED branding across the app, sign-in screen,
+  and emails.
 - **Sign-in label** - what your login identity is called on the sign-in screen
   (e.g. "Rutgers NetID", "University ID", or just "Email").
 - **Period label** - what your org calls a planning period: Semester, Quarter,

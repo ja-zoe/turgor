@@ -3,10 +3,13 @@ import { prisma } from "@/lib/prisma";
 import { Permission, TriggerType, Channel, RecipientGroup } from "@/generated/prisma";
 import { updateSettings, updateOrgSettings, createNotificationRule, toggleNotificationRule, deleteNotificationRule } from "@/lib/actions/settings";
 import { getOrgSettings } from "@/lib/org";
-import { THEME_PRESETS } from "@/lib/themes";
+import { THEME_PRESETS, themePrimaryHex, DEFAULT_CANVAS, DEFAULT_CARD } from "@/lib/themes";
 import { Bell, Buildings, Gauge, Trash } from "@phosphor-icons/react/dist/ssr";
 import { SubmitButton } from "@/components/submit-button";
 import { PendingIconButton } from "@/components/action-feedback";
+import { LogoUploader } from "@/components/logo-uploader";
+import { storageConfigured } from "@/lib/storage";
+import { envAuthProviderOverride } from "@/lib/auth-provider";
 import Image from "next/image";
 
 const TRIGGER_LABELS: Record<TriggerType, string> = {
@@ -55,7 +58,7 @@ export default async function SettingsPage() {
             lineHeight: 1.1,
           }}
         >
-          Settings
+          Organization Settings
         </h1>
       </div>
 
@@ -64,6 +67,20 @@ export default async function SettingsPage() {
         <div className="flex items-center gap-2 mb-4">
           <Buildings size={15} className="text-muted-foreground" />
           <h2 className="text-sm font-semibold text-foreground">Organization</h2>
+        </div>
+        {/* Logo upload lives outside the org form — forms can't nest (R29.1). */}
+        <div className="p-5 bg-card border border-border rounded-xl mb-4">
+          <p
+            className="block text-xs text-muted-foreground mb-3"
+            style={{ fontFamily: "var(--font-mono)" }}
+          >
+            Logo
+          </p>
+          <LogoUploader
+            currentUrl={org.orgLogoUrl}
+            orgName={org.orgName}
+            configured={storageConfigured()}
+          />
         </div>
         <form action={updateOrgSettings} className="p-5 bg-card border border-border rounded-xl space-y-5">
           <div className="grid grid-cols-2 gap-5">
@@ -104,6 +121,26 @@ export default async function SettingsPage() {
                 className="block text-xs text-muted-foreground mb-1"
                 style={{ fontFamily: "var(--font-mono)" }}
               >
+                App name (optional)
+              </label>
+              <input
+                name="appName"
+                defaultValue={settings?.appName ?? ""}
+                placeholder={`${org.orgName} Tracker`}
+                className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
+                data-testid="org-app-name"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Replaces the whole &ldquo;{`${org.orgName} Tracker`}&rdquo; line (sidebar,
+                browser tab, sign-in pages, emails). Leave empty to derive it from the
+                short name.
+              </p>
+            </div>
+            <div>
+              <label
+                className="block text-xs text-muted-foreground mb-1"
+                style={{ fontFamily: "var(--font-mono)" }}
+              >
                 Institution (optional)
               </label>
               <input
@@ -118,7 +155,7 @@ export default async function SettingsPage() {
                 className="block text-xs text-muted-foreground mb-1"
                 style={{ fontFamily: "var(--font-mono)" }}
               >
-                Logo URL
+                Logo URL (advanced)
               </label>
               <input
                 name="orgLogoUrl"
@@ -128,7 +165,8 @@ export default async function SettingsPage() {
                 data-testid="org-logo-url"
               />
               <p className="text-xs text-muted-foreground mt-1">
-                A path under /public or any hosted image URL.
+                Prefer the upload control above; this accepts a /public path or any
+                hosted image URL.
               </p>
             </div>
             <div>
@@ -147,6 +185,29 @@ export default async function SettingsPage() {
               />
               <p className="text-xs text-muted-foreground mt-1">
                 Shown on the sign-in button, e.g. &ldquo;Rutgers NetID&rdquo;.
+              </p>
+            </div>
+            <div>
+              <label
+                className="block text-xs text-muted-foreground mb-1"
+                style={{ fontFamily: "var(--font-mono)" }}
+              >
+                Sign-in method
+              </label>
+              <select
+                name="authProvider"
+                defaultValue={settings?.authProvider ?? "email"}
+                disabled={envAuthProviderOverride() !== null}
+                className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 disabled:opacity-60"
+                data-testid="org-auth-provider"
+              >
+                <option value="email">Email magic link</option>
+                <option value="cas">CAS single sign-on</option>
+              </select>
+              <p className="text-xs text-muted-foreground mt-1">
+                {envAuthProviderOverride()
+                  ? "Locked: set by the deployment's AUTH_PROVIDER variable."
+                  : "Changes how everyone signs in. Make sure CAS is configured before switching to it."}
               </p>
             </div>
             <div>
@@ -174,7 +235,7 @@ export default async function SettingsPage() {
               >
                 Theme
               </label>
-              <div className="flex items-center gap-4 pt-1.5" data-testid="org-theme">
+              <div className="flex items-center gap-4 pt-1.5 flex-wrap" data-testid="org-theme">
                 {THEME_PRESETS.map((preset) => (
                   <label key={preset.id} className="flex items-center gap-1.5 cursor-pointer">
                     <input
@@ -193,9 +254,41 @@ export default async function SettingsPage() {
                     <span className="text-sm text-foreground">{preset.label}</span>
                   </label>
                 ))}
+                <label className="flex items-center gap-1.5 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="themePreset"
+                    value="custom"
+                    defaultChecked={org.themePreset === "custom"}
+                    className="accent-primary cursor-pointer"
+                    data-testid="theme-custom"
+                  />
+                  <span className="text-sm text-foreground">Custom</span>
+                </label>
+              </div>
+              <div className="flex items-center gap-4 mt-2.5" data-testid="custom-colors">
+                {(
+                  [
+                    { key: "customPrimary", label: "Primary", value: org.customColors?.primary ?? themePrimaryHex(org.themePreset) },
+                    { key: "customBackground", label: "Background", value: org.customColors?.background ?? DEFAULT_CANVAS },
+                    { key: "customCard", label: "Card", value: org.customColors?.card ?? DEFAULT_CARD },
+                  ] as const
+                ).map(({ key, label, value }) => (
+                  <label key={key} className="flex items-center gap-1.5 cursor-pointer text-xs text-muted-foreground">
+                    <input
+                      type="color"
+                      name={key}
+                      defaultValue={value}
+                      className="h-6 w-8 cursor-pointer rounded border border-border bg-transparent p-0"
+                      data-testid={key}
+                    />
+                    {label}
+                  </label>
+                ))}
               </div>
               <p className="text-xs text-muted-foreground mt-1.5">
-                Swaps the primary color across the app. Status colors stay the same.
+                Presets swap the primary color; Custom also opens the background and
+                card colors. Status colors stay the same — they carry meaning.
               </p>
             </div>
             <div className="flex items-end">

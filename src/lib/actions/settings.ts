@@ -3,8 +3,57 @@
 import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/permissions";
 import { Permission, Channel, RecipientGroup, TriggerType } from "@/generated/prisma";
-import { isThemePresetId } from "@/lib/themes";
+import { isThemePresetId, isCustomColors } from "@/lib/themes";
+import { storageConfigured, uploadPublicAsset } from "@/lib/storage";
 import { revalidatePath } from "next/cache";
+
+const ALLOWED_LOGO_TYPES = new Set([
+  "image/png",
+  "image/jpeg",
+  "image/svg+xml",
+  "image/webp",
+]);
+const MAX_LOGO_BYTES = 2 * 1024 * 1024;
+
+/**
+ * R29.1 — upload an org logo to Supabase Storage and point Settings.orgLogoUrl at
+ * its public URL. Returns { error } instead of throwing so the uploader component
+ * can render failures inline.
+ */
+export async function uploadOrgLogo(formData: FormData): Promise<{ error?: string; url?: string }> {
+  await requirePermission(Permission.CONFIGURE_NOTIFICATIONS);
+
+  if (!storageConfigured()) {
+    return { error: "Uploads are not configured (SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY)." };
+  }
+  const file = formData.get("logoFile");
+  if (!(file instanceof File) || file.size === 0) {
+    return { error: "Choose an image file to upload." };
+  }
+  if (!ALLOWED_LOGO_TYPES.has(file.type)) {
+    return { error: "The logo must be a PNG, JPEG, SVG, or WebP image." };
+  }
+  if (file.size > MAX_LOGO_BYTES) {
+    return { error: "The logo must be 2 MB or smaller." };
+  }
+
+  let url: string;
+  try {
+    url = await uploadPublicAsset(file, "logo");
+  } catch (e) {
+    console.error("logo upload failed", e);
+    return { error: "Upload failed — check the storage configuration and try again." };
+  }
+
+  await prisma.settings.upsert({
+    where: { id: "singleton" },
+    update: { orgLogoUrl: url },
+    create: { id: "singleton", orgLogoUrl: url },
+  });
+  revalidatePath("/", "layout");
+  revalidatePath("/pm/settings");
+  return { url };
+}
 
 export async function updateSettings(formData: FormData) {
   await requirePermission(Permission.CONFIGURE_NOTIFICATIONS);
@@ -55,14 +104,46 @@ export async function updateOrgSettings(formData: FormData) {
   const periodLabel = periodLabelRaw || current?.periodLabel || "Semester";
   const orgFullName = ((formData.get("orgFullName") as string) ?? "").trim();
   const orgInstitution = ((formData.get("orgInstitution") as string) ?? "").trim();
+  // App-name override (R29.3): empty means "derive <orgName> Tracker" — stored null.
+  const appName = ((formData.get("appName") as string) ?? "").trim() || null;
 
-  // Only curated preset ids are accepted; anything else keeps the current theme.
+  // Curated preset ids plus "custom" (R29.2); anything else keeps the current theme.
   const themePresetRaw = ((formData.get("themePreset") as string) ?? "").trim();
-  const themePreset = isThemePresetId(themePresetRaw)
-    ? themePresetRaw
-    : current?.themePreset ?? "forest";
+  const themePreset =
+    isThemePresetId(themePresetRaw) || themePresetRaw === "custom"
+      ? themePresetRaw
+      : current?.themePreset ?? "forest";
 
-  const data = { orgName, orgFullName, orgInstitution, orgLogoUrl, signInLabel, periodLabel, themePreset };
+  // Custom palette: persisted whenever submitted-and-valid (so switching presets
+  // and back keeps the last choice); a custom save with a malformed hex is rejected.
+  const submittedColors = {
+    primary: ((formData.get("customPrimary") as string) ?? "").trim(),
+    background: ((formData.get("customBackground") as string) ?? "").trim(),
+    card: ((formData.get("customCard") as string) ?? "").trim(),
+  };
+  const anyColorSubmitted = Boolean(
+    submittedColors.primary || submittedColors.background || submittedColors.card
+  );
+  let customColors =
+    current && isCustomColors(current.customColors) ? current.customColors : null;
+  if (isCustomColors(submittedColors)) {
+    customColors = submittedColors;
+  } else if (themePreset === "custom" && anyColorSubmitted) {
+    throw new Error("Custom colors must be 6-digit hex values like #2E4034.");
+  }
+  if (themePreset === "custom" && !customColors) {
+    throw new Error("Pick the three custom colors before selecting the Custom theme.");
+  }
+
+  // Sign-in method (R29.4). A disabled select (env override active) submits
+  // nothing → the stored value is kept.
+  const authProviderRaw = ((formData.get("authProvider") as string) ?? "").trim();
+  const authProvider =
+    authProviderRaw === "cas" || authProviderRaw === "email"
+      ? authProviderRaw
+      : current?.authProvider ?? "email";
+
+  const data = { orgName, orgFullName, orgInstitution, orgLogoUrl, signInLabel, periodLabel, themePreset, appName, customColors: customColors ?? undefined, authProvider };
 
   await prisma.settings.upsert({
     where: { id: "singleton" },
