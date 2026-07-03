@@ -8,7 +8,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { updateProject, deleteProject } from "@/lib/actions/projects";
+import { updateProject, deleteProject, setProjectArchived } from "@/lib/actions/projects";
+import { Archive } from "@phosphor-icons/react";
 import { isValidDateInput } from "@/lib/date";
 import { MarkdownEditor } from "@/components/markdown-editor";
 import { InlineConfirm } from "@/components/sortable-deliverables";
@@ -23,6 +24,7 @@ interface EditableProject {
   correctiveActionPlan: string | null;
   startDate: string | null; // ISO
   endDate: string | null; // ISO
+  archived?: boolean;
 }
 
 function toDateInput(iso: string | null | undefined): string {
@@ -110,6 +112,19 @@ export function ProjectModal({
     });
   }
 
+  // One click, no confirm — archiving is reversible (unlike Delete).
+  function toggleArchived() {
+    setError(null);
+    startTransition(async () => {
+      try {
+        await setProjectArchived(project.id, !project.archived);
+        setOpen(false);
+      } catch (e) {
+        setError((e as Error)?.message ?? "Could not update the project");
+      }
+    });
+  }
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogTrigger render={trigger} />
@@ -194,7 +209,7 @@ export function ProjectModal({
           {error && <p className="text-xs text-[#A4503C]">{error}</p>}
 
           <div className="flex items-center justify-between gap-3 pt-1">
-            {/* Delete (armed confirm) on the left — PM-only */}
+            {/* Archive + Delete (armed confirm) on the left — PM-only */}
             {!canDelete ? (
               <span />
             ) : confirmingDelete ? (
@@ -204,16 +219,29 @@ export function ProjectModal({
                 <InlineConfirm show onConfirm={doDelete} onCancel={() => setConfirmingDelete(false)} disabled={isPending} />
               </span>
             ) : (
-              <button
-                type="button"
-                onClick={() => setConfirmingDelete(true)}
-                disabled={isPending}
-                data-testid="project-modal-delete"
-                className="text-xs text-muted-foreground clickable-danger"
-                style={{ fontFamily: "var(--font-mono)" }}
-              >
-                Delete project
-              </button>
+              <span className="inline-flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={toggleArchived}
+                  disabled={isPending}
+                  data-testid="project-modal-archive"
+                  className="inline-flex items-center gap-1 text-xs text-muted-foreground clickable-icon"
+                  style={{ fontFamily: "var(--font-mono)" }}
+                >
+                  <Archive size={12} />
+                  {project.archived ? "Unarchive project" : "Archive project"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setConfirmingDelete(true)}
+                  disabled={isPending}
+                  data-testid="project-modal-delete"
+                  className="text-xs text-muted-foreground clickable-danger"
+                  style={{ fontFamily: "var(--font-mono)" }}
+                >
+                  Delete project
+                </button>
+              </span>
             )}
 
             <div className="flex items-center gap-3">

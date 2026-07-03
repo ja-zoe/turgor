@@ -66,7 +66,9 @@ export default async function CalendarPage({
       })
     : [];
 
+  // No new meetings for archived (ended) projects; existing events stay visible.
   const projects = await prisma.project.findMany({
+    where: { archivedAt: null },
     select: { id: true, name: true, semester: true },
     orderBy: { name: "asc" },
   });

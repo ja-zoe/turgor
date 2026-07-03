@@ -21,7 +21,16 @@ const TOOLS = [
   {
     name: "list_projects",
     description: "List all projects the current user has access to.",
-    inputSchema: { type: "object", properties: {}, required: [] },
+    inputSchema: {
+      type: "object",
+      properties: {
+        includeArchived: {
+          type: "boolean",
+          description: "Include archived projects (default false)",
+        },
+      },
+      required: [],
+    },
   },
   {
     name: "get_project_detail",
@@ -111,7 +120,7 @@ const TOOLS = [
   {
     name: "update_project",
     description:
-      "Update a project's name, semester, description, dates, or corrective action plan. Requires MANAGE_PROJECTS permission.",
+      "Update a project's name, semester, description, dates, corrective action plan, or archived state. Requires MANAGE_PROJECTS permission.",
     inputSchema: {
       type: "object",
       properties: {
@@ -122,8 +131,30 @@ const TOOLS = [
         startDate: { type: "string", description: "ISO date string, or null to clear" },
         endDate: { type: "string", description: "ISO date string, or null to clear" },
         correctiveActionPlan: { type: "string" },
+        archived: {
+          type: "boolean",
+          description:
+            "Archive (true) or unarchive (false) the project. Archived projects drop out of listings, reports, and notifications.",
+        },
       },
       required: ["projectId"],
+    },
+  },
+  {
+    name: "carry_project",
+    description:
+      "Carry a project into a new period: clones its name, description, and member assignments into the given semester with a fresh deliverables/standings slate, archiving the source project by default. Requires MANAGE_PROJECTS permission.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        projectId: { type: "string" },
+        semester: { type: "string", description: "The new period, e.g. 'Spring 2027'" },
+        archiveSource: {
+          type: "boolean",
+          description: "Archive the source project (default true)",
+        },
+      },
+      required: ["projectId", "semester"],
     },
   },
   // ── Action items ──────────────────────────────────────────────────────────
@@ -535,17 +566,40 @@ async function executeTool(
   switch (name) {
     // ── list_projects ────────────────────────────────────────────────────────
     case "list_projects": {
+      const includeArchived = args.includeArchived === true;
+      const archivedFilter = includeArchived ? {} : { archivedAt: null };
+      const projectSelect = {
+        id: true,
+        name: true,
+        status: true,
+        semester: true,
+        archivedAt: true,
+      } as const;
+      const withArchivedFlag = (p: {
+        id: string;
+        name: string;
+        status: string;
+        semester: string;
+        archivedAt: Date | null;
+      }) => ({
+        id: p.id,
+        name: p.name,
+        status: p.status,
+        semester: p.semester,
+        archived: p.archivedAt !== null,
+      });
       if (permissions.includes(Permission.VIEW_ALL_PROJECTS)) {
         const projects = await prisma.project.findMany({
-          select: { id: true, name: true, status: true, semester: true },
+          where: archivedFilter,
+          select: projectSelect,
         });
-        return { projects };
+        return { projects: projects.map(withArchivedFlag) };
       }
       const assignments = await prisma.projectAssignment.findMany({
-        where: { userId: user.id },
-        include: { project: { select: { id: true, name: true, status: true, semester: true } } },
+        where: { userId: user.id, project: archivedFilter },
+        include: { project: { select: projectSelect } },
       });
-      return { projects: assignments.map((a) => a.project) };
+      return { projects: assignments.map((a) => withArchivedFlag(a.project)) };
     }
 
     // ── get_project_detail ───────────────────────────────────────────────────
@@ -558,7 +612,7 @@ async function executeTool(
       const [project, deliverables, actionItems] = await Promise.all([
         prisma.project.findUnique({
           where: { id: pid },
-          select: { id: true, name: true, semester: true, status: true, startDate: true, endDate: true, description: true },
+          select: { id: true, name: true, semester: true, status: true, startDate: true, endDate: true, description: true, archivedAt: true },
         }),
         prisma.deliverable.findMany({
           where: { projectId: pid },
@@ -749,6 +803,9 @@ async function executeTool(
       if (args.correctiveActionPlan !== undefined) updateFields.correctiveActionPlan = args.correctiveActionPlan as string;
       if ("startDate" in args) updateFields.startDate = args.startDate ? new Date(args.startDate as string) : null;
       if ("endDate" in args) updateFields.endDate = args.endDate ? new Date(args.endDate as string) : null;
+      if (typeof args.archived === "boolean") {
+        updateFields.archivedAt = args.archived ? new Date() : null;
+      }
 
       if (Object.keys(updateFields).length === 0) return { error: "No fields to update" };
 
@@ -759,9 +816,58 @@ async function executeTool(
       const updated = await prisma.project.update({
         where: { id: pid },
         data: updateFields,
-        select: { id: true, name: true, semester: true, startDate: true, endDate: true },
+        select: { id: true, name: true, semester: true, startDate: true, endDate: true, archivedAt: true },
       });
       return { updated };
+    }
+
+    // ── carry_project ────────────────────────────────────────────────────────
+    case "carry_project": {
+      if (!permissions.includes(Permission.MANAGE_PROJECTS)) {
+        return { error: "Requires MANAGE_PROJECTS permission" };
+      }
+      const pid = args.projectId as string;
+      const semester = (args.semester as string | undefined)?.trim();
+      if (!semester) return { error: "semester is required" };
+      const archiveSource = args.archiveSource !== false;
+
+      const source = await prisma.project.findUnique({
+        where: { id: pid },
+        include: { assignments: { select: { userId: true, role: true } } },
+      });
+      if (!source) return { error: "Project not found" };
+
+      const duplicate = await prisma.project.findFirst({
+        where: { name: source.name, semester },
+        select: { id: true },
+      });
+      if (duplicate) {
+        return { error: `"${source.name}" already exists in ${semester}` };
+      }
+
+      const created = await prisma.$transaction(async (tx) => {
+        const project = await tx.project.create({
+          data: {
+            name: source.name,
+            description: source.description,
+            semester,
+            assignments: {
+              createMany: {
+                data: source.assignments.map((a) => ({ userId: a.userId, role: a.role })),
+              },
+            },
+          },
+          select: { id: true, name: true, semester: true },
+        });
+        if (archiveSource) {
+          await tx.project.update({
+            where: { id: pid },
+            data: { archivedAt: new Date() },
+          });
+        }
+        return project;
+      });
+      return { created, sourceArchived: archiveSource };
     }
 
     // ── create_action_item ───────────────────────────────────────────────────
