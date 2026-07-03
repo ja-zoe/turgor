@@ -169,6 +169,8 @@ model User {
   mcpToken      String?    @unique
   status        UserStatus @default(PENDING)
   roleId        String?
+  // R27.2: recipient-side mute for the EMAIL channel; in-app delivery unaffected.
+  emailNotifications Boolean @default(true)
 
   role               Role?               @relation(fields: [roleId], references: [id])
   accounts           Account[]
