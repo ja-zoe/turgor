@@ -252,6 +252,7 @@ export function MpcTokenSection({ hasToken, orgName, appUrl, connections }: Prop
               group: "Action items",
               tools: [
                 { name: "create_action_item", desc: "create (LEAD/SUBLEAD or PM)" },
+                { name: "create_action_items", desc: "bulk create up to 50 in one approval" },
                 { name: "update_action_item", desc: "close, reopen, or edit (LEAD/SUBLEAD or PM)" },
                 { name: "delete_action_item", desc: "delete an action item (LEAD/SUBLEAD or PM)" },
               ],
@@ -275,6 +276,7 @@ export function MpcTokenSection({ hasToken, orgName, appUrl, connections }: Prop
               group: "Deliverables",
               tools: [
                 { name: "create_deliverable", desc: "create (LEAD/SUBLEAD or PM)" },
+                { name: "create_deliverables", desc: "bulk create up to 25, with nested subtasks, in one approval" },
                 { name: "update_deliverable", desc: "edit title, dates, status, group (LEAD/SUBLEAD or PM)" },
                 { name: "delete_deliverable", desc: "delete + all subtasks (PM only)" },
               ],

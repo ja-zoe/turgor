@@ -191,6 +191,35 @@ const TOOLS = [
     },
   },
   {
+    name: "create_action_items",
+    description:
+      "Create up to 50 action items on one project in a single call — one approval instead of N. Same permissions as create_action_item. All-or-nothing: if any item is invalid, nothing is created and the error names the failing index.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        projectId: { type: "string" },
+        items: {
+          type: "array",
+          minItems: 1,
+          maxItems: 50,
+          items: {
+            type: "object",
+            properties: {
+              description: { type: "string" },
+              deadline: { type: "string", description: "ISO date string (optional)" },
+              ownerId: {
+                type: "string",
+                description: "Owner user id; defaults to the caller; empty string for no owner.",
+              },
+            },
+            required: ["description"],
+          },
+        },
+      },
+      required: ["projectId", "items"],
+    },
+  },
+  {
     name: "update_action_item",
     description:
       "Close, reopen, or edit an action item (including reassigning its owner). Requires CLOSE_ACTION_ITEMS, ASSIGN_ACTION_ITEMS, or project LEAD/SUBLEAD.",
@@ -328,6 +357,49 @@ const TOOLS = [
         },
       },
       required: ["projectId", "title", "targetDate"],
+    },
+  },
+  {
+    name: "create_deliverables",
+    description:
+      "Create up to 25 deliverables (each optionally with nested subtasks) on one project in a single call — one approval instead of N. Same permissions and date rules as create_deliverable. All-or-nothing: if anything is invalid, nothing is created and the error names the failing index.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        projectId: { type: "string" },
+        deliverables: {
+          type: "array",
+          minItems: 1,
+          maxItems: 25,
+          items: {
+            type: "object",
+            properties: {
+              title: { type: "string" },
+              targetDate: { type: "string", description: "ISO date string" },
+              startDate: { type: "string", description: "ISO date string (optional)" },
+              description: { type: "string" },
+              group: { type: "string" },
+              priority: { type: "string", enum: ["LOW", "MEDIUM", "HIGH"] },
+              subtasks: {
+                type: "array",
+                items: {
+                  type: "object",
+                  properties: {
+                    title: { type: "string" },
+                    description: { type: "string" },
+                    dueDate: { type: "string", description: "ISO date string (optional)" },
+                    startDate: { type: "string", description: "ISO date string (optional)" },
+                    assigneeId: { type: "string", description: "User id (optional)" },
+                  },
+                  required: ["title"],
+                },
+              },
+            },
+            required: ["title", "targetDate"],
+          },
+        },
+      },
+      required: ["projectId", "deliverables"],
     },
   },
   {
@@ -917,6 +989,42 @@ async function executeTool(
       return { created: item };
     }
 
+    // ── create_action_items (bulk) ───────────────────────────────────────────
+    case "create_action_items": {
+      const pid = args.projectId as string;
+      const membership = await getProjectMembership(user.id, pid);
+      const canCreate =
+        permissions.includes(Permission.ASSIGN_ACTION_ITEMS) ||
+        membership?.role === "LEAD" ||
+        membership?.role === "SUBLEAD";
+      if (!canCreate) return { error: "Insufficient permissions to create action items on this project" };
+
+      const items = args.items as { description?: unknown; ownerId?: unknown; deadline?: unknown }[];
+      if (!Array.isArray(items) || items.length === 0) return { error: "items must be a non-empty array" };
+      if (items.length > 50) return { error: "At most 50 items per call" };
+
+      // Validate every item BEFORE writing anything — all-or-nothing.
+      const rows: { projectId: string; description: string; deadline: Date | null; ownerId: string | null }[] = [];
+      for (let i = 0; i < items.length; i++) {
+        const it = items[i];
+        if (typeof it?.description !== "string" || !it.description.trim()) {
+          return { error: `Item ${i}: description is required`, index: i };
+        }
+        const deadline = it.deadline ? new Date(it.deadline as string) : null;
+        if (deadline && isNaN(deadline.getTime())) {
+          return { error: `Item ${i}: invalid deadline`, index: i };
+        }
+        const ownerId = "ownerId" in it ? ((it.ownerId as string) || null) : user.id;
+        rows.push({ projectId: pid, description: it.description, deadline, ownerId });
+      }
+      const created = await prisma.$transaction(
+        rows.map((data) =>
+          prisma.actionItem.create({ data, select: { id: true, description: true, ownerId: true } })
+        )
+      );
+      return { createdCount: created.length, created };
+    }
+
     // ── update_action_item ───────────────────────────────────────────────────
     case "update_action_item": {
       const aid = args.actionItemId as string;
@@ -1169,6 +1277,93 @@ async function executeTool(
         select: { id: true, title: true, status: true, targetDate: true, group: true, priority: true },
       });
       return { created: deliverable };
+    }
+
+    // ── create_deliverables (bulk) ───────────────────────────────────────────
+    case "create_deliverables": {
+      const pid = args.projectId as string;
+      const membership = await getProjectMembership(user.id, pid);
+      const canCreate =
+        permissions.includes(Permission.MANAGE_MILESTONES) ||
+        membership?.role === "LEAD" ||
+        membership?.role === "SUBLEAD";
+      if (!canCreate) return { error: "Insufficient permissions to create deliverables" };
+
+      type BulkSubtask = { title?: unknown; description?: unknown; dueDate?: unknown; startDate?: unknown; assigneeId?: unknown };
+      type BulkDeliverable = {
+        title?: unknown; targetDate?: unknown; startDate?: unknown; description?: unknown;
+        group?: unknown; priority?: unknown; subtasks?: BulkSubtask[];
+      };
+      const list = args.deliverables as BulkDeliverable[];
+      if (!Array.isArray(list) || list.length === 0) return { error: "deliverables must be a non-empty array" };
+      if (list.length > 25) return { error: "At most 25 deliverables per call" };
+
+      // Validate everything BEFORE writing anything — all-or-nothing. Date checks
+      // mirror the single-item tool (start must not be after target).
+      const baseCount = await prisma.deliverable.count({ where: { projectId: pid } });
+      type CreateInput = Parameters<typeof prisma.deliverable.create>[0]["data"];
+      const inputs: CreateInput[] = [];
+      for (let i = 0; i < list.length; i++) {
+        const d = list[i];
+        if (typeof d?.title !== "string" || !d.title.trim()) {
+          return { error: `Deliverable ${i}: title is required`, index: i };
+        }
+        const target = new Date(d.targetDate as string);
+        if (!d.targetDate || isNaN(target.getTime())) {
+          return { error: `Deliverable ${i}: valid targetDate is required`, index: i };
+        }
+        const start = d.startDate ? new Date(d.startDate as string) : null;
+        if (start && isNaN(start.getTime())) {
+          return { error: `Deliverable ${i}: invalid startDate`, index: i };
+        }
+        if (start && start > target) {
+          return { error: `Deliverable ${i}: startDate must not be after targetDate`, index: i };
+        }
+        const subtasks = d.subtasks ?? [];
+        if (!Array.isArray(subtasks)) return { error: `Deliverable ${i}: subtasks must be an array`, index: i };
+        const subtaskCreates = [];
+        for (let j = 0; j < subtasks.length; j++) {
+          const s = subtasks[j];
+          if (typeof s?.title !== "string" || !s.title.trim()) {
+            return { error: `Deliverable ${i}, subtask ${j}: title is required`, index: i };
+          }
+          const due = s.dueDate ? new Date(s.dueDate as string) : null;
+          const sStart = s.startDate ? new Date(s.startDate as string) : null;
+          if ((due && isNaN(due.getTime())) || (sStart && isNaN(sStart.getTime()))) {
+            return { error: `Deliverable ${i}, subtask ${j}: invalid date`, index: i };
+          }
+          subtaskCreates.push({
+            title: s.title,
+            description: (s.description as string | undefined) ?? null,
+            dueDate: due,
+            startDate: sStart,
+            assigneeId: (s.assigneeId as string | undefined) || null,
+            orderIndex: j,
+          });
+        }
+        inputs.push({
+          projectId: pid,
+          title: d.title,
+          targetDate: target,
+          startDate: start,
+          description: (d.description as string | undefined) ?? null,
+          group: (d.group as string | undefined) ?? null,
+          orderIndex: baseCount + i,
+          ...(typeof d.priority === "string" && d.priority in Priority
+            ? { priority: d.priority as Priority }
+            : {}),
+          ...(subtaskCreates.length > 0 ? { subtasks: { create: subtaskCreates } } : {}),
+        });
+      }
+      const created = await prisma.$transaction(
+        inputs.map((data) =>
+          prisma.deliverable.create({
+            data,
+            select: { id: true, title: true, subtasks: { select: { id: true, title: true }, orderBy: { orderIndex: "asc" } } },
+          })
+        )
+      );
+      return { createdCount: created.length, created };
     }
 
     // ── update_deliverable ───────────────────────────────────────────────────
