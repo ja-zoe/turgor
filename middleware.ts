@@ -12,6 +12,7 @@ const { auth } = NextAuth(authConfig);
 const PUBLIC_PATHS = [
   "/",
   "/dev-login",
+  "/signin",
   "/pending",
   "/cas",
   "/api/cas",
