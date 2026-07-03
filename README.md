@@ -24,9 +24,17 @@ Next.js 16 (App Router), React 19, TypeScript, Tailwind CSS v4, Prisma v7 on Sup
 
 ## Getting started
 
+**Automated setup (recommended)** — after cloning, run in Claude Code:
+
+```bash
+/turgor-setup
+```
+
+The agent will handle prerequisites, environment setup, database initialization, and first sign-in — just provide your Supabase connection string and email address. Read more in [Setup Agent](./.claude/skills/turgor-setup.md).
+
 **Deploy a live instance** (free Supabase + Vercel, ~15 min) - [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/ja-zoe/turgor&env=DATABASE_URL,AUTH_SECRET,AUTH_URL,PM_ADMIN_EMAIL,ALLOWED_EMAIL_DOMAINS,RESEND_API_KEY,EMAIL_FROM&envDescription=Database%2C%20auth%2C%20and%20email%20settings%20-%20see%20the%20setup%20guide&envLink=https://github.com/ja-zoe/turgor/blob/main/SETUP.md) then follow [SETUP.md Part A](SETUP.md) to create the tables and sign in.
 
-**Run it locally** (evaluate or develop):
+**Run it locally** (manual setup — see [SETUP.md](SETUP.md)):
 
 ```bash
 git clone --recurse-submodules git@github.com:ja-zoe/turgor.git
