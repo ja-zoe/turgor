@@ -1,157 +1,164 @@
 # Setting up Turgor for your organization
 
-This guide is for the person who will run the tracker for their club or team (the
-"Project Manager"). It assumes you can open a terminal and paste commands, but not
-that you know anything about web development. Expect the whole setup to take about
-30 minutes, most of it waiting on accounts.
+This guide is for the person who will run Turgor for their club or team (the
+"Project Manager"). It assumes you can open a terminal and paste a few commands,
+but not that you know anything about web development.
 
-## 1. Prerequisites
+Most teams want a **live site their whole team can use** - that is Part A, and it
+takes about 15 minutes, most of it waiting on free accounts. If you only want to
+try Turgor on your own laptop first, skip to Part B.
 
-You need three things installed or created before starting:
+---
 
-- **Node.js 20 or newer** - download from [nodejs.org](https://nodejs.org) (the LTS
-  version is fine).
-- **pnpm** - the package manager this project uses (not npm). After installing
-  Node, run: `npm install -g pnpm`
-- **A Postgres database** - the easiest path is a free
-  [Supabase](https://supabase.com) project: create an account, click "New project",
-  pick any name and region, and set a database password you'll remember.
+## Part A - Get it live
 
-Then get the code:
+You will create two free accounts (a database and a host) and connect them.
+
+### A1. Create the database (Supabase)
+
+1. Go to [supabase.com](https://supabase.com), sign up, and click **New project**.
+2. Pick any name and region, and set a database password you'll remember.
+3. Once it finishes provisioning, open **Project Settings → Database → Connection
+   string** and copy the **pooled** string (it contains `:6543` and
+   `pooler.supabase.com`). Keep it handy - it is your `DATABASE_URL`.
+
+### A2. Deploy the app (Vercel)
+
+Click the button to clone Turgor into your own Vercel account:
+
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/ja-zoe/turgor&env=DATABASE_URL,AUTH_SECRET,AUTH_URL,PM_ADMIN_EMAIL,ALLOWED_EMAIL_DOMAINS,RESEND_API_KEY,EMAIL_FROM&envDescription=Database%2C%20auth%2C%20and%20email%20settings%20-%20see%20the%20setup%20guide&envLink=https://github.com/ja-zoe/turgor/blob/main/SETUP.md)
+
+Vercel will ask you to fill in these settings:
+
+- **`DATABASE_URL`** - the pooled Supabase string from A1. Make sure it ends with
+  `?pgbouncer=true`.
+- **`AUTH_SECRET`** - a random string that secures sign-in sessions. Generate one
+  by running `openssl rand -base64 32` in a terminal and paste the output.
+- **`AUTH_URL`** - your site's public address. You won't know it until the first
+  deploy finishes, so put a placeholder like `https://example.com` now and fix it
+  in A4.
+- **`PM_ADMIN_EMAIL`** - **your email address.** The first person to sign in with
+  this address becomes the Project Manager automatically; everyone else waits for
+  your approval.
+- **`ALLOWED_EMAIL_DOMAINS`** - who may request a sign-in link. Set it to your
+  school domain (e.g. `myschool.edu`) to restrict sign-in, or leave it blank to
+  allow any email. Make sure `PM_ADMIN_EMAIL` is inside it if you set it.
+- **`RESEND_API_KEY`** - Turgor's default sign-in emails a magic link, which needs
+  an email sender. Create a free [Resend](https://resend.com) account and paste an
+  API key. (If you'd rather evaluate without email first, use Part B locally.)
+- **`EMAIL_FROM`** - the sender name/address for those emails, e.g.
+  `Turgor <onboarding@resend.dev>` to start.
+
+Click **Deploy** and wait for it to finish.
+
+### A3. Create the tables
+
+The database is empty until you load Turgor's schema into it. Do this once from
+your own machine (you need [Node.js 20+](https://nodejs.org) and pnpm -
+`npm install -g pnpm`):
 
 ```bash
 git clone --recurse-submodules git@github.com:ja-zoe/turgor.git
 cd turgor
 pnpm install
+cp .env.example .env      # then paste your DATABASE_URL into it
+pnpm db:migrate           # creates all tables (safe to re-run)
+pnpm db:seed              # adds built-in roles and default settings
 ```
 
-## 2. Configure your environment
+`pnpm db:migrate` applies the versioned migrations in `migrations/`; it records
+what it has run, so running it again is harmless and is also how you pick up
+future updates. **Never use `prisma db push`** - Supabase's pooler hangs on it.
 
-Copy the example configuration file and open it in any text editor:
+### A4. Point the app at itself
 
-```bash
-cp .env.example .env
-```
+1. In Vercel, open your project → **Settings → Domains** and copy your site URL
+   (e.g. `https://turgor-yourteam.vercel.app`).
+2. Go to **Settings → Environment Variables**, set `AUTH_URL` to that exact URL,
+   and redeploy (Deployments → ⋯ → Redeploy). Sign-in links won't work until
+   `AUTH_URL` matches your real address.
 
-The file explains every setting, but these are the ones you must fill in:
+### A5. First sign-in and approving your team
 
-- **`DATABASE_URL`** - in Supabase, go to Project Settings → Database → Connection
-  string and copy the **pooled** connection string (it contains `:6543` and
-  `pooler.supabase.com`). Replace the placeholder with it, keeping
-  `?pgbouncer=true` at the end. (`DIRECT_URL` is the same string with `:5432` -
-  copy it too, but the app itself only uses the pooled one.)
-- **`AUTH_SECRET`** - a random string that secures sign-in sessions. Generate one
-  by running `openssl rand -base64 32` in your terminal and paste the output.
-- **`PM_ADMIN_EMAIL`** - **your email address.** The first account that signs in
-  with this address is automatically activated and made the Project Manager.
-  Everyone else who signs in starts as "pending" until you approve them.
-- **`CAS_MODE`** - leave it as `"mock"` unless your school runs a CAS single
-  sign-on server and has registered this app with it. Mock mode gives you a simple
-  local sign-in screen and the app is fully usable with it.
-- **`CAS_EMAIL_DOMAIN`** and **`ALLOWED_EMAIL_DOMAINS`** - replace the Rutgers
-  domains with your own. Sign-in asks for a username and turns it into
-  `username@CAS_EMAIL_DOMAIN`; that domain must appear in `ALLOWED_EMAIL_DOMAINS`
-  or every sign-in is rejected. Make sure `PM_ADMIN_EMAIL` uses the same domain
-  (e.g. domain `yourschool.edu` and admin email `jane@yourschool.edu`).
-- **`RESEND_API_KEY`** - optional. If you want the tracker to send email
-  notifications, create a free [Resend](https://resend.com) account and paste an
-  API key here. If you leave it empty, email is skipped and in-app notifications
-  still work. If you set it, also update `EMAIL_FROM` to your sender name.
-
-The remaining settings (CAS server details, Stytch/ChatGPT OAuth, cron secret) are
-only needed for specific deployments - the comments in `.env.example` say when.
-
-### Choosing your sign-in method
-
-You pick this inside the app: **Org Settings → Sign-in method** (you can change it
-any time after your first sign-in; new installations default to email):
-
-- **Email magic link** (the default) - members enter their email and receive a
-  single-use sign-in link (this requires `RESEND_API_KEY`).
-  `ALLOWED_EMAIL_DOMAINS` controls who may request a link: set it to your school's
-  domain to restrict sign-in, or leave it empty to allow any address. Either way,
-  every new account still waits for your approval before it can do anything.
-- **CAS single sign-on** - if your school runs CAS. Until your IT department
-  registers the app's URL with the CAS server, `CAS_MODE="mock"` gives you a
-  working local sign-in screen for evaluation; switch to `CAS_MODE="real"` once
-  registered.
-
-(Advanced: setting the `AUTH_PROVIDER` environment variable forces a method and
-locks the Org Settings control - useful for testing, rarely needed otherwise.)
-
-## 3. Initialize the database and start the app
-
-Create the tables. **Do not use `prisma db push`** - Supabase's connection pooler
-hangs on it. The project ships a script that applies the schema directly:
-
-```bash
-pnpm exec prisma migrate diff --from-empty --to-schema prisma/schema.prisma --script > /tmp/schema.sql
-pnpm exec tsx scripts/apply-schema.ts
-```
-
-Then seed the built-in roles and settings, and start the app:
-
-```bash
-pnpm db:seed
-pnpm dev
-```
-
-Open [http://localhost:3000](http://localhost:3000) in your browser.
-
-## 4. First sign-in and approving your team
-
-1. The app redirects you to a sign-in screen. In mock mode, enter the part of your
-   `PM_ADMIN_EMAIL` before the `@` (e.g. `jane` for `jane@yourschool.edu`).
+1. Open your site. Enter your `PM_ADMIN_EMAIL`, check your inbox, and click the
+   magic link.
 2. You should land on the dashboard with a **PM Tools** section (Users & Roles,
-   Monthly Review, Settings) at the bottom of the left sidebar. If you see it, you
-   are the Project Manager. If not, double-check `PM_ADMIN_EMAIL` matches the
-   address you signed in with.
-3. When teammates sign in, their accounts wait in **Users & Roles** under "Pending".
-   Approve each one and pick their role: **Project Lead** for people who run a
-   project, **Viewer** for everyone else. You can also build custom roles on the
-   same page.
+   Monthly Review, Settings) at the bottom of the left sidebar. If it's there,
+   you're the Project Manager. If not, confirm `PM_ADMIN_EMAIL` matches the address
+   you signed in with.
+3. As teammates sign in, their accounts wait in **Users & Roles → Pending**.
+   Approve each and pick a role: **Project Lead** for people who run a project,
+   **Viewer** for everyone else.
 
-## 5. Make it yours
+### A6. Make it yours
 
-Everything branded "SEED" is configurable. Go to **PM Tools → Settings**:
+Turgor ships with neutral default branding. Go to **PM Tools → Settings** to
+replace it:
 
 - **Organization** - your org's short name, full name, institution, and logo.
-  Upload a logo image directly (add `SUPABASE_URL` and `SUPABASE_SECRET_KEY`
-  from your Supabase project's API-keys settings to `.env` to enable uploads), or
-  paste an image URL. These replace the SEED branding across the app, sign-in screen,
-  and emails.
+  Upload a logo directly (add `SUPABASE_URL` and `SUPABASE_SECRET_KEY` from your
+  Supabase project's API settings to enable uploads) or paste an image URL. This
+  replaces the default Turgor branding across the app, sign-in screen, and emails.
 - **Sign-in label** - what your login identity is called on the sign-in screen
-  (e.g. "Rutgers NetID", "University ID", or just "Email").
+  (e.g. "Email", "NetID", "University ID").
 - **Period label** - what your org calls a planning period: Semester, Quarter,
   Term... This renames the calendar and every period picker.
-- **Theme** - pick one of the color presets to move away from the default forest
-  green.
+- **Theme** - pick a color preset to move off the default forest green.
 - **Detection thresholds** - how far a project slips (weeks behind a milestone,
-  missed goals in a row) before it is automatically flagged BEHIND.
-- **Notification rules** - who gets notified about what (missing submissions,
-  projects behind, action items due, missed goals) and whether by email, in-app,
-  or both.
+  missed goals in a row) before it is auto-flagged BEHIND.
+- **Notification rules** - who gets notified about what, and whether by email,
+  in-app, or both.
 
 Built-in roles can be renamed in **Users & Roles** (e.g. "Project Manager" →
 "Director") - renames are safe and survive re-seeding.
 
-## 6. Going further
+You now have a live, branded tracker. The rest of this file is optional.
+
+---
+
+## Part B - Run it locally
+
+To evaluate or develop on your own machine instead of deploying:
+
+```bash
+git clone --recurse-submodules git@github.com:ja-zoe/turgor.git
+cd turgor
+pnpm install
+cp .env.example .env      # fill in DATABASE_URL and AUTH_SECRET at minimum
+pnpm db:migrate           # create the tables
+pnpm db:seed              # seed built-in roles and settings
+pnpm dev
+```
+
+Open [http://localhost:3000](http://localhost:3000). For a zero-email trial, set
+`AUTH_PROVIDER="cas"` and `CAS_MODE="mock"` in `.env`: the app then shows a local
+sign-in screen where any username works - enter the part of your `PM_ADMIN_EMAIL`
+before the `@` to land as the Project Manager. Everything is usable this way
+without a Resend key.
+
+The comments in `.env.example` explain every setting, including the ones only
+specific deployments need (CAS server details, Stytch/ChatGPT OAuth, cron secret).
+
+---
+
+## Part C - Going further
 
 - **AI assistant access (MCP)** - each user can connect Claude, Cursor, or another
-  MCP-capable AI client to the tracker: go to **Account**, generate a personal
-  access token, and paste the shown client configuration into the AI tool. The
-  assistant then works with the tracker under that user's own permissions. Tokens
-  work identically whichever sign-in method you chose.
+  MCP-capable AI client: go to **Account**, generate a personal access token, and
+  paste the shown client configuration into the AI tool. The assistant then works
+  with the tracker under that user's own permissions.
 - **Calendar subscription** - the calendar page offers an ICS export you can
   subscribe to from Google Calendar or Outlook.
-- **Real single sign-on** - if your school runs CAS, have IT register the app's
-  URL, then set `CAS_MODE="real"` and the `CAS_*` values in `.env`.
+- **Scheduled notifications** - point a cron job at `POST /api/cron/notifications`
+  (sending the `CRON_SECRET` header) to run the notification engine on a schedule.
+  On Vercel, a `vercel.json` cron or any external scheduler works.
+- **Real single sign-on** - if your school runs CAS, have IT register your site's
+  URL, then set `CAS_MODE="real"` and the `CAS_*` values.
 - **End of period** - when a semester/quarter ends, archive finished projects from
-  the project page, or "carry" continuing projects into the new period (this
-  clones the project with a fresh slate and archives the old one). Archived
-  projects stay searchable and exportable.
-- **Deploying to the internet** - the app is a standard Next.js project; Vercel's
-  free tier works well. Set the same `.env` values in the Vercel dashboard, plus
-  `AUTH_URL` set to your public URL, and point a cron job at
-  `POST /api/cron/notifications` (with the `CRON_SECRET` header) to run the
-  notification engine on a schedule.
+  the project page, or "carry" continuing ones into the new period (clones the
+  project with a fresh slate and archives the old one). Archived projects stay
+  searchable and exportable.
+- **Backups and upgrades** - your data lives in your Supabase Postgres database;
+  use Supabase's backup features to protect it (restoring a backup is also how you
+  roll back a bad change). To upgrade Turgor, pull the latest code, run
+  `pnpm db:migrate` to apply any new migrations, and redeploy.
