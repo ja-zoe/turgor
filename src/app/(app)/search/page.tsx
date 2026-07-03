@@ -161,7 +161,7 @@ export default async function SearchPage({
                   >
                     <div className="min-w-0">
                       <Link
-                        href={`/projects/${a.project.id}/action-items`}
+                        href={`/projects/${a.project.id}`}
                         className="clickable text-sm text-foreground line-clamp-1"
                       >
                         {a.description}
