@@ -3,7 +3,7 @@
 import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/permissions";
 import { Permission, Channel, RecipientGroup, TriggerType } from "@/generated/prisma";
-import { isThemePresetId } from "@/lib/themes";
+import { isThemePresetId, isCustomColors } from "@/lib/themes";
 import { storageConfigured, uploadPublicAsset } from "@/lib/storage";
 import { revalidatePath } from "next/cache";
 
@@ -107,13 +107,35 @@ export async function updateOrgSettings(formData: FormData) {
   // App-name override (R29.3): empty means "derive <orgName> Tracker" — stored null.
   const appName = ((formData.get("appName") as string) ?? "").trim() || null;
 
-  // Only curated preset ids are accepted; anything else keeps the current theme.
+  // Curated preset ids plus "custom" (R29.2); anything else keeps the current theme.
   const themePresetRaw = ((formData.get("themePreset") as string) ?? "").trim();
-  const themePreset = isThemePresetId(themePresetRaw)
-    ? themePresetRaw
-    : current?.themePreset ?? "forest";
+  const themePreset =
+    isThemePresetId(themePresetRaw) || themePresetRaw === "custom"
+      ? themePresetRaw
+      : current?.themePreset ?? "forest";
 
-  const data = { orgName, orgFullName, orgInstitution, orgLogoUrl, signInLabel, periodLabel, themePreset, appName };
+  // Custom palette: persisted whenever submitted-and-valid (so switching presets
+  // and back keeps the last choice); a custom save with a malformed hex is rejected.
+  const submittedColors = {
+    primary: ((formData.get("customPrimary") as string) ?? "").trim(),
+    background: ((formData.get("customBackground") as string) ?? "").trim(),
+    card: ((formData.get("customCard") as string) ?? "").trim(),
+  };
+  const anyColorSubmitted = Boolean(
+    submittedColors.primary || submittedColors.background || submittedColors.card
+  );
+  let customColors =
+    current && isCustomColors(current.customColors) ? current.customColors : null;
+  if (isCustomColors(submittedColors)) {
+    customColors = submittedColors;
+  } else if (themePreset === "custom" && anyColorSubmitted) {
+    throw new Error("Custom colors must be 6-digit hex values like #2E4034.");
+  }
+  if (themePreset === "custom" && !customColors) {
+    throw new Error("Pick the three custom colors before selecting the Custom theme.");
+  }
+
+  const data = { orgName, orgFullName, orgInstitution, orgLogoUrl, signInLabel, periodLabel, themePreset, appName, customColors: customColors ?? undefined };
 
   await prisma.settings.upsert({
     where: { id: "singleton" },

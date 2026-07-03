@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { Permission, TriggerType, Channel, RecipientGroup } from "@/generated/prisma";
 import { updateSettings, updateOrgSettings, createNotificationRule, toggleNotificationRule, deleteNotificationRule } from "@/lib/actions/settings";
 import { getOrgSettings } from "@/lib/org";
-import { THEME_PRESETS } from "@/lib/themes";
+import { THEME_PRESETS, themePrimaryHex, DEFAULT_CANVAS, DEFAULT_CARD } from "@/lib/themes";
 import { Bell, Buildings, Gauge, Trash } from "@phosphor-icons/react/dist/ssr";
 import { SubmitButton } from "@/components/submit-button";
 import { PendingIconButton } from "@/components/action-feedback";
@@ -210,7 +210,7 @@ export default async function SettingsPage() {
               >
                 Theme
               </label>
-              <div className="flex items-center gap-4 pt-1.5" data-testid="org-theme">
+              <div className="flex items-center gap-4 pt-1.5 flex-wrap" data-testid="org-theme">
                 {THEME_PRESETS.map((preset) => (
                   <label key={preset.id} className="flex items-center gap-1.5 cursor-pointer">
                     <input
@@ -229,9 +229,41 @@ export default async function SettingsPage() {
                     <span className="text-sm text-foreground">{preset.label}</span>
                   </label>
                 ))}
+                <label className="flex items-center gap-1.5 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="themePreset"
+                    value="custom"
+                    defaultChecked={org.themePreset === "custom"}
+                    className="accent-primary cursor-pointer"
+                    data-testid="theme-custom"
+                  />
+                  <span className="text-sm text-foreground">Custom</span>
+                </label>
+              </div>
+              <div className="flex items-center gap-4 mt-2.5" data-testid="custom-colors">
+                {(
+                  [
+                    { key: "customPrimary", label: "Primary", value: org.customColors?.primary ?? themePrimaryHex(org.themePreset) },
+                    { key: "customBackground", label: "Background", value: org.customColors?.background ?? DEFAULT_CANVAS },
+                    { key: "customCard", label: "Card", value: org.customColors?.card ?? DEFAULT_CARD },
+                  ] as const
+                ).map(({ key, label, value }) => (
+                  <label key={key} className="flex items-center gap-1.5 cursor-pointer text-xs text-muted-foreground">
+                    <input
+                      type="color"
+                      name={key}
+                      defaultValue={value}
+                      className="h-6 w-8 cursor-pointer rounded border border-border bg-transparent p-0"
+                      data-testid={key}
+                    />
+                    {label}
+                  </label>
+                ))}
               </div>
               <p className="text-xs text-muted-foreground mt-1.5">
-                Swaps the primary color across the app. Status colors stay the same.
+                Presets swap the primary color; Custom also opens the background and
+                card colors. Status colors stay the same — they carry meaning.
               </p>
             </div>
             <div className="flex items-end">
