@@ -1,4 +1,4 @@
-# Setting up the tracker for your organization
+# Setting up Turgor for your organization
 
 This guide is for the person who will run the tracker for their club or team (the
 "Project Manager"). It assumes you can open a terminal and paste commands, but not
@@ -20,8 +20,8 @@ You need three things installed or created before starting:
 Then get the code:
 
 ```bash
-git clone --recurse-submodules git@github.com:ja-zoe/seed-project-tracker.git
-cd seed-project-tracker
+git clone --recurse-submodules git@github.com:ja-zoe/turgor.git
+cd turgor
 pnpm install
 ```
 
