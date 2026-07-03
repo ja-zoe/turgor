@@ -52,11 +52,8 @@ yarn-error.log*
 /claude
 
 /src/generated/prisma
-# Claude Code + dev tooling (agents/ and skills/ are part of distribution)
+# Claude Code + dev tooling (local-only; agents are in .agents/ which is tracked)
 .claude/
-!.claude/agents/
-!.claude/skills/
-.agents/
 
 # Spec-driven-dev (development tracking)
 changes/

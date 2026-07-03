@@ -24,13 +24,14 @@ Next.js 16 (App Router), React 19, TypeScript, Tailwind CSS v4, Prisma v7 on Sup
 
 ## Getting started
 
-**Automated setup (recommended)** — after cloning, run in Claude Code:
+**Automated setup (recommended)** — after cloning, set up the local agent directory, then run in Claude Code:
 
 ```bash
+ln -s .agents .claude    # symlink for Claude Code to find agents
 /turgor-setup
 ```
 
-The agent asks whether you want local development or a live production site (Supabase + Vercel), then handles environment setup, database initialization, deployment guidance, and first sign-in — you just supply credentials and click through the dashboards it points you to. Read more in [Setup Agent](./.claude/skills/turgor-setup.md).
+The agent asks whether you want local development or a live production site (Supabase + Vercel), then handles environment setup, database initialization, deployment guidance, and first sign-in — you just supply credentials and click through the dashboards it points you to. Read more in [Setup Agent](./.agents/skills/turgor-setup.md).
 
 **Deploy a live instance** (free Supabase + Vercel, ~15 min) - [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/ja-zoe/turgor&env=DATABASE_URL,AUTH_SECRET,AUTH_URL,PM_ADMIN_EMAIL,ALLOWED_EMAIL_DOMAINS,RESEND_API_KEY,EMAIL_FROM&envDescription=Database%2C%20auth%2C%20and%20email%20settings%20-%20see%20the%20setup%20guide&envLink=https://github.com/ja-zoe/turgor/blob/main/SETUP.md) then follow [SETUP.md Part A](SETUP.md) to create the tables and sign in.
 
@@ -60,7 +61,7 @@ pnpm exec playwright test  # run the e2e suite
 
 ## Development workflow
 
-Changes are tracked as spec-driven revision sets under `changes/` (see `changes/CONTEXT.md`), using the [spec-driven-dev skill](https://github.com/ja-zoe/agent-skill-spec-driven-dev) vendored as a submodule. `CLAUDE.md` documents the architecture in depth.
+Changes are tracked as spec-driven revision sets under `changes/` (see `changes/CONTEXT.md`), using the [spec-driven-dev skill](https://github.com/ja-zoe/agent-skill-spec-driven-dev) vendored as a submodule. `AGENTS.md` documents the architecture in depth.
 
 ## License
 

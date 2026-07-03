@@ -1,6 +1,6 @@
-# CLAUDE.md
+# AGENTS.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file documents the architecture for Turgor, written for agent-based development in Claude Code and other AI-driven workflows. References like `.agents/agents/turgor-setup.md` are tracked in git; locally, `.claude` is a symlink to `.agents/`.
 
 ## Commands
 

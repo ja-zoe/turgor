@@ -4,6 +4,10 @@ This guide is for the person who will run Turgor for their club or team (the
 "Project Manager"). It assumes you can open a terminal and paste a few commands,
 but not that you know anything about web development.
 
+**If using Claude Code's setup agent:** after cloning, run `ln -s .agents .claude`
+in the repo directory (creates a symlink so the agent files are accessible). Then
+run `/turgor-setup` and it'll guide you through everything below.
+
 Most teams want a **live site their whole team can use** - that is Part A, and it
 takes about 15 minutes, most of it waiting on free accounts. If you only want to
 try Turgor on your own laptop first, skip to Part B.
