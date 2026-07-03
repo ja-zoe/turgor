@@ -1,13 +1,16 @@
 {
-  "name": "seed-project-tracker",
+  "name": "turgor",
   "version": "0.1.0",
   "private": true,
+  "license": "AGPL-3.0-only",
   "scripts": {
     "postinstall": "prisma generate",
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "db:push": "prisma db push --accept-data-loss",
+    "db:migrate": "tsx scripts/migrate.ts",
+    "db:migrate:status": "tsx scripts/migrate.ts --status",
+    "db:migrate:baseline": "tsx scripts/migrate.ts --baseline",
     "db:seed": "prisma db seed",
     "db:studio": "prisma studio",
     "notifications:run": "tsx scripts/run-notifications.ts"

@@ -184,7 +184,7 @@ export default async function SettingsPage() {
                 data-testid="org-sign-in-label"
               />
               <p className="text-xs text-muted-foreground mt-1">
-                Shown on the sign-in button, e.g. &ldquo;Rutgers NetID&rdquo;.
+                Shown on the sign-in button, e.g. &ldquo;Email&rdquo; or &ldquo;NetID&rdquo;.
               </p>
             </div>
             <div>

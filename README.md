@@ -1,8 +1,8 @@
-# SEED Project Tracker
+# Turgor
 
-A project tracking web app for student organizations. It was built for [SEED (Students for Environmental & Energy Development)](https://github.com/ja-zoe/seed-website) at Rutgers, and is being generalized so any club can run it for their own projects.
+[![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-2E4034.svg)](LICENSE)
 
-> **Note:** as part of that generalization, this repository will be renamed in the future.
+A project tracker for project-based student teams - competition teams, design/build teams, hackathon orgs, and any club that runs real projects with deliverables and deadlines. Built for and battle-tested by [SEED (Students for Environmental & Energy Development)](https://github.com/ja-zoe/seed-website) at Rutgers.
 
 > **Adopting this for your org?** [SETUP.md](SETUP.md) walks a first admin through the whole setup - database, sign-in (campus CAS or email magic links), approving your team, and rebranding - in plain language.
 
@@ -24,25 +24,37 @@ Next.js 16 (App Router), React 19, TypeScript, Tailwind CSS v4, Prisma v7 on Sup
 
 ## Getting started
 
+**Deploy a live instance** (free Supabase + Vercel, ~15 min) - [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/ja-zoe/turgor&env=DATABASE_URL,AUTH_SECRET,AUTH_URL,PM_ADMIN_EMAIL,ALLOWED_EMAIL_DOMAINS,RESEND_API_KEY,EMAIL_FROM&envDescription=Database%2C%20auth%2C%20and%20email%20settings%20-%20see%20the%20setup%20guide&envLink=https://github.com/ja-zoe/turgor/blob/main/SETUP.md) then follow [SETUP.md Part A](SETUP.md) to create the tables and sign in.
+
+**Run it locally** (evaluate or develop):
+
 ```bash
-git clone --recurse-submodules git@github.com:ja-zoe/seed-project-tracker.git
-cd seed-project-tracker
+git clone --recurse-submodules git@github.com:ja-zoe/turgor.git
+cd turgor
 pnpm install
-cp .env.example .env   # fill in database + auth values (see comments in the file)
+cp .env.example .env   # fill in DATABASE_URL + AUTH_SECRET (see comments in the file)
+pnpm db:migrate        # create the tables
 pnpm db:seed           # seed built-in roles and settings
 pnpm dev
 ```
 
-With `CAS_MODE=mock` (the default) the app redirects to a local dev-login page where any NetID works. Sign in with the NetID from `PM_ADMIN_EMAIL` to land as the Project Manager.
+Open [http://localhost:3000](http://localhost:3000). For a zero-email trial set `AUTH_PROVIDER="cas"` and `CAS_MODE="mock"` in `.env` - the app then shows a local sign-in screen where any username works; sign in with the name from `PM_ADMIN_EMAIL` to land as the Project Manager. Full walkthrough in [SETUP.md Part B](SETUP.md).
 
 Other useful commands:
 
 ```bash
-pnpm db:studio           # browse the database with Prisma Studio
-pnpm notifications:run   # run the notification engine once
+pnpm db:studio             # browse the database with Prisma Studio
+pnpm db:migrate:status     # show applied vs pending migrations
+pnpm notifications:run     # run the notification engine once
 pnpm exec playwright test  # run the e2e suite
 ```
 
 ## Development workflow
 
 Changes are tracked as spec-driven revision sets under `changes/` (see `changes/CONTEXT.md`), using the [spec-driven-dev skill](https://github.com/ja-zoe/agent-skill-spec-driven-dev) vendored as a submodule. `CLAUDE.md` documents the architecture in depth.
+
+## License
+
+[GNU AGPL v3](LICENSE). You are free to self-host, modify, and use this software at no cost. If you offer a modified version to others as a network service (for example, hosted tracker access), the AGPL requires you to publish the source of your modifications.
+
+Copyright (C) 2026 Julian V
