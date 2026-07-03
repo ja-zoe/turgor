@@ -8,7 +8,7 @@ import { getAuthProvider } from "@/lib/auth-provider";
 export default async function PendingPage() {
   const session = await auth();
   if (!session?.user) {
-    redirect(getAuthProvider() === "email" ? "/signin/email" : "/dev-login");
+    redirect((await getAuthProvider()) === "email" ? "/signin/email" : "/dev-login");
   }
   if (session.user.status === "ACTIVE") redirect("/dashboard");
   const org = await getOrgSettings();

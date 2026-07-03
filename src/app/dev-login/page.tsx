@@ -11,8 +11,8 @@ import { getAuthProvider } from "@/lib/auth-provider";
  * in real-CAS mode it would let anyone mint a session as any netId, and in email
  * mode the magic link is the only door. Enforced in the page and the action.
  */
-function assertMockCas() {
-  if (getAuthProvider() === "email") redirect("/signin/email");
+async function assertMockCas() {
+  if ((await getAuthProvider()) === "email") redirect("/signin/email");
   if (process.env.CAS_MODE === "real") redirect("/api/cas/login");
 }
 
@@ -30,13 +30,13 @@ const errorMessages: Record<string, string> = {
 };
 
 export default async function DevLoginPage({ searchParams }: Props) {
-  assertMockCas();
+  await assertMockCas();
   const { error } = await searchParams;
   const org = await getOrgSettings();
 
   async function login(formData: FormData) {
     "use server";
-    assertMockCas();
+    await assertMockCas();
     const netId = (formData.get("netId") as string)?.trim().toLowerCase();
 
     if (!netId || !/^[a-z0-9]+$/.test(netId)) {
