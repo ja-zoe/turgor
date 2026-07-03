@@ -131,8 +131,9 @@ export default async function SettingsPage() {
                 data-testid="org-app-name"
               />
               <p className="text-xs text-muted-foreground mt-1">
-                Replaces the whole &ldquo;{org.orgName} Tracker&rdquo; line (sidebar, browser
-                tab, sign-in pages, emails). Leave empty to derive it from the short name.
+                Replaces the whole &ldquo;{`${org.orgName} Tracker`}&rdquo; line (sidebar,
+                browser tab, sign-in pages, emails). Leave empty to derive it from the
+                short name.
               </p>
             </div>
             <div>
