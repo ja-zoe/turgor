@@ -60,7 +60,7 @@ const pmItems = [
   },
   {
     href: "/pm/settings",
-    label: "Settings",
+    label: "Org Settings",
     icon: Gear,
     perm: Permission.CONFIGURE_NOTIFICATIONS,
   },

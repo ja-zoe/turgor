@@ -1,6 +1,5 @@
 import NextAuth from "next-auth";
 import authConfig from "./auth.config";
-import { getAuthProvider } from "./lib/auth-provider";
 import { NextResponse } from "next/server";
 import type { NextAuthRequest } from "next-auth";
 
@@ -39,13 +38,12 @@ export default auth(function middleware(request: NextAuthRequest) {
     return NextResponse.next();
   }
 
-  // Not signed in → the deployment's sign-in flow (R28.2)
+  // Not signed in → the /signin dispatcher (R29.4). The provider now lives in
+  // Settings and this proxy runs on the Edge runtime with no DB access, so the
+  // Node-side dispatcher resolves cas-vs-email and forwards.
   if (!session?.user) {
-    if (getAuthProvider() === "email") {
-      return NextResponse.redirect(new URL("/signin/email", request.url));
-    }
-    const url = new URL("/api/cas/login", request.url);
-    url.searchParams.set("service", request.url);
+    const url = new URL("/signin", request.url);
+    url.searchParams.set("next", request.url);
     return NextResponse.redirect(url);
   }
 

@@ -135,7 +135,15 @@ export async function updateOrgSettings(formData: FormData) {
     throw new Error("Pick the three custom colors before selecting the Custom theme.");
   }
 
-  const data = { orgName, orgFullName, orgInstitution, orgLogoUrl, signInLabel, periodLabel, themePreset, appName, customColors: customColors ?? undefined };
+  // Sign-in method (R29.4). A disabled select (env override active) submits
+  // nothing → the stored value is kept.
+  const authProviderRaw = ((formData.get("authProvider") as string) ?? "").trim();
+  const authProvider =
+    authProviderRaw === "cas" || authProviderRaw === "email"
+      ? authProviderRaw
+      : current?.authProvider ?? "email";
+
+  const data = { orgName, orgFullName, orgInstitution, orgLogoUrl, signInLabel, periodLabel, themePreset, appName, customColors: customColors ?? undefined, authProvider };
 
   await prisma.settings.upsert({
     where: { id: "singleton" },

@@ -63,18 +63,21 @@ only needed for specific deployments - the comments in `.env.example` say when.
 
 ### Choosing your sign-in method
 
-`AUTH_PROVIDER` picks how your members sign in:
+You pick this inside the app: **Org Settings → Sign-in method** (you can change it
+any time after your first sign-in; new installations default to email):
 
-- **Your school runs CAS single sign-on** - leave `AUTH_PROVIDER` unset (CAS is the
-  default). Until your IT department registers the app's URL with the CAS server,
-  `CAS_MODE="mock"` gives you a working local sign-in screen for evaluation; switch
-  to `CAS_MODE="real"` once registered.
-- **No CAS, or a community club** - set `AUTH_PROVIDER="email"`. Members enter
-  their email and receive a single-use sign-in link (this requires
-  `RESEND_API_KEY`). `ALLOWED_EMAIL_DOMAINS` controls who may request a link: set
-  it to your school's domain to restrict sign-in, or leave it empty to allow any
-  address. Either way, every new account still waits for your approval before it
-  can do anything.
+- **Email magic link** (the default) - members enter their email and receive a
+  single-use sign-in link (this requires `RESEND_API_KEY`).
+  `ALLOWED_EMAIL_DOMAINS` controls who may request a link: set it to your school's
+  domain to restrict sign-in, or leave it empty to allow any address. Either way,
+  every new account still waits for your approval before it can do anything.
+- **CAS single sign-on** - if your school runs CAS. Until your IT department
+  registers the app's URL with the CAS server, `CAS_MODE="mock"` gives you a
+  working local sign-in screen for evaluation; switch to `CAS_MODE="real"` once
+  registered.
+
+(Advanced: setting the `AUTH_PROVIDER` environment variable forces a method and
+locks the Org Settings control - useful for testing, rarely needed otherwise.)
 
 ## 3. Initialize the database and start the app
 

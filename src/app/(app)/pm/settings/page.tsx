@@ -9,6 +9,7 @@ import { SubmitButton } from "@/components/submit-button";
 import { PendingIconButton } from "@/components/action-feedback";
 import { LogoUploader } from "@/components/logo-uploader";
 import { storageConfigured } from "@/lib/storage";
+import { envAuthProviderOverride } from "@/lib/auth-provider";
 import Image from "next/image";
 
 const TRIGGER_LABELS: Record<TriggerType, string> = {
@@ -57,7 +58,7 @@ export default async function SettingsPage() {
             lineHeight: 1.1,
           }}
         >
-          Settings
+          Organization Settings
         </h1>
       </div>
 
@@ -183,6 +184,29 @@ export default async function SettingsPage() {
               />
               <p className="text-xs text-muted-foreground mt-1">
                 Shown on the sign-in button, e.g. &ldquo;Rutgers NetID&rdquo;.
+              </p>
+            </div>
+            <div>
+              <label
+                className="block text-xs text-muted-foreground mb-1"
+                style={{ fontFamily: "var(--font-mono)" }}
+              >
+                Sign-in method
+              </label>
+              <select
+                name="authProvider"
+                defaultValue={settings?.authProvider ?? "email"}
+                disabled={envAuthProviderOverride() !== null}
+                className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 disabled:opacity-60"
+                data-testid="org-auth-provider"
+              >
+                <option value="email">Email magic link</option>
+                <option value="cas">CAS single sign-on</option>
+              </select>
+              <p className="text-xs text-muted-foreground mt-1">
+                {envAuthProviderOverride()
+                  ? "Locked: set by the deployment's AUTH_PROVIDER variable."
+                  : "Changes how everyone signs in. Make sure CAS is configured before switching to it."}
               </p>
             </div>
             <div>
