@@ -7,6 +7,7 @@ import { getPendingLeadMeetings } from "@/lib/lead-meeting";
 import { runRedFlagDetection } from "@/lib/red-flag";
 import { getOrgSettings } from "@/lib/org";
 import { verifyOAuthAccessToken, looksLikeJwt, type McpUser } from "@/lib/mcp-oauth";
+import { searchAll } from "@/lib/search";
 
 // Lead/eboard meetings are hidden from users without VIEW_LEAD_MEETINGS — mirrors
 // calendar/page.tsx and api/calendar/ics/route.ts.
@@ -83,6 +84,18 @@ const TOOLS = [
         },
       },
       required: [],
+    },
+  },
+  {
+    name: "search",
+    description:
+      "Case-insensitive search across projects (name/description), deliverables (title), action items (description), and users (name/email; requires MANAGE_USERS). Scoped like the web app: without VIEW_ALL_PROJECTS results are limited to the caller's assigned projects. Use this to resolve a name to an id.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        query: { type: "string", description: "Search text (min 2 characters)" },
+      },
+      required: ["query"],
     },
   },
   {
@@ -600,6 +613,16 @@ async function executeTool(
         include: { project: { select: projectSelect } },
       });
       return { projects: assignments.map((a) => withArchivedFlag(a.project)) };
+    }
+
+    // ── search ───────────────────────────────────────────────────────────────
+    case "search": {
+      const query = (args.query as string) ?? "";
+      if (query.trim().length < 2) {
+        return { error: "Query must be at least 2 characters" };
+      }
+      // Same helper as the /search page — identical scoping on every surface.
+      return await searchAll(query, user.id, permissions);
     }
 
     // ── get_project_detail ───────────────────────────────────────────────────

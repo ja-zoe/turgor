@@ -232,6 +232,7 @@ export function MpcTokenSection({ hasToken, orgName, appUrl, connections }: Prop
             {
               group: "Read",
               tools: [
+                { name: "search", desc: "find projects, deliverables, action items & users by name" },
                 { name: "list_projects", desc: "all projects you have access to" },
                 { name: "get_project_detail", desc: "deliverables, subtasks & open action items" },
                 { name: "list_members", desc: "query members by project, role, or status" },
@@ -244,6 +245,7 @@ export function MpcTokenSection({ hasToken, orgName, appUrl, connections }: Prop
               tools: [
                 { name: "create_project", desc: "create a new project" },
                 { name: "update_project", desc: "edit name, semester, dates, description, corrective action" },
+                { name: "carry_project", desc: "clone into a new period with a fresh slate, archiving the source" },
               ],
             },
             {
@@ -258,6 +260,15 @@ export function MpcTokenSection({ hasToken, orgName, appUrl, connections }: Prop
               group: "Status",
               tools: [
                 { name: "create_status_update", desc: "post weekly update (LEAD/SUBLEAD or PM)" },
+                { name: "list_status_updates", desc: "list submitted standing updates" },
+              ],
+            },
+            {
+              group: "Meetings",
+              tools: [
+                { name: "list_meeting_records", desc: "post-meeting tracking records, newest first" },
+                { name: "create_meeting_record", desc: "record a post-meeting entry (POST_MEETING_TRACKING)" },
+                { name: "delete_meeting_record", desc: "delete a meeting record (MANAGE_MEETING_RECORDS)" },
               ],
             },
             {

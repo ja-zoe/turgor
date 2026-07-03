@@ -28,8 +28,11 @@ async function sendEmail(payloads: NotificationPayload[]) {
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey || payloads.length === 0) return;
 
+  // Opted-out users (User.emailNotifications = false) are excluded here, which
+  // covers every email path — all senders funnel through sendEmail. In-app
+  // delivery is untouched.
   const users = await prisma.user.findMany({
-    where: { id: { in: payloads.map((p) => p.userId) } },
+    where: { id: { in: payloads.map((p) => p.userId) }, emailNotifications: true },
     select: { id: true, email: true, name: true },
   });
   const emailMap = new Map(users.map((u) => [u.id, u]));

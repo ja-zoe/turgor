@@ -4,6 +4,8 @@ A project tracking web app for student organizations. It was built for [SEED (St
 
 > **Note:** as part of that generalization, this repository will be renamed in the future.
 
+> **Adopting this for your org?** [SETUP.md](SETUP.md) walks a first admin through the whole setup - database, sign-in, approving your team, and rebranding - in plain language.
+
 ## What it does
 
 - **Projects and deliverables** - projects with deliverables, subtasks, timelines, and per-semester views

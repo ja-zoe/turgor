@@ -40,6 +40,17 @@ export async function generateMcpToken(): Promise<{ token: string }> {
   return { token };
 }
 
+export async function updateEmailNotifications(formData: FormData): Promise<void> {
+  const user = await requireAuth();
+  // Unchecked checkboxes drop out of FormData, so absence means opted out.
+  const enabled = formData.get("emailNotifications") === "on";
+  await prisma.user.update({
+    where: { id: user.id },
+    data: { emailNotifications: enabled },
+  });
+  revalidatePath("/account");
+}
+
 export async function revokeMcpToken(): Promise<void> {
   const user = await requireAuth();
   await prisma.user.update({

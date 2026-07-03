@@ -17,6 +17,7 @@ import {
   X,
   UserCircle,
   CalendarDots,
+  MagnifyingGlass,
 } from "@phosphor-icons/react";
 import { Permission } from "@/generated/prisma";
 import { NotificationBell } from "@/components/notification-bell";
@@ -35,6 +36,7 @@ interface SidebarProps {
 // The calendar label is org-configurable ("Semester Calendar", "Quarter Calendar"…),
 // so it's filled in per render from the periodLabel prop.
 const navItems = [
+  { href: "/search", label: "Search", icon: MagnifyingGlass },
   { href: "/dashboard", label: "Dashboard", icon: Plant },
   { href: "/projects", label: "Projects", icon: Folders },
   { href: "/my-tasks", label: "My Tasks", icon: CheckSquare },
