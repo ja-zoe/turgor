@@ -1,5 +1,7 @@
 # SEED Project Tracker
 
+[![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-2E4034.svg)](LICENSE)
+
 A project tracking web app for student organizations. It was built for [SEED (Students for Environmental & Energy Development)](https://github.com/ja-zoe/seed-website) at Rutgers, and is being generalized so any club can run it for their own projects.
 
 > **Note:** as part of that generalization, this repository will be renamed in the future.
@@ -46,3 +48,9 @@ pnpm exec playwright test  # run the e2e suite
 ## Development workflow
 
 Changes are tracked as spec-driven revision sets under `changes/` (see `changes/CONTEXT.md`), using the [spec-driven-dev skill](https://github.com/ja-zoe/agent-skill-spec-driven-dev) vendored as a submodule. `CLAUDE.md` documents the architecture in depth.
+
+## License
+
+[GNU AGPL v3](LICENSE). You are free to self-host, modify, and use this software at no cost. If you offer a modified version to others as a network service (for example, hosted tracker access), the AGPL requires you to publish the source of your modifications.
+
+Copyright (C) 2026 Julian V
