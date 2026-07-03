@@ -401,22 +401,42 @@ export default async function UsersPage() {
                     />
                   </div>
                   <div className="grid grid-cols-2 gap-x-4 gap-y-2.5 mb-4">
-                    {ALL_PERMISSIONS.map(({ value, label, description }) => (
-                      <label key={value} className="flex items-start gap-2 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          name={`perm_${value}`}
-                          defaultChecked={role.permissions.includes(value)}
-                          className="mt-0.5 rounded accent-primary"
-                        />
-                        <span className="min-w-0">
-                          <span className="block text-xs text-foreground">{label}</span>
-                          <span className="block text-[11px] leading-snug text-muted-foreground">
-                            {description}
+                    {ALL_PERMISSIONS.map(({ value, label, description }) => {
+                      // Self-lockout guard (cosmetic half — updateRole enforces it):
+                      // on your own role, MANAGE_ROLES is locked on. The hidden input
+                      // keeps the value in FormData (disabled inputs drop out).
+                      const lockedSelf =
+                        role.id === me.roleId && value === Permission.MANAGE_ROLES;
+                      return (
+                        <label
+                          key={value}
+                          className={`flex items-start gap-2 ${lockedSelf ? "" : "cursor-pointer"}`}
+                        >
+                          <input
+                            type="checkbox"
+                            name={`perm_${value}`}
+                            defaultChecked={role.permissions.includes(value)}
+                            disabled={lockedSelf}
+                            className="mt-0.5 rounded accent-primary"
+                          />
+                          {lockedSelf && (
+                            <input type="hidden" name={`perm_${value}`} value="on" />
+                          )}
+                          <span className="min-w-0">
+                            <span className="block text-xs text-foreground">{label}</span>
+                            <span className="block text-[11px] leading-snug text-muted-foreground">
+                              {description}
+                            </span>
+                            {lockedSelf && (
+                              <span className="block text-[11px] leading-snug text-muted-foreground italic">
+                                Your own role: role management cannot be removed from
+                                yourself.
+                              </span>
+                            )}
                           </span>
-                        </span>
-                      </label>
-                    ))}
+                        </label>
+                      );
+                    })}
                   </div>
                   <div className="flex items-center gap-3">
                     <SubmitButton
@@ -427,7 +447,7 @@ export default async function UsersPage() {
                     />
                   </div>
                 </form>
-                {!role.isBuiltIn && (
+                {!role.isBuiltIn && role.id !== me.roleId && (
                   <div className="border-t border-border px-4 py-2 bg-muted/10">
                     <form
                       action={async () => {
