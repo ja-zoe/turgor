@@ -64,3 +64,9 @@ playwright.config.ts
 
 # Development artifacts
 .next/
+
+# gnhf run logs (local-only)
+.gnhf/
+
+# Local Claude Code entrypoint (symlink to the tracked AGENTS.md)
+/CLAUDE.md
