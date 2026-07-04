@@ -40,23 +40,36 @@ const DEFAULTS = {
 /**
  * Org identity for branding surfaces. Cached per request via React cache().
  * Falls back to the stock Turgor defaults when the Settings row doesn't exist
- * yet (pre-seed boot), so branding consumers never crash. An adopting org
- * overrides these in PM Tools → Settings; SEED's live deployment stores its own
- * SEED values in the Settings row.
+ * yet (pre-seed boot) OR the database is unreachable, so branding consumers
+ * never crash. The unreachable case matters at build time: Next always
+ * prerenders a static `/_not-found` shell (and any `○` page), which runs the
+ * root layout through here — a CI/Vercel build with no reachable database must
+ * not fail on it. An adopting org overrides these in PM Tools → Settings;
+ * SEED's live deployment stores its own SEED values in the Settings row.
  */
 export const getOrgSettings = cache(async (): Promise<OrgSettings> => {
-  const settings = await prisma.settings.findUnique({
-    where: { id: "singleton" },
-    select: {
-      orgName: true,
-      orgFullName: true,
-      orgInstitution: true,
-      orgLogoUrl: true,
-      periodLabel: true,
-      themePreset: true,
-      appName: true,
-    },
-  });
+  const settings = await prisma.settings
+    .findUnique({
+      where: { id: "singleton" },
+      select: {
+        orgName: true,
+        orgFullName: true,
+        orgInstitution: true,
+        orgLogoUrl: true,
+        periodLabel: true,
+        themePreset: true,
+        appName: true,
+      },
+    })
+    .catch((err: unknown) => {
+      // DB unreachable (build-time prerender with no database, or a transient
+      // outage) — degrade to stock Turgor branding rather than crash the render.
+      console.warn(
+        "[org] Settings lookup failed; falling back to default branding:",
+        err instanceof Error ? err.message : err,
+      );
+      return null;
+    });
 
   const base = settings ?? DEFAULTS;
   // R32.2: appName → orgName when customized → "Turgor". Plain-text surfaces keep
