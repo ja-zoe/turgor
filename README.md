@@ -4,7 +4,7 @@
 
 A project tracker for project-based student teams - competition teams, design/build teams, hackathon orgs, and any club that runs real projects with deliverables and deadlines. Built for and battle-tested by [SEED (Students for Environmental & Energy Development)](https://github.com/ja-zoe/seed-website) at Rutgers.
 
-> **Adopting this for your org?** [SETUP.md](SETUP.md) walks a first admin through the whole setup - database, sign-in (campus CAS or email magic links), approving your team, and rebranding - in plain language.
+> **Adopting this for your org?** [SETUP.md](SETUP.md) walks a first admin through the whole setup - database, sign-in (email magic links or Google/GitHub OAuth), approving your team, and rebranding - in plain language.
 
 ## What it does
 
@@ -16,7 +16,7 @@ A project tracker for project-based student teams - competition teams, design/bu
 - **MCP server** - a built-in [Model Context Protocol](https://modelcontextprotocol.io) endpoint at `/api/mcp` so AI assistants can query the tracker, with token auth generated from the account page and OAuth support for ChatGPT connectors (via Stytch)
 - **Excel export** - export project data to spreadsheets
 
-Sign-in is chosen per org in Org Settings: email magic links (the default for new installations) or CAS SSO. For local development a mock CAS mode lets you log in as any user without touching the real CAS server.
+Sign-in is email magic links, plus optional Google and GitHub OAuth. For local development a dev-only mock login lets you sign in as any email without sending anything (it 404s in production builds).
 
 ## Stack
 
@@ -33,7 +33,7 @@ ln -s .agents .claude    # symlink for Claude Code to find agents
 
 The agent asks whether you want local development or a live production site (Supabase + Vercel), then handles environment setup, database initialization, deployment guidance, and first sign-in — you just supply credentials and click through the dashboards it points you to. Read more in [the setup skill](./.agents/skills/turgor-setup/SKILL.md).
 
-**Deploy a live instance** (free Supabase + Vercel, ~15 min) - [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/ja-zoe/turgor&env=DATABASE_URL,AUTH_SECRET,AUTH_URL,PM_ADMIN_EMAIL,ALLOWED_EMAIL_DOMAINS,RESEND_API_KEY,EMAIL_FROM&envDescription=Database%2C%20auth%2C%20and%20email%20settings%20-%20see%20the%20setup%20guide&envLink=https://github.com/ja-zoe/turgor/blob/main/SETUP.md) then follow [SETUP.md Part A](SETUP.md) to create the tables and sign in.
+**Deploy a live instance** (free Supabase + Vercel, ~15 min) - [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/ja-zoe/turgor&env=DATABASE_URL,AUTH_SECRET,AUTH_URL,PM_ADMIN_EMAIL,RESEND_API_KEY,EMAIL_FROM&envDescription=Database%2C%20auth%2C%20and%20email%20settings%20-%20see%20the%20setup%20guide&envLink=https://github.com/ja-zoe/turgor/blob/main/SETUP.md) then follow [SETUP.md Part A](SETUP.md) to create the tables and sign in.
 
 **Run it locally** (manual setup — see [SETUP.md](SETUP.md)):
 
@@ -48,7 +48,7 @@ pnpm db:seed           # seed built-in roles and settings
 pnpm dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000). For a zero-email trial set `AUTH_PROVIDER="cas"` and `CAS_MODE="mock"` in `.env` - the app then shows a local sign-in screen where any username works; sign in with the name from `PM_ADMIN_EMAIL` to land as the Project Manager. Full walkthrough in [SETUP.md Part B](SETUP.md).
+Open [http://localhost:3000](http://localhost:3000). For a zero-email trial, use the mock login at `/dev-login` - enter any email (your `PM_ADMIN_EMAIL` to land as the Project Manager), no Resend key needed. It's dev-only and 404s in production. Full walkthrough in [SETUP.md Part B](SETUP.md).
 
 Other useful commands:
 

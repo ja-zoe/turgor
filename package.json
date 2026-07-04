@@ -5,7 +5,7 @@
   "license": "AGPL-3.0-only",
   "scripts": {
     "postinstall": "prisma generate",
-    "dev": "next dev",
+    "dev": "tsx scripts/ensure-db.ts && next dev",
     "build": "next build",
     "start": "next start",
     "db:migrate": "tsx scripts/migrate.ts",

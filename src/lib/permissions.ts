@@ -21,11 +21,11 @@ export const RETIRED_PERMISSIONS: readonly Permission[] = [Permission.VIEW_ASSIG
 /** Returns the session user or redirects. Does NOT check permissions. */
 export async function requireAuth(): Promise<SessionUser> {
   const session = await auth();
-  if (!session?.user?.id) redirect("/api/cas/login");
+  if (!session?.user?.id) redirect("/signin");
   if (session.user.status === UserStatus.PENDING) redirect("/pending");
-  if (session.user.status === UserStatus.SUSPENDED) redirect("/api/cas/login");
+  if (session.user.status === UserStatus.SUSPENDED) redirect("/signin");
   // A DELETED user is treated as inactive — locked out like a suspended account (R18.2).
-  if (session.user.status === UserStatus.DELETED) redirect("/api/cas/login");
+  if (session.user.status === UserStatus.DELETED) redirect("/signin");
   return session.user as SessionUser;
 }
 

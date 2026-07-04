@@ -388,7 +388,6 @@ model Settings {
   orgFullName    String @default("Turgor")
   orgInstitution String @default("")
   orgLogoUrl     String @default("/turgor-logo.svg")
-  signInLabel    String @default("Email")
   // What a project cycle is called (R24.2) — display labels only; Project.semester stays generic.
   periodLabel    String @default("Semester")
   // Color family (R24.3, R32.4) — one of the 6 curated family ids in
@@ -397,9 +396,6 @@ model Settings {
   themePreset    String @default("forest")
   // Whole-app-name override (R29.3) — null derives via the R32.2 chain.
   appName        String?
-  // Sign-in mechanism (R29.4) — "email" | "cas". Env AUTH_PROVIDER, when set,
-  // overrides (operator/testing escape hatch). New orgs default to email.
-  authProvider   String @default("email")
 
   updatedAt DateTime @updatedAt
 }

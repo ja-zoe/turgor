@@ -30,7 +30,7 @@ You will create two free accounts (a database and a host) and connect them.
 
 Click the button to clone Turgor into your own Vercel account:
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/ja-zoe/turgor&env=DATABASE_URL,AUTH_SECRET,AUTH_URL,PM_ADMIN_EMAIL,ALLOWED_EMAIL_DOMAINS,RESEND_API_KEY,EMAIL_FROM&envDescription=Database%2C%20auth%2C%20and%20email%20settings%20-%20see%20the%20setup%20guide&envLink=https://github.com/ja-zoe/turgor/blob/main/SETUP.md)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/ja-zoe/turgor&env=DATABASE_URL,AUTH_SECRET,AUTH_URL,PM_ADMIN_EMAIL,RESEND_API_KEY,EMAIL_FROM&envDescription=Database%2C%20auth%2C%20and%20email%20settings%20-%20see%20the%20setup%20guide&envLink=https://github.com/ja-zoe/turgor/blob/main/SETUP.md)
 
 Vercel will ask you to fill in these settings:
 
@@ -44,9 +44,13 @@ Vercel will ask you to fill in these settings:
 - **`PM_ADMIN_EMAIL`** - **your email address.** The first person to sign in with
   this address becomes the Project Manager automatically; everyone else waits for
   your approval.
-- **`ALLOWED_EMAIL_DOMAINS`** - who may request a sign-in link. Set it to your
-  school domain (e.g. `myschool.edu`) to restrict sign-in, or leave it blank to
-  allow any email. Make sure `PM_ADMIN_EMAIL` is inside it if you set it.
+- **`ALLOWED_EMAIL_DOMAINS`** (optional, not on the Deploy screen) - who may sign
+  in. Leave it unset to allow any email; to restrict sign-in to your school domain,
+  add it **after deploy** in Vercel → Settings → Environment Variables (e.g.
+  `myschool.edu`, comma-separated for several). Make sure `PM_ADMIN_EMAIL`'s domain
+  is included if you set it. It's kept off the one-click Deploy form on purpose:
+  Vercel makes listed variables mandatory, and an empty value there used to break
+  sign-in.
 - **`RESEND_API_KEY`** - Turgor's default sign-in emails a magic link, which needs
   an email sender. Create a free [Resend](https://resend.com) account and paste an
   API key. (If you'd rather evaluate without email first, use Part B locally.)
@@ -103,8 +107,6 @@ replace it:
   Upload a logo directly (add `SUPABASE_URL` and `SUPABASE_SECRET_KEY` from your
   Supabase project's API settings to enable uploads) or paste an image URL. This
   replaces the default Turgor branding across the app, sign-in screen, and emails.
-- **Sign-in label** - what your login identity is called on the sign-in screen
-  (e.g. "Email", "NetID", "University ID").
 - **Period label** - what your org calls a planning period: Semester, Quarter,
   Term... This renames the calendar and every period picker.
 - **Theme** - pick a color preset to move off the default forest green.
@@ -145,14 +147,13 @@ pnpm db:seed              # seed built-in roles and settings
 pnpm dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000). For a zero-email trial, set
-`AUTH_PROVIDER="cas"` and `CAS_MODE="mock"` in `.env`: the app then shows a local
-sign-in screen where any username works - enter the part of your `PM_ADMIN_EMAIL`
-before the `@` to land as the Project Manager. Everything is usable this way
-without a Resend key.
+Open [http://localhost:3000](http://localhost:3000). For a zero-email trial, use
+the local mock login at [/dev-login](http://localhost:3000/dev-login): enter any
+email - your `PM_ADMIN_EMAIL` to land as the Project Manager - and you're in, no
+Resend key needed. (The mock login is dev-only; it 404s in production builds.)
 
 The comments in `.env.example` explain every setting, including the ones only
-specific deployments need (CAS server details, Stytch/ChatGPT OAuth, cron secret).
+specific deployments need (Stytch/ChatGPT OAuth, cron secret).
 
 ---
 
@@ -162,13 +163,27 @@ specific deployments need (CAS server details, Stytch/ChatGPT OAuth, cron secret
   MCP-capable AI client: go to **Account**, generate a personal access token, and
   paste the shown client configuration into the AI tool. The assistant then works
   with the tracker under that user's own permissions.
+- **Social sign-in (Google / GitHub)** - optional one-click sign-in alongside the
+  email magic link. Each provider's button appears only when you set both of its
+  environment variables; the same allowed-domains rule applies. Set `AUTH_URL` to
+  your site's URL first (the callback URLs are built from it).
+  - **GitHub** (quickest): GitHub → Settings → Developer settings → **OAuth Apps** →
+    New OAuth App. Homepage URL = your site; **Authorization callback URL** =
+    `<AUTH_URL>/api/auth/callback/github`. Copy the Client ID and generate a client
+    secret into `AUTH_GITHUB_ID` / `AUTH_GITHUB_SECRET`.
+  - **Google**: Google Cloud Console → **APIs & Services → Credentials** → Create
+    Credentials → **OAuth client ID** → Web application. Add
+    `<AUTH_URL>/api/auth/callback/google` under **Authorized redirect URIs** (fill in
+    the OAuth consent screen first if prompted). Copy the client ID/secret into
+    `AUTH_GOOGLE_ID` / `AUTH_GOOGLE_SECRET`.
+  - Redeploy (or restart `pnpm dev`) after setting the variables. Anyone signing in
+    with Google/GitHub uses the same account as their magic-link email - one person,
+    one account, whichever door they use.
 - **Calendar subscription** - the calendar page offers an ICS export you can
   subscribe to from Google Calendar or Outlook.
 - **Scheduled notifications** - point a cron job at `POST /api/cron/notifications`
   (sending the `CRON_SECRET` header) to run the notification engine on a schedule.
   On Vercel, a `vercel.json` cron or any external scheduler works.
-- **Real single sign-on** - if your school runs CAS, have IT register your site's
-  URL, then set `CAS_MODE="real"` and the `CAS_*` values.
 - **End of period** - when a semester/quarter ends, archive finished projects from
   the project page, or "carry" continuing ones into the new period (clones the
   project with a fresh slate and archives the old one). Archived projects stay

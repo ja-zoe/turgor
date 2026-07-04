@@ -11,9 +11,9 @@ import { getOrgSettings } from "@/lib/org";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const session = await auth();
-  if (!session?.user?.id) redirect("/api/cas/login");
+  if (!session?.user?.id) redirect("/signin");
   if (session.user.status === UserStatus.PENDING) redirect("/pending");
-  if (session.user.status === UserStatus.SUSPENDED) redirect("/api/cas/login");
+  if (session.user.status === UserStatus.SUSPENDED) redirect("/signin");
 
   // Profile completion gate
   const dbUser = await prisma.user.findUnique({

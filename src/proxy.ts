@@ -14,8 +14,6 @@ const PUBLIC_PATHS = [
   "/dev-login",
   "/signin",
   "/pending",
-  "/cas",
-  "/api/cas",
   "/api/auth",
   "/auth",
   "/api/mcp",
@@ -50,7 +48,7 @@ export default auth(function middleware(request: NextAuthRequest) {
   const status = session.user.status as string | undefined;
 
   if (status === "SUSPENDED") {
-    return NextResponse.redirect(new URL("/dev-login?error=suspended", request.url));
+    return NextResponse.redirect(new URL("/signin?error=suspended", request.url));
   }
 
   if (status === "PENDING") {
