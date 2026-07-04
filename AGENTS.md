@@ -2,6 +2,18 @@
 
 This file documents the architecture for Turgor, written for agent-based development in Claude Code and other AI-driven workflows. Agent skills live in `.agents/skills/` (tracked in git); locally, `.claude` is a symlink to `.agents/`.
 
+## Non-negotiables
+
+The rules most often broken in past sessions. The first three are hard-enforced by hooks (`.claude/settings.json` → `.agents/hooks/spec-gate.sh`); a blocked merge or blocked turn means fix the paper trail, not fight the hook (deliberate, user-approved override: `SPEC_GATE_SKIP=1` prefix on the merge command).
+
+1. **All feature work goes through the spec-driven-dev skill.** No source changes without a feature file under `changes/N-*/`, and flip the `_set.md` markers in real time: `[ ]→[~]` when you start a feature, `[~]→[t]` the moment its tests pass, `[t]→[x]` on merge. As they happen, never batched at the end.
+2. **The Tests checklist is the merge gate.** Never mark a test item `[x]` without literally running it (`pnpm build` satisfies only the build item). A `[t]`/`[x]` feature whose checklist still has `- [ ]` items is a contradiction; treat it as `[FAIL]`.
+3. **Set branches merge to `main` only with explicit user approval**, after every feature passed its scheme and the app boots clean. Verify your own work first (Playwright + screenshots for anything user-visible); never hand the user something you have not verified yourself.
+4. **Clean up test artifacts** (test projects, seeded rows, stray screenshots) before handing work to the user.
+5. **One dev server at a time, and kill any server or background process you started** when you finish with it. Orphaned dev servers plus Playwright have crashed this machine (100% CPU/RAM/swap). Run Playwright headless with a single worker.
+6. **Never ask the user to paste secrets into chat.** Have them edit `.env` themselves and tell you only the variable name; transcripts persist on disk.
+7. **Update this file as part of any set that changes architecture.** Stale docs cost a whole session of re-derivation.
+
 ## Commands
 
 ```bash
@@ -35,23 +47,21 @@ src/app/
   api/
     mcp/route.ts          # MCP server (JSON-RPC 2.0, Bearer token auth)
     notifications/        # GET list, POST /read
-    cas/login/            # CAS redirect (real) or mock dev-login redirect
+    auth/email/           # magic-link request + callback (Resend + VerificationToken)
     cron/                 # notification engine HTTP trigger
-    ai/                   # (legacy stubs, unused)
-  auth/                   # NextAuth handlers
-  cas/                    # CAS callback (real mode)
-  dev-login/              # mock login form (CAS_MODE != "real")
+  auth/                   # NextAuth handlers + /auth/handoff (token → session)
+  signin/                 # /signin dispatcher (→ /signin/email) + /signin/email form
+  dev-login/              # dev-only mock login (404s in production)
   pending/                # shown to PENDING users after sign-in
 ```
 
-### Auth flow
+### Auth flow (R33.1: CAS removed; email magic link + optional OAuth)
 
-1. Middleware (`src/proxy.ts` — must live in `src/`, a root-level file is silently ignored) redirects unauthenticated requests to the deployment's sign-in flow: `/api/cas/login` (default) or `/signin/email` when `AUTH_PROVIDER=email` (R28 magic links via Resend + the NextAuth `VerificationToken` table).
-2. In mock mode (`CAS_MODE=mock`), the CAS route redirects to `/dev-login` where any netId can be entered. `/dev-login` refuses to run outside mock mode (real CAS and email mode redirect away).
-3. In real mode, browser goes to the Rutgers CAS server; on callback, `/cas/callback` mints a short-lived HMAC handoff token (`src/lib/handoff-token.ts`, 60 s TTL). The email magic-link callback mints the same token (full email as identity).
-4. The handoff token is passed via `/auth/handoff` (a route handler — Next 16 forbids `signIn()` during page render) to NextAuth's Credentials provider (`src/auth.ts`), which creates/finds the user and issues a JWT session.
-5. The first sign-in from `PM_ADMIN_EMAIL` auto-promotes the user to the "Project Manager" role.
-6. New users start as `PENDING` and land on `/pending` until a PM activates them.
+1. Middleware (`src/proxy.ts` — must live in `src/`, a root-level file is silently ignored) redirects unauthenticated requests to `/signin`, which forwards to `/signin/email` (magic links via Resend + the NextAuth `VerificationToken` table), preserving `?next=`.
+2. The magic-link callback (`/api/auth/email/callback`), the OAuth callbacks (R33.2), and the dev-only mock at `/dev-login` all mint the same short-lived HMAC handoff token (`src/lib/handoff-token.ts`, 60 s TTL) carrying a full verified email. `/dev-login` is `NODE_ENV`-gated — it `notFound()`s in production, so it can't be an auth bypass.
+3. The handoff token is passed via `/auth/handoff` (a route handler — Next 16 forbids `signIn()` during page render) to NextAuth's Credentials provider (`src/auth.ts`), which validates `ALLOWED_EMAIL_DOMAINS`, creates/finds the user, and issues a JWT session.
+4. The first sign-in from `PM_ADMIN_EMAIL` auto-promotes the user to the "Project Manager" role.
+5. New users start as `PENDING` and land on `/pending` until a PM activates them.
 
 ### RBAC: two-layer roles
 
@@ -59,7 +69,7 @@ src/app/
 - **Project role** (`ProjectAssignment.role: LEAD | SUBLEAD | MEMBER`): controls per-project write operations (submit status updates, manage deliverables/subtasks).
 
 Permission helpers live in `src/lib/permissions.ts`:
-- `requireAuth()` — returns session user or redirects to CAS
+- `requireAuth()` — returns session user or redirects to `/signin`
 - `requirePermission(perm)` — redirects to /dashboard if not granted
 - `getUserPermissions(roleId)` — returns permissions array for RBAC checks
 - `getProjectMembership(userId, projectId)` — returns project role or null

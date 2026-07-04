@@ -92,14 +92,12 @@ export async function updateOrgSettings(formData: FormData) {
   const current = await prisma.settings.findUnique({ where: { id: "singleton" } });
 
   const orgNameRaw = ((formData.get("orgName") as string) ?? "").trim();
-  const signInLabelRaw = ((formData.get("signInLabel") as string) ?? "").trim();
   const orgLogoUrlRaw = ((formData.get("orgLogoUrl") as string) ?? "").trim();
   const periodLabelRaw = ((formData.get("periodLabel") as string) ?? "").trim();
 
-  // orgName / signInLabel / orgLogoUrl / periodLabel render in the shell and must never
-  // be blank: an emptied field keeps its current value instead of erroring.
+  // orgName / orgLogoUrl / periodLabel render in the shell and must never be blank:
+  // an emptied field keeps its current value instead of erroring.
   const orgName = orgNameRaw || current?.orgName || "Turgor";
-  const signInLabel = signInLabelRaw || current?.signInLabel || "Email";
   const orgLogoUrl = orgLogoUrlRaw || current?.orgLogoUrl || "/turgor-logo.svg";
   const periodLabel = periodLabelRaw || current?.periodLabel || "Semester";
   const orgFullName = ((formData.get("orgFullName") as string) ?? "").trim();
@@ -115,15 +113,7 @@ export async function updateOrgSettings(formData: FormData) {
     ? themePresetRaw
     : current?.themePreset ?? "forest";
 
-  // Sign-in method (R29.4). A disabled select (env override active) submits
-  // nothing → the stored value is kept.
-  const authProviderRaw = ((formData.get("authProvider") as string) ?? "").trim();
-  const authProvider =
-    authProviderRaw === "cas" || authProviderRaw === "email"
-      ? authProviderRaw
-      : current?.authProvider ?? "email";
-
-  const data = { orgName, orgFullName, orgInstitution, orgLogoUrl, signInLabel, periodLabel, themePreset, appName, authProvider };
+  const data = { orgName, orgFullName, orgInstitution, orgLogoUrl, periodLabel, themePreset, appName };
 
   await prisma.settings.upsert({
     where: { id: "singleton" },

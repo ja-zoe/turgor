@@ -7,7 +7,7 @@ import { getOrgSettings } from "@/lib/org";
 
 export default async function ProfileSetupPage() {
   const session = await auth();
-  if (!session?.user?.id) redirect("/api/cas/login");
+  if (!session?.user?.id) redirect("/signin");
 
   const user = await prisma.user.findUnique({
     where: { id: session.user.id },

@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
 
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) {
-    console.error("AUTH_PROVIDER=email needs RESEND_API_KEY to deliver sign-in links");
+    console.error("magic-link sign-in needs RESEND_API_KEY to deliver links");
     return neutral();
   }
   const { appName } = await getOrgSettings();
