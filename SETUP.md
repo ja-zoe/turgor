@@ -30,7 +30,7 @@ You will create two free accounts (a database and a host) and connect them.
 
 Click the button to clone Turgor into your own Vercel account:
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/ja-zoe/turgor&env=DATABASE_URL,AUTH_SECRET,AUTH_URL,PM_ADMIN_EMAIL,ALLOWED_EMAIL_DOMAINS,RESEND_API_KEY,EMAIL_FROM&envDescription=Database%2C%20auth%2C%20and%20email%20settings%20-%20see%20the%20setup%20guide&envLink=https://github.com/ja-zoe/turgor/blob/main/SETUP.md)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/ja-zoe/turgor&env=DATABASE_URL,AUTH_SECRET,AUTH_URL,PM_ADMIN_EMAIL,RESEND_API_KEY,EMAIL_FROM&envDescription=Database%2C%20auth%2C%20and%20email%20settings%20-%20see%20the%20setup%20guide&envLink=https://github.com/ja-zoe/turgor/blob/main/SETUP.md)
 
 Vercel will ask you to fill in these settings:
 
@@ -44,9 +44,13 @@ Vercel will ask you to fill in these settings:
 - **`PM_ADMIN_EMAIL`** - **your email address.** The first person to sign in with
   this address becomes the Project Manager automatically; everyone else waits for
   your approval.
-- **`ALLOWED_EMAIL_DOMAINS`** - who may request a sign-in link. Set it to your
-  school domain (e.g. `myschool.edu`) to restrict sign-in, or leave it blank to
-  allow any email. Make sure `PM_ADMIN_EMAIL` is inside it if you set it.
+- **`ALLOWED_EMAIL_DOMAINS`** (optional, not on the Deploy screen) - who may sign
+  in. Leave it unset to allow any email; to restrict sign-in to your school domain,
+  add it **after deploy** in Vercel → Settings → Environment Variables (e.g.
+  `myschool.edu`, comma-separated for several). Make sure `PM_ADMIN_EMAIL`'s domain
+  is included if you set it. It's kept off the one-click Deploy form on purpose:
+  Vercel makes listed variables mandatory, and an empty value there used to break
+  sign-in.
 - **`RESEND_API_KEY`** - Turgor's default sign-in emails a magic link, which needs
   an email sender. Create a free [Resend](https://resend.com) account and paste an
   API key. (If you'd rather evaluate without email first, use Part B locally.)

@@ -33,7 +33,7 @@ ln -s .agents .claude    # symlink for Claude Code to find agents
 
 The agent asks whether you want local development or a live production site (Supabase + Vercel), then handles environment setup, database initialization, deployment guidance, and first sign-in — you just supply credentials and click through the dashboards it points you to. Read more in [the setup skill](./.agents/skills/turgor-setup/SKILL.md).
 
-**Deploy a live instance** (free Supabase + Vercel, ~15 min) - [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/ja-zoe/turgor&env=DATABASE_URL,AUTH_SECRET,AUTH_URL,PM_ADMIN_EMAIL,ALLOWED_EMAIL_DOMAINS,RESEND_API_KEY,EMAIL_FROM&envDescription=Database%2C%20auth%2C%20and%20email%20settings%20-%20see%20the%20setup%20guide&envLink=https://github.com/ja-zoe/turgor/blob/main/SETUP.md) then follow [SETUP.md Part A](SETUP.md) to create the tables and sign in.
+**Deploy a live instance** (free Supabase + Vercel, ~15 min) - [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/ja-zoe/turgor&env=DATABASE_URL,AUTH_SECRET,AUTH_URL,PM_ADMIN_EMAIL,RESEND_API_KEY,EMAIL_FROM&envDescription=Database%2C%20auth%2C%20and%20email%20settings%20-%20see%20the%20setup%20guide&envLink=https://github.com/ja-zoe/turgor/blob/main/SETUP.md) then follow [SETUP.md Part A](SETUP.md) to create the tables and sign in.
 
 **Run it locally** (manual setup — see [SETUP.md](SETUP.md)):
 
