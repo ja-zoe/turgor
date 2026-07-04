@@ -1,6 +1,6 @@
 ---
 name: turgor-setup
-description: Interactive Turgor setup — walks a new adopter through database (Docker or Supabase), environment variables, migrations, hosting (local dev server or Vercel production), and first sign-in. Use when the user wants to set up, initialize, install, or deploy Turgor.
+description: Interactive Turgor setup — walks a new adopter through database (Docker or Supabase), environment variables, sign-in (dev mock, email magic links, or Google/GitHub OAuth), migrations, hosting (local dev server or Vercel production), and first sign-in. Use when the user wants to set up, initialize, install, or deploy Turgor.
 ---
 
 # Turgor Setup
@@ -63,12 +63,15 @@ Gather in order. Generate what you can instead of asking.
 
 1. **AUTH_SECRET** — generate it yourself: `openssl rand -base64 32`. Don't ask.
 2. **PM_ADMIN_EMAIL** — "Your email address. The first sign-in with this email is auto-promoted to Project Manager."
-3. **ALLOWED_EMAIL_DOMAINS** (optional) — "Restrict sign-in to your org's domain(s), e.g. `myorg.edu`? Leave blank to allow any email." If set, confirm PM_ADMIN_EMAIL's domain is inside it.
-4. **Sign-in method:**
-   - Local dev — AskUserQuestion: **mock CAS** (default: zero external services; any username works at a local sign-in screen; sets `AUTH_PROVIDER="cas"` + `CAS_MODE="mock"`) or **email magic links** (needs a Resend key).
-   - Production — always email magic links (`AUTH_PROVIDER="email"`).
-5. **RESEND_API_KEY** (email only) — "Paste a Resend API key (free at [resend.com](https://resend.com) → API Keys)."
-6. **EMAIL_FROM** (email only) — e.g. `Turgor <onboarding@resend.dev>` to start; their verified domain later.
+3. **ALLOWED_EMAIL_DOMAINS** (optional) — "Restrict sign-in to your org's domain(s), e.g. `myorg.edu`? Leave blank to allow any email." If set, confirm PM_ADMIN_EMAIL's domain is inside it. **Leave it fully unset (not an empty string) when allowing any domain**, and for production add it *after* deploy in Vercel → Settings → Environment Variables — never in the initial deploy env list (Vercel makes listed vars mandatory, and an empty value there breaks sign-in).
+4. **Sign-in method.** Email is the identity key, so one person reaches the same account through any door. Turgor has three:
+   - **Dev mock** (local only, default — nothing to configure): at `/dev-login` you enter any email and are signed in instantly. It is `NODE_ENV`-gated and **404s in production**, so it's for local development only. No external accounts, no env vars.
+   - **Email magic links** (local: optional; production: the baseline): a single-use link by email. Needs a Resend key.
+   - **Google / GitHub OAuth** (optional, either environment): one-click "Continue with …" buttons, each shown only when its credential pair is set.
+
+   For **local dev**, the mock is enough — skip Resend/OAuth unless you want to test them. For **production**, set up **email magic links** as the baseline (the mock is unavailable there) and optionally add OAuth. There is no `AUTH_PROVIDER`/`CAS_MODE` variable anymore (CAS was removed).
+5. **RESEND_API_KEY** + **EMAIL_FROM** (when using magic links) — "Paste a Resend API key (free at [resend.com](https://resend.com) → API Keys)." EMAIL_FROM e.g. `Turgor <onboarding@resend.dev>` to start (optional; that's the default), a verified domain later.
+6. **Google / GitHub OAuth** (optional) — only if the user wants social sign-in. They create an OAuth app per provider (walk them via SETUP.md → "Social sign-in"; GitHub is ~2 min) and give you the client ID + secret for each. Set `AUTH_GOOGLE_ID`/`AUTH_GOOGLE_SECRET` and/or `AUTH_GITHUB_ID`/`AUTH_GITHUB_SECRET` (both halves of a pair, or its button won't appear). The callback URL to register is `<AUTH_URL>/api/auth/callback/google` (or `/github`) — for production, register it once AUTH_URL is known (Step 5B). Signing in with `PM_ADMIN_EMAIL` through a provider auto-promotes to PM, exactly like the magic link.
 7. **AUTH_URL** — local: `http://localhost:3000` (don't ask). Production: unknown until Vercel assigns a URL — use `https://example.com` as a placeholder and tell the user up front you'll fix it in Step 5B so it doesn't look like an error.
 
 ## Step 4 — Write .env and initialize the database
@@ -93,9 +96,9 @@ Run `pnpm dev`, wait for the "Ready in …" line, then send the user to http://l
 
 1. **Their own GitHub repo:** Vercel deploys from their account, not from `ja-zoe/turgor`. If they only have a local clone, help them create a repo and push, or point them at the README's Deploy Button (which forks automatically).
 2. "Go to [vercel.com](https://vercel.com) → sign up with GitHub (free) → **Add New → Project** → import your Turgor repo."
-3. Before they click Deploy, print the complete env-var list in `KEY=value` form (everything from Steps 2–3) for them to paste into Vercel's **Environment Variables** panel.
+3. Before they click Deploy, print the env-var list in `KEY=value` form for them to paste into Vercel's **Environment Variables** panel: the required core (`DATABASE_URL`, `AUTH_SECRET`, `AUTH_URL` placeholder, `PM_ADMIN_EMAIL`), the magic-link pair (`RESEND_API_KEY`, `EMAIL_FROM`), and any OAuth pairs the user chose. **Do not include `ALLOWED_EMAIL_DOMAINS`** in this list (Vercel would force a value — add it later if wanted, Step 6 next-steps).
 4. "Click **Deploy** and wait (~2–3 min)."
-5. **Fix AUTH_URL:** "Copy your assigned URL (e.g. `https://turgor-myorg.vercel.app`), set `AUTH_URL` to it in **Settings → Environment Variables**, then **Deployments → ⋯ → Redeploy**. Sign-in links are broken until this is done."
+5. **Fix AUTH_URL (and register OAuth callbacks):** "Copy your assigned URL (e.g. `https://turgor-myorg.vercel.app`), set `AUTH_URL` to it in **Settings → Environment Variables**." If they configured OAuth, they must now register the real callback URL(s) in each provider's app — `<that URL>/api/auth/callback/google` and/or `/github` (the localhost placeholder won't work in production). Then **Deployments → ⋯ → Redeploy**. "Sign-in is broken until AUTH_URL is set and redeployed."
 6. The database was already migrated + seeded in Step 4, so the site is fully functional after the redeploy. Go to Step 6.
 
 ## Step 6 — First sign-in (ALWAYS, every path)
@@ -103,13 +106,14 @@ Run `pnpm dev`, wait for the "Ready in …" line, then send the user to http://l
 This is the proof the setup works. Never skip it, never end before it.
 
 1. Open the app URL (localhost or the Vercel URL).
-2. Sign in with `PM_ADMIN_EMAIL`:
-   - Mock CAS: enter the part before the `@` at the local sign-in screen.
-   - Email: enter the address, open the magic link from the inbox.
-3. Confirm they land on the dashboard with **PM Tools** at the bottom of the sidebar — that's the auto-promotion working.
-4. If they land on a "Pending" page instead, the signed-in email didn't match `PM_ADMIN_EMAIL` — find the typo, fix `.env` (or Vercel env + redeploy), retry.
+2. Sign in with `PM_ADMIN_EMAIL` (whichever method was configured):
+   - Dev mock (local): go to `/dev-login`, enter the full `PM_ADMIN_EMAIL`, submit — you're in immediately.
+   - Email magic link: enter the address on the sign-in page, open the link from the inbox.
+   - Google / GitHub: click "Continue with …" and authorize with the account whose email is `PM_ADMIN_EMAIL`.
+3. Confirm they land on the dashboard with **PM Tools** at the bottom of the sidebar — that's the auto-promotion working (it fires for `PM_ADMIN_EMAIL` no matter which door they used).
+4. If they land on a "Pending" page instead, the signed-in email didn't match `PM_ADMIN_EMAIL` — find the typo, fix `.env` (or Vercel env + redeploy), retry. (For OAuth, the provider account's primary email must equal `PM_ADMIN_EMAIL`.)
 
-**Done:** "✓ Setup complete." Then point at next steps: **PM Tools → Settings** to rebrand (org name, logo, sign-in label), invite teammates (they land as PENDING; PM activates them under Users & Roles), and SETUP.md Part C for extras (MCP access, calendar feeds, notification cron, real CAS).
+**Done:** "✓ Setup complete." Then point at next steps: **PM Tools → Settings** to rebrand (org name, logo, theme family) — each member also gets a personal light/dark toggle; invite teammates (they land as PENDING; PM activates them under Users & Roles); add `ALLOWED_EMAIL_DOMAINS` in Vercel if you want to restrict who can sign in; and SETUP.md Part C for extras (Google/GitHub social sign-in, MCP access, calendar feeds, notification cron).
 
 ## Troubleshooting
 
@@ -118,8 +122,11 @@ This is the proof the setup works. Never skip it, never end before it.
 - **Supabase connection fails** — re-check it's the pooled `:6543` string with `?pgbouncer=true`; wait a few seconds after provisioning and retry.
 - **Migration fails midway** — each file runs in its own transaction; `pnpm db:migrate:status` shows where it stopped; re-run after fixing.
 - **Vercel build fails** — read them the build log error; usually a missing/mistyped env var.
-- **Sign-in email never arrives** — check Resend → Logs; with `onboarding@resend.dev` the recipient must be the Resend account's own email until a domain is verified.
-- **Port 3000 in use** — `pkill -f "next dev"`, retry.
+- **Sign-in email never arrives** — check Resend → Logs; with `onboarding@resend.dev` the recipient must be the Resend account's own email until a domain is verified. (Locally, use the dev mock at `/dev-login` instead — no email needed.)
+- **OAuth button not showing** — both halves of the pair must be set (`AUTH_GOOGLE_ID` *and* `AUTH_GOOGLE_SECRET`); restart the dev server / redeploy after adding them.
+- **OAuth "redirect_uri_mismatch" or provider error** — the callback registered in the provider app must exactly match `<AUTH_URL>/api/auth/callback/<provider>`; in production that's the Vercel URL, not localhost.
+- **OAuth sign-in shows "that account's email domain isn't allowed"** — the provider account's email is outside `ALLOWED_EMAIL_DOMAINS`; unset it (allow any) or add the domain.
+- **Port 3000 in use** — the dev server process is named `next-server` (not "next dev"), so kill it with `pkill -f "[n]ext-server"` (the bracket stops pkill from matching its own shell), then retry.
 
 If truly stuck, fall back to the manual walkthrough in SETUP.md.
 
