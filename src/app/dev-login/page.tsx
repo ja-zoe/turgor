@@ -2,6 +2,7 @@ import { redirect, notFound } from "next/navigation";
 import { AuthError } from "next-auth";
 import Image from "next/image";
 import Link from "next/link";
+import { ArrowLeft } from "@phosphor-icons/react/dist/ssr";
 import { signIn } from "@/auth";
 import { mintHandoffToken } from "@/lib/handoff-token";
 import { getOrgSettings } from "@/lib/org";
@@ -55,6 +56,16 @@ export default async function DevLoginPage({ searchParams }: Props) {
   return (
     <div className="min-h-screen flex items-center justify-center bg-background px-4">
       <div className="w-full max-w-sm">
+        {/* Back to landing (R33.3) */}
+        <Link
+          href="/"
+          className="clickable inline-flex items-center gap-1.5 text-xs text-muted-foreground mb-6"
+          style={{ fontFamily: "var(--font-mono)" }}
+        >
+          <ArrowLeft size={14} weight="bold" />
+          Back
+        </Link>
+
         {/* Brand */}
         <div className="flex items-center gap-2 mb-10">
           <Image src={org.orgLogoUrl} alt={org.orgName} width={24} height={24} unoptimized className="object-contain" />
@@ -113,13 +124,9 @@ export default async function DevLoginPage({ searchParams }: Props) {
           </button>
         </form>
 
-        <Link href="/" className="clickable mt-6 block text-center text-xs text-muted-foreground">
-          ← Back to home
-        </Link>
-
         {/* Dev mock indicator */}
         <p
-          className="mt-4 text-xs text-muted-foreground text-center"
+          className="mt-6 text-xs text-muted-foreground text-center"
           style={{ fontFamily: "var(--font-mono)" }}
         >
           dev mock — production builds 404 this page

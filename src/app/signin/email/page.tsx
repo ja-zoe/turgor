@@ -1,8 +1,9 @@
+import Link from "next/link";
 import { getOrgSettings } from "@/lib/org";
 import { getConfiguredOAuthProviders } from "@/lib/auth-provider";
 import { signIn } from "@/auth";
 import { BrandLockup } from "@/components/brand-lockup";
-import { GoogleLogo, GithubLogo } from "@phosphor-icons/react/dist/ssr";
+import { GoogleLogo, GithubLogo, ArrowLeft } from "@phosphor-icons/react/dist/ssr";
 
 interface Props {
   searchParams: Promise<{ sent?: string; error?: string }>;
@@ -40,6 +41,16 @@ export default async function EmailSignInPage({ searchParams }: Props) {
   return (
     <div className="min-h-screen flex items-center justify-center bg-background px-4">
       <div className="w-full max-w-sm">
+        {/* Back to landing (R33.3) */}
+        <Link
+          href="/"
+          className="clickable inline-flex items-center gap-1.5 text-xs text-muted-foreground mb-6"
+          style={{ fontFamily: "var(--font-mono)" }}
+        >
+          <ArrowLeft size={14} weight="bold" />
+          Back
+        </Link>
+
         <div className="mb-10">
           <BrandLockup org={org} variant="nav" />
         </div>
