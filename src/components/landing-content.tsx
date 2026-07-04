@@ -15,6 +15,8 @@ import {
 } from "@phosphor-icons/react";
 import Link from "next/link";
 import type { OrgSettings } from "@/lib/org";
+import { BrandLockup } from "@/components/brand-lockup";
+import { TurgorMark } from "@/components/turgor-mark";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -98,12 +100,7 @@ export function LandingContent({
       {/* Nav */}
       <header className="border-b border-border bg-background/95 sticky top-0 z-10">
         <div className="max-w-5xl mx-auto px-6 h-14 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Leaf size={20} weight="fill" className="text-primary" />
-            <span className="text-sm font-semibold tracking-tight text-foreground">
-              {org.appFullName}
-            </span>
-          </div>
+          <BrandLockup org={org} variant="nav" />
           <Link
             href={signInHref}
             className="inline-flex items-center gap-1.5 text-sm font-medium text-primary-foreground bg-primary px-3 py-1.5 rounded-md hover:bg-primary/80 transition-colors"
@@ -117,14 +114,28 @@ export function LandingContent({
       {/* Hero */}
       <section className="max-w-5xl mx-auto px-6 pt-24 pb-20 w-full">
         <div className="max-w-2xl">
-          <p
-            data-hero-line
-            className="mono text-muted-foreground uppercase tracking-widest mb-4"
-          >
-            {org.orgInstitution
-              ? `${org.orgFullName} · ${org.orgInstitution}`
-              : org.orgFullName}
-          </p>
+          {org.isDefaultBrand ? (
+            <>
+              <div data-hero-line className="mb-4">
+                <BrandLockup org={org} variant="hero" />
+              </div>
+              <p
+                data-hero-line
+                className="mono text-muted-foreground uppercase tracking-widest mb-4 text-xs"
+              >
+                Projects, kept upright
+              </p>
+            </>
+          ) : (
+            <p
+              data-hero-line
+              className="mono text-muted-foreground uppercase tracking-widest mb-4"
+            >
+              {org.orgInstitution
+                ? `${org.orgFullName} · ${org.orgInstitution}`
+                : org.orgFullName}
+            </p>
+          )}
           <h1
             data-hero-line
             className="text-5xl text-foreground mb-6"
@@ -239,9 +250,21 @@ export function LandingContent({
                 : org.orgName}
             </span>
           </div>
-          <span className="mono text-xs text-muted-foreground">
-            Phase 0 scaffold
-          </span>
+          <a
+            href="https://github.com/ja-zoe/turgor"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="clickable inline-flex items-center gap-1.5 text-muted-foreground"
+          >
+            <TurgorMark size={14} />
+            <span className="mono text-xs">powered by</span>
+            <span
+              className="text-sm leading-none"
+              style={{ fontFamily: "var(--font-display), Georgia, serif" }}
+            >
+              turgor
+            </span>
+          </a>
         </div>
       </footer>
     </div>
