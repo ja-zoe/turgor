@@ -20,12 +20,18 @@ export function BrandLockup({
 
   if (org.isDefaultBrand) {
     return (
+      // R34.1: the hero lockup runs tight (gap-1) and large (text-6xl); the
+      // wordmark gets -ml-2 to absorb the drop mark's built-in side whitespace
+      // (the droplet fills only the middle of its 48-unit viewBox), so the mark
+      // and word read as one unit. The nav variant keeps its smaller spacing.
       <span
-        className={`inline-flex items-center text-foreground ${hero ? "gap-3" : "gap-2"}`}
+        className={`inline-flex items-center text-foreground ${hero ? "gap-1" : "gap-2"}`}
       >
-        <TurgorMark size={hero ? 52 : 20} />
+        <TurgorMark size={hero ? 60 : 20} />
         <span
-          className={hero ? "text-5xl leading-none" : "text-base leading-none"}
+          className={
+            hero ? "text-6xl leading-none -ml-2" : "text-base leading-none"
+          }
           style={{ fontFamily: "var(--font-display), Georgia, serif" }}
         >
           turgor
