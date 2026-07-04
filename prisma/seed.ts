@@ -81,7 +81,6 @@ async function main() {
       orgFullName: "Turgor",
       orgInstitution: "",
       orgLogoUrl: "/turgor-logo.svg",
-      signInLabel: "Email",
       periodLabel: "Semester",
       themePreset: "forest",
     },

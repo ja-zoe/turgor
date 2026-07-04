@@ -7,7 +7,6 @@ export type OrgSettings = {
   orgFullName: string;
   orgInstitution: string;
   orgLogoUrl: string;
-  signInLabel: string;
   /** What a project cycle is called — "Semester", "Quarter", "Cycle"… Display-only;
    *  the `Project.semester` data field and form/query names stay `semester`. */
   periodLabel: string;
@@ -33,7 +32,6 @@ const DEFAULTS = {
   orgFullName: "Turgor",
   orgInstitution: "",
   orgLogoUrl: "/turgor-logo.svg",
-  signInLabel: "Email",
   periodLabel: "Semester",
   themePreset: "forest",
   appName: null as string | null,
@@ -54,7 +52,6 @@ export const getOrgSettings = cache(async (): Promise<OrgSettings> => {
       orgFullName: true,
       orgInstitution: true,
       orgLogoUrl: true,
-      signInLabel: true,
       periodLabel: true,
       themePreset: true,
       appName: true,

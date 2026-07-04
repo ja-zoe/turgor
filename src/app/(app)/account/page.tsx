@@ -50,7 +50,7 @@ export default async function AccountPage() {
         lastName={dbUser?.lastName ?? ""}
         nickname={dbUser?.nickname ?? ""}
         email={dbUser?.email ?? user.email}
-        emailNote={`Managed by ${org.signInLabel} sign-in — can't be changed here.`}
+        emailNote="Managed by your sign-in provider — can't be changed here."
       />
 
       <section>

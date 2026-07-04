@@ -103,8 +103,6 @@ replace it:
   Upload a logo directly (add `SUPABASE_URL` and `SUPABASE_SECRET_KEY` from your
   Supabase project's API settings to enable uploads) or paste an image URL. This
   replaces the default Turgor branding across the app, sign-in screen, and emails.
-- **Sign-in label** - what your login identity is called on the sign-in screen
-  (e.g. "Email", "NetID", "University ID").
 - **Period label** - what your org calls a planning period: Semester, Quarter,
   Term... This renames the calendar and every period picker.
 - **Theme** - pick a color preset to move off the default forest green.
@@ -145,14 +143,13 @@ pnpm db:seed              # seed built-in roles and settings
 pnpm dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000). For a zero-email trial, set
-`AUTH_PROVIDER="cas"` and `CAS_MODE="mock"` in `.env`: the app then shows a local
-sign-in screen where any username works - enter the part of your `PM_ADMIN_EMAIL`
-before the `@` to land as the Project Manager. Everything is usable this way
-without a Resend key.
+Open [http://localhost:3000](http://localhost:3000). For a zero-email trial, use
+the local mock login at [/dev-login](http://localhost:3000/dev-login): enter any
+email - your `PM_ADMIN_EMAIL` to land as the Project Manager - and you're in, no
+Resend key needed. (The mock login is dev-only; it 404s in production builds.)
 
 The comments in `.env.example` explain every setting, including the ones only
-specific deployments need (CAS server details, Stytch/ChatGPT OAuth, cron secret).
+specific deployments need (Stytch/ChatGPT OAuth, cron secret).
 
 ---
 
@@ -167,8 +164,6 @@ specific deployments need (CAS server details, Stytch/ChatGPT OAuth, cron secret
 - **Scheduled notifications** - point a cron job at `POST /api/cron/notifications`
   (sending the `CRON_SECRET` header) to run the notification engine on a schedule.
   On Vercel, a `vercel.json` cron or any external scheduler works.
-- **Real single sign-on** - if your school runs CAS, have IT register your site's
-  URL, then set `CAS_MODE="real"` and the `CAS_*` values.
 - **End of period** - when a semester/quarter ends, archive finished projects from
   the project page, or "carry" continuing ones into the new period (clones the
   project with a fresh slate and archives the old one). Archived projects stay

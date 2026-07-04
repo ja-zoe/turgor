@@ -39,25 +39,13 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const identity = verifyHandoffToken(raw);
         if (!identity) return null;
 
-        // R28.1: the email magic-link callback mints handoff tokens carrying a full
-        // verified email; the CAS paths carry a bare netId. Both converge on the
-        // same user pipeline below. The CAS branch is unchanged.
-        let email: string;
-        let netId: string;
-        if (identity.includes("@")) {
-          email = identity.toLowerCase();
-          netId = email.split("@")[0];
-          if (!isEmailDomainAllowed(email)) return null;
-        } else {
-          netId = identity;
-          const emailDomain = process.env.CAS_EMAIL_DOMAIN ?? "scarletmail.rutgers.edu";
-          email = `${netId}@${emailDomain}`;
-
-          const allowed = (process.env.ALLOWED_EMAIL_DOMAINS ?? "")
-            .split(",")
-            .map((d) => d.trim());
-          if (!allowed.includes(emailDomain)) return null;
-        }
+        // R33.1: every handoff token now carries a full verified email — the magic
+        // link, the OAuth callbacks (R33.2), and the dev mock all mint email tokens.
+        // A token without "@" is malformed (the old CAS/netId path is gone) → reject.
+        if (!identity.includes("@")) return null;
+        const email = identity.toLowerCase();
+        const netId = email.split("@")[0];
+        if (!isEmailDomainAllowed(email)) return null;
 
         // Find or create the user
         let user = await prisma.user.findUnique({

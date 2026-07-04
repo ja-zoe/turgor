@@ -12,8 +12,8 @@ const errorMessages: Record<string, string> = {
 /**
  * R28.1 — magic-link request form. The form posts to /api/auth/email/request, which
  * always lands back here with ?sent=1 (neutral regardless of address validity — no
- * account enumeration). Reachable in any provider mode; middleware routes
- * unauthenticated users here only when AUTH_PROVIDER=email (R28.2).
+ * account enumeration). Since R33.1 this is the sole sign-in surface; the proxy
+ * routes unauthenticated users to /signin, which forwards here.
  */
 export default async function EmailSignInPage({ searchParams }: Props) {
   const { sent, error } = await searchParams;

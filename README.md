@@ -4,7 +4,7 @@
 
 A project tracker for project-based student teams - competition teams, design/build teams, hackathon orgs, and any club that runs real projects with deliverables and deadlines. Built for and battle-tested by [SEED (Students for Environmental & Energy Development)](https://github.com/ja-zoe/seed-website) at Rutgers.
 
-> **Adopting this for your org?** [SETUP.md](SETUP.md) walks a first admin through the whole setup - database, sign-in (campus CAS or email magic links), approving your team, and rebranding - in plain language.
+> **Adopting this for your org?** [SETUP.md](SETUP.md) walks a first admin through the whole setup - database, sign-in (email magic links or Google/GitHub OAuth), approving your team, and rebranding - in plain language.
 
 ## What it does
 
@@ -16,7 +16,7 @@ A project tracker for project-based student teams - competition teams, design/bu
 - **MCP server** - a built-in [Model Context Protocol](https://modelcontextprotocol.io) endpoint at `/api/mcp` so AI assistants can query the tracker, with token auth generated from the account page and OAuth support for ChatGPT connectors (via Stytch)
 - **Excel export** - export project data to spreadsheets
 
-Sign-in is chosen per org in Org Settings: email magic links (the default for new installations) or CAS SSO. For local development a mock CAS mode lets you log in as any user without touching the real CAS server.
+Sign-in is email magic links, plus optional Google and GitHub OAuth. For local development a dev-only mock login lets you sign in as any email without sending anything (it 404s in production builds).
 
 ## Stack
 
@@ -48,7 +48,7 @@ pnpm db:seed           # seed built-in roles and settings
 pnpm dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000). For a zero-email trial set `AUTH_PROVIDER="cas"` and `CAS_MODE="mock"` in `.env` - the app then shows a local sign-in screen where any username works; sign in with the name from `PM_ADMIN_EMAIL` to land as the Project Manager. Full walkthrough in [SETUP.md Part B](SETUP.md).
+Open [http://localhost:3000](http://localhost:3000). For a zero-email trial, use the mock login at `/dev-login` - enter any email (your `PM_ADMIN_EMAIL` to land as the Project Manager), no Resend key needed. It's dev-only and 404s in production. Full walkthrough in [SETUP.md Part B](SETUP.md).
 
 Other useful commands:
 

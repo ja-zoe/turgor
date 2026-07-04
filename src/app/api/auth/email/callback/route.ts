@@ -6,8 +6,8 @@ import { mintHandoffToken } from "@/lib/handoff-token";
 /**
  * R28.1 — magic-link callback. Consumes the VerificationToken single-use, then
  * mints the standard 60s handoff token (full email as the identity) and hands into
- * the existing NextAuth Credentials sign-in via /auth/handoff — exactly like
- * /cas/callback, so user creation, PENDING, and PM promotion run unchanged.
+ * the existing NextAuth Credentials sign-in via /auth/handoff, so user creation,
+ * PENDING, and PM promotion run unchanged.
  */
 export async function GET(request: NextRequest) {
   const raw = request.nextUrl.searchParams.get("token") ?? "";

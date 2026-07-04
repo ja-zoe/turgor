@@ -1,49 +1,46 @@
-import { redirect } from "next/navigation";
+import { redirect, notFound } from "next/navigation";
 import { AuthError } from "next-auth";
 import Image from "next/image";
+import Link from "next/link";
 import { signIn } from "@/auth";
 import { mintHandoffToken } from "@/lib/handoff-token";
 import { getOrgSettings } from "@/lib/org";
-import { getAuthProvider } from "@/lib/auth-provider";
 
 /**
- * /dev-login is the CAS *mock* and must not exist as a sign-in path outside it:
- * in real-CAS mode it would let anyone mint a session as any netId, and in email
- * mode the magic link is the only door. Enforced in the page and the action.
+ * Dev-only mock login (R33.1, replaces the CAS mock). Fail-closed: the page 404s
+ * and the server action throws in production, so the *absence* of any config is
+ * safe — no env var can open it (this closes BACKLOG SEC-1). Locally it mints an
+ * email handoff token, exercising the same `authorize` email path as the magic
+ * link (including the ALLOWED_EMAIL_DOMAINS gate).
  */
-async function assertMockCas() {
-  if ((await getAuthProvider()) === "email") redirect("/signin/email");
-  if (process.env.CAS_MODE === "real") redirect("/api/cas/login");
-}
+const IS_PROD = process.env.NODE_ENV === "production";
 
 interface Props {
-  searchParams: Promise<{ error?: string; service?: string }>;
+  searchParams: Promise<{ error?: string }>;
 }
 
 const errorMessages: Record<string, string> = {
-  CredentialsSignin: "Sign-in failed. Please try again.",
-  invalid_netid: "NetID must be letters and numbers only.",
-  auth_failed: "Sign-in failed. Please try again.",
-  no_ticket: "No CAS ticket received.",
-  invalid_ticket: "CAS ticket validation failed.",
-  cas_unreachable: "Could not reach the CAS server.",
+  CredentialsSignin: "Sign-in failed (check ALLOWED_EMAIL_DOMAINS).",
+  invalid_email: "Enter a valid email address.",
 };
 
 export default async function DevLoginPage({ searchParams }: Props) {
-  await assertMockCas();
+  if (IS_PROD) notFound();
   const { error } = await searchParams;
   const org = await getOrgSettings();
 
   async function login(formData: FormData) {
     "use server";
-    await assertMockCas();
-    const netId = (formData.get("netId") as string)?.trim().toLowerCase();
+    if (process.env.NODE_ENV === "production") {
+      throw new Error("dev mock login is disabled in production");
+    }
+    const email = (formData.get("email") as string)?.trim().toLowerCase();
 
-    if (!netId || !/^[a-z0-9]+$/.test(netId)) {
-      redirect("/dev-login?error=invalid_netid");
+    if (!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+      redirect("/dev-login?error=invalid_email");
     }
 
-    const token = mintHandoffToken(netId);
+    const token = mintHandoffToken(email);
 
     try {
       await signIn("credentials", { token, redirectTo: "/dashboard" });
@@ -74,7 +71,7 @@ export default async function DevLoginPage({ searchParams }: Props) {
           Sign in
         </h1>
         <p className="text-sm text-muted-foreground mb-8">
-          {`Enter your ${org.signInLabel} to continue.`}
+          Enter any email to continue.
         </p>
 
         {/* Error */}
@@ -90,19 +87,19 @@ export default async function DevLoginPage({ searchParams }: Props) {
         <form action={login} className="space-y-4">
           <div>
             <label
-              htmlFor="netId"
+              htmlFor="email"
               className="block text-xs font-medium text-muted-foreground uppercase tracking-widest mb-2"
               style={{ fontFamily: "var(--font-mono)" }}
             >
-              NetID
+              Email
             </label>
             <input
-              id="netId"
-              name="netId"
-              type="text"
+              id="email"
+              name="email"
+              type="email"
               autoComplete="username"
               autoFocus
-              placeholder="e.g. jav273"
+              placeholder="e.g. you@example.com"
               className="w-full rounded-md border border-border bg-card px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-colors"
               style={{ fontFamily: "var(--font-mono)" }}
             />
@@ -112,16 +109,20 @@ export default async function DevLoginPage({ searchParams }: Props) {
             type="submit"
             className="w-full cursor-pointer rounded-md bg-primary text-primary-foreground text-sm font-medium py-2.5 hover:bg-primary/80 transition-colors"
           >
-            {`Sign in with ${org.signInLabel}`}
+            Sign in
           </button>
         </form>
 
-        {/* Mock mode indicator */}
+        <Link href="/" className="clickable mt-6 block text-center text-xs text-muted-foreground">
+          ← Back to home
+        </Link>
+
+        {/* Dev mock indicator */}
         <p
-          className="mt-6 text-xs text-muted-foreground text-center"
+          className="mt-4 text-xs text-muted-foreground text-center"
           style={{ fontFamily: "var(--font-mono)" }}
         >
-          CAS mock mode — any NetID is accepted
+          dev mock — production builds 404 this page
         </p>
       </div>
     </div>
