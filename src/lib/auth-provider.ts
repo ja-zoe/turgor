@@ -20,6 +20,19 @@ export function isEmailDomainAllowed(email: string): boolean {
 }
 
 /**
+ * R33.2: which OAuth providers this deployment has configured, by env pair. A
+ * provider's button renders (and its NextAuth provider is wired) only when both
+ * halves of its credential pair are present. Single source shared by `auth.ts`
+ * (provider list) and the sign-in page (button list) so they can't drift.
+ */
+export function getConfiguredOAuthProviders(): ("google" | "github")[] {
+  const providers: ("google" | "github")[] = [];
+  if (process.env.AUTH_GOOGLE_ID && process.env.AUTH_GOOGLE_SECRET) providers.push("google");
+  if (process.env.AUTH_GITHUB_ID && process.env.AUTH_GITHUB_SECRET) providers.push("github");
+  return providers;
+}
+
+/**
  * e2e hook: skip Resend delivery and hand the sign-in link back to the caller.
  * Never active in production builds regardless of the env var.
  */

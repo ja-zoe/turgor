@@ -1,5 +1,8 @@
-import Image from "next/image";
 import { getOrgSettings } from "@/lib/org";
+import { getConfiguredOAuthProviders } from "@/lib/auth-provider";
+import { signIn } from "@/auth";
+import { BrandLockup } from "@/components/brand-lockup";
+import { GoogleLogo, GithubLogo } from "@phosphor-icons/react/dist/ssr";
 
 interface Props {
   searchParams: Promise<{ sent?: string; error?: string }>;
@@ -7,33 +10,38 @@ interface Props {
 
 const errorMessages: Record<string, string> = {
   invalid_link: "That sign-in link is invalid or has expired. Request a new one below.",
+  AccessDenied: "That account's email domain isn't allowed here.",
 };
 
+const OAUTH_META = {
+  google: { label: "Continue with Google", Icon: GoogleLogo },
+  github: { label: "Continue with GitHub", Icon: GithubLogo },
+} as const;
+
 /**
- * R28.1 — magic-link request form. The form posts to /api/auth/email/request, which
- * always lands back here with ?sent=1 (neutral regardless of address validity — no
- * account enumeration). Since R33.1 this is the sole sign-in surface; the proxy
- * routes unauthenticated users to /signin, which forwards here.
+ * The sign-in surface (R28.1 magic link + R33.2 OAuth). OAuth buttons render only
+ * for providers whose credential env pair is configured (getConfiguredOAuthProviders,
+ * shared with auth.ts); a stock install shows just the magic-link form.
  */
 export default async function EmailSignInPage({ searchParams }: Props) {
   const { sent, error } = await searchParams;
   const org = await getOrgSettings();
+  const oauthProviders = getConfiguredOAuthProviders();
+
+  // One server action for every OAuth button; the provider comes from the form.
+  async function oauthSignIn(formData: FormData) {
+    "use server";
+    const provider = formData.get("provider");
+    if (provider === "google" || provider === "github") {
+      await signIn(provider, { redirectTo: "/dashboard" });
+    }
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background px-4">
       <div className="w-full max-w-sm">
-        <div className="flex items-center gap-2 mb-10">
-          <Image
-            src={org.orgLogoUrl}
-            alt={org.orgName}
-            width={24}
-            height={24}
-            unoptimized
-            className="object-contain"
-          />
-          <span className="text-sm font-semibold tracking-tight text-foreground">
-            {org.appFullName}
-          </span>
+        <div className="mb-10">
+          <BrandLockup org={org} variant="nav" />
         </div>
 
         <h1
@@ -61,10 +69,44 @@ export default async function EmailSignInPage({ searchParams }: Props) {
 
             {error && (
               <div className="rounded-md border border-[var(--behind-bg)] bg-[var(--behind-bg)] px-4 py-3 mb-6">
-                <p className="text-xs text-[var(--behind)] font-medium" data-testid="magic-link-error">
+                <p className="text-xs text-[var(--behind)] font-medium" data-testid="signin-error">
                   {errorMessages[error] ?? "An unexpected error occurred."}
                 </p>
               </div>
+            )}
+
+            {oauthProviders.length > 0 && (
+              <>
+                <div className="space-y-2.5 mb-5" data-testid="oauth-buttons">
+                  {oauthProviders.map((provider) => {
+                    const { label, Icon } = OAUTH_META[provider];
+                    return (
+                      <form key={provider} action={oauthSignIn}>
+                        <input type="hidden" name="provider" value={provider} />
+                        <button
+                          type="submit"
+                          data-testid={`oauth-${provider}`}
+                          className="w-full cursor-pointer inline-flex items-center justify-center gap-2 rounded-md border border-border bg-card text-foreground text-sm font-medium py-2.5 hover:bg-muted transition-colors"
+                        >
+                          <Icon size={18} weight="bold" />
+                          {label}
+                        </button>
+                      </form>
+                    );
+                  })}
+                </div>
+
+                <div className="flex items-center gap-3 mb-5" aria-hidden>
+                  <span className="h-px flex-1 bg-border" />
+                  <span
+                    className="text-xs text-muted-foreground uppercase tracking-widest"
+                    style={{ fontFamily: "var(--font-mono)" }}
+                  >
+                    or
+                  </span>
+                  <span className="h-px flex-1 bg-border" />
+                </div>
+              </>
             )}
 
             <form method="POST" action="/api/auth/email/request" className="space-y-4">

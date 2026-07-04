@@ -6,8 +6,10 @@ const authConfig: NextAuthConfig = {
   session: { strategy: "jwt" },
   providers: [],
   pages: {
-    signIn: "/dev-login",
-    error: "/dev-login",
+    // R33.1/R33.2: the sign-in surface is /signin/email (dev-login 404s in prod).
+    // OAuth errors (e.g. AccessDenied from the signIn callback) land here too.
+    signIn: "/signin/email",
+    error: "/signin/email",
   },
 };
 
