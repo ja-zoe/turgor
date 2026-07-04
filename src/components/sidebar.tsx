@@ -21,6 +21,7 @@ import {
 } from "@phosphor-icons/react";
 import { Permission } from "@/generated/prisma";
 import { NotificationBell } from "@/components/notification-bell";
+import { ThemeModeToggle } from "@/components/theme-mode-toggle";
 
 interface SidebarProps {
   userName: string;
@@ -147,7 +148,10 @@ export function Sidebar({
               {userEmail}
             </p>
           </div>
-          <NotificationBell />
+          <div className="flex items-center gap-0.5">
+            <ThemeModeToggle />
+            <NotificationBell />
+          </div>
         </div>
         <form action={signOutAction}>
           <button

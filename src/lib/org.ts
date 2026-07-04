@@ -1,6 +1,6 @@
 import { cache } from "react";
 import { prisma } from "@/lib/prisma";
-import { isCustomColors, type CustomColors } from "@/lib/themes";
+import { isThemePresetId } from "@/lib/themes";
 
 export type OrgSettings = {
   orgName: string;
@@ -11,10 +11,9 @@ export type OrgSettings = {
   /** What a project cycle is called — "Semester", "Quarter", "Cycle"… Display-only;
    *  the `Project.semester` data field and form/query names stay `semester`. */
   periodLabel: string;
-  /** Curated color theme id (see src/lib/themes.ts) or "custom" (R29.2). */
+  /** Curated theme family id (see src/lib/themes.ts). Normalized: any unknown or
+   *  legacy value (incl. R29.2 "custom") resolves to "forest". */
   themePreset: string;
-  /** Validated custom palette when themePreset is "custom"; null otherwise/invalid. */
-  customColors: CustomColors | null;
   /** App name (sidebar, metadata title). R32.2 chain: Settings.appName →
    *  orgName when customized → "Turgor". No derived "Tracker" suffixes. */
   appName: string;
@@ -38,7 +37,6 @@ const DEFAULTS = {
   periodLabel: "Semester",
   themePreset: "forest",
   appName: null as string | null,
-  customColors: null,
 } as const;
 
 /**
@@ -60,7 +58,6 @@ export const getOrgSettings = cache(async (): Promise<OrgSettings> => {
       periodLabel: true,
       themePreset: true,
       appName: true,
-      customColors: true,
     },
   });
 
@@ -74,7 +71,8 @@ export const getOrgSettings = cache(async (): Promise<OrgSettings> => {
     appName: resolvedName,
     appFullName: resolvedName,
     isDefaultBrand: base.appName === null && base.orgName === DEFAULTS.orgName,
+    // R32.4: normalize legacy/unknown family ids (incl. removed "custom") to forest.
+    themePreset: isThemePresetId(base.themePreset) ? base.themePreset : "forest",
     periodLabelLower: base.periodLabel.toLowerCase(),
-    customColors: isCustomColors(base.customColors) ? base.customColors : null,
   };
 });
