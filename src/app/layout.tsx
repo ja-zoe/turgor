@@ -1,9 +1,14 @@
 import type { Metadata } from "next";
+import { cookies } from "next/headers";
 import { Geist, Instrument_Serif, JetBrains_Mono } from "next/font/google";
 import { GsapProvider } from "@/components/gsap-provider";
 import { getOrgSettings } from "@/lib/org";
-import { readableForeground } from "@/lib/themes";
 import "./globals.css";
+
+// R32.4: applied in <head> before paint. The mode cookie is server-rendered onto
+// <html> when present (no flash for returning users); this only fills the no-cookie
+// case from the OS preference so a first-time dark-OS visitor never flashes light.
+const THEME_INIT = `(function(){try{var d=document.documentElement;if(!d.dataset.mode){var m=document.cookie.match(/(?:^|; )turgor-theme-mode=(light|dark)/);d.dataset.mode=m?m[1]:(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');}}catch(e){}})();`;
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -30,6 +35,10 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     title: org.appFullName,
     description: `Weekly accountability and ${org.periodLabelLower} progress tracking for ${org.orgName}.`,
+    // R32.1: the favicon follows the org logo (Supabase Storage URL once uploaded);
+    // the default is the Turgor drop mark. Keep src/app/icon.png deleted — the file
+    // convention would override this.
+    icons: { icon: org.orgLogoUrl },
   };
 }
 
@@ -39,37 +48,26 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   const org = await getOrgSettings();
-  // R29.2: "custom" overrides the same tokens the preset blocks override, plus the
-  // two canvas tokens, inline on <html>. Foregrounds are derived, never hand-picked.
-  // A "custom" preset without valid colors falls back to forest (no attr, no style).
-  const custom = org.themePreset === "custom" ? org.customColors : null;
-  const customStyle = custom
-    ? ({
-        "--primary": custom.primary,
-        "--primary-foreground": readableForeground(custom.primary),
-        "--ring": custom.primary,
-        "--chart-2": custom.primary,
-        "--sidebar-primary": custom.primary,
-        "--sidebar-ring": custom.primary,
-        "--accent": `color-mix(in srgb, ${custom.primary} 12%, white)`,
-        "--sidebar-accent": `color-mix(in srgb, ${custom.primary} 12%, white)`,
-        "--accent-foreground": custom.primary,
-        "--sidebar-accent-foreground": custom.primary,
-        "--background": custom.background,
-        "--card": custom.card,
-      } as React.CSSProperties)
-    : undefined;
-  const themeAttr =
-    org.themePreset === "forest" || (org.themePreset === "custom" && !custom)
-      ? undefined
-      : org.themePreset;
+  // R32.4: family is org-wide (data-theme); mode is the per-user cookie (data-mode).
+  // "forest" needs no data-theme (its light palette is :root). Mode is rendered from
+  // the cookie when present so returning users get no flash; the no-cookie case is
+  // filled pre-paint by THEME_INIT from the OS preference. suppressHydrationWarning
+  // because that script mutates <html> before React hydrates.
+  const themeAttr = org.themePreset === "forest" ? undefined : org.themePreset;
+  const modeCookie = (await cookies()).get("turgor-theme-mode")?.value;
+  const dataMode =
+    modeCookie === "dark" || modeCookie === "light" ? modeCookie : undefined;
   return (
     <html
       lang="en"
       data-theme={themeAttr}
-      style={customStyle}
+      data-mode={dataMode}
+      suppressHydrationWarning
       className={`${geistSans.variable} ${instrumentSerif.variable} ${jetbrainsMono.variable} h-full antialiased`}
     >
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_INIT }} />
+      </head>
       <body className="min-h-full flex flex-col">
         <GsapProvider>{children}</GsapProvider>
       </body>

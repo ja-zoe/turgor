@@ -102,12 +102,18 @@ Rule-based system stored in `NotificationRule`. `src/lib/notifications.ts` conta
 
 ## Design system
 
-**Forest Floor palette** — defined as CSS custom properties in `src/app/globals.css`:
+**Theme system v2 (R32.4)** — CSS custom-property palettes in `src/app/globals.css`, two orthogonal axes:
+- **Family** (org-wide, `Settings.themePreset`): one of 6 curated ids in `src/lib/themes.ts` — `forest` (default), `slate`, `plum`, `clay`, `marine`, `ochre` — emitted as `data-theme` on `<html>` (forest omits it).
+- **Mode** (per-user): light|dark in the `turgor-theme-mode` cookie → `data-mode="dark"` on `<html>`; a no-FOUC inline script in the root layout fills it from `prefers-color-scheme` when there's no cookie. The Sun/Moon toggle (`theme-mode-toggle.tsx`) lives in the sidebar footer.
+- Palette blocks: `:root` = forest light (the Forest Floor values below), `[data-theme=X]` = family light, `[data-mode=dark]` = forest dark (complete token set), `[data-theme=X][data-mode=dark]` = family dark. Use tokens, never hardcoded light hexes, so dark mode follows.
+- The R29.2 custom color picker was removed (`Settings.customColors` dropped; `readableForeground` deleted).
+
+**Forest Floor** — the default forest-light palette:
 - Canvas: `#F4F1EA` (background), `#FFFFFF` (card)
 - Primary: `#2E4034` (forest green), Secondary: `#F9F8F5`
-- Status: on-track `#588157`, at-risk `#C99846`, behind `#A4503C`
+- Status: on-track `#588157`, at-risk `#C99846`, behind `#A4503C` — semantically green/amber/red in every family and mode.
 
-**Tailwind v4** — `@import "tailwindcss"` + `@theme inline` (no `tailwind.config.js`). All design tokens are CSS variables bridged into Tailwind via `@theme inline`.
+**Tailwind v4** — `@import "tailwindcss"` + `@theme inline` (no `tailwind.config.js`). All design tokens are CSS variables bridged into Tailwind via `@theme inline`. The `dark:` variant keys off `[data-mode="dark"]`.
 
 **Icons:** Phosphor Icons only (`@phosphor-icons/react`), Bold/Fill weights. Lucide is banned.
 

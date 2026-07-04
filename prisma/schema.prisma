@@ -391,11 +391,11 @@ model Settings {
   signInLabel    String @default("Email")
   // What a project cycle is called (R24.2) — display labels only; Project.semester stays generic.
   periodLabel    String @default("Semester")
-  // Color theme (R24.3) — one of the curated preset ids in src/lib/themes.ts,
-  // or "custom" (R29.2) driven by customColors {primary, background, card}.
+  // Color family (R24.3, R32.4) — one of the 6 curated family ids in
+  // src/lib/themes.ts. Legacy "custom" (R29.2, removed R32.4) is normalized to
+  // "forest" on read. Per-user light/dark mode is a cookie, not a column.
   themePreset    String @default("forest")
-  customColors   Json?
-  // Whole-app-name override (R29.3) — null derives "<orgName> Tracker".
+  // Whole-app-name override (R29.3) — null derives via the R32.2 chain.
   appName        String?
   // Sign-in mechanism (R29.4) — "email" | "cas". Env AUTH_PROVIDER, when set,
   // overrides (operator/testing escape hatch). New orgs default to email.

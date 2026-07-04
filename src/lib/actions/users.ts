@@ -21,7 +21,7 @@ export async function approveUser(userId: string, roleId: string) {
       userId,
       type: "USER_APPROVAL",
       title: "Your account has been approved",
-      body: `You now have access to the ${appFullName}.`,
+      body: `You now have access to ${appFullName}.`,
       link: "/dashboard",
     },
   });
