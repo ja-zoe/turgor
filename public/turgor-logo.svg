@@ -1,8 +1,11 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" role="img" aria-label="Turgor">
-  <!-- Turgor mark: a turgid (water-filled) cell holding an upright leaf form.
-       Forest Floor palette; square so it reads at 24-36px with object-contain. -->
-  <path d="M24 4C15.7 4 9 12.5 9 23.5 9 34 15.5 44 24 44s15-10 15-20.5C39 12.5 32.3 4 24 4Z" fill="#2E4034"/>
-  <path d="M24 12c-4.6 3.2-7 8-7 13.2 0 4.4 2.8 8.3 7 9.8V12Z" fill="#588157"/>
-  <path d="M24 12c4.6 3.2 7 8 7 13.2 0 4.4-2.8 8.3-7 9.8V12Z" fill="#F4F1EA" opacity="0.92"/>
-  <line x1="24" y1="13" x2="24" y2="35" stroke="#2E4034" stroke-width="1.6" stroke-linecap="round"/>
+  <!-- Turgor mark: a water droplet part-filled with green (turgor pressure), a stem
+       with two leaves growing through it. Light-background variant; the border is
+       painted after the fill so the outline stays crisp at small sizes. -->
+  <defs><clipPath id="tdrop"><path d="M24 3.5C36 15 36.5 32.5 24 44.5 11.5 32.5 12 15 24 3.5Z"/></clipPath></defs>
+  <g clip-path="url(#tdrop)"><rect x="0" y="26" width="48" height="24" fill="#588157"/><ellipse cx="24" cy="26" rx="16" ry="3.4" fill="#6a9668"/></g>
+  <path d="M24 3.5C36 15 36.5 32.5 24 44.5 11.5 32.5 12 15 24 3.5Z" fill="none" stroke="#2E4034" stroke-width="2.4"/>
+  <line x1="24" y1="9" x2="24" y2="40" stroke="#2E4034" stroke-width="2" stroke-linecap="round"/>
+  <path d="M24 22 L30 18" stroke="#2E4034" stroke-width="2" stroke-linecap="round"/>
+  <path d="M24 28 L18 24" stroke="#F4F1EA" stroke-width="2" stroke-linecap="round"/>
 </svg>

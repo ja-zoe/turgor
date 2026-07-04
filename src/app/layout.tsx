@@ -30,6 +30,10 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     title: org.appFullName,
     description: `Weekly accountability and ${org.periodLabelLower} progress tracking for ${org.orgName}.`,
+    // R32.1: the favicon follows the org logo (Supabase Storage URL once uploaded);
+    // the default is the Turgor drop mark. Keep src/app/icon.png deleted — the file
+    // convention would override this.
+    icons: { icon: org.orgLogoUrl },
   };
 }
 
