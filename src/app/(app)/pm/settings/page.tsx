@@ -126,14 +126,13 @@ export default async function SettingsPage() {
               <input
                 name="appName"
                 defaultValue={settings?.appName ?? ""}
-                placeholder={`${org.orgName} Tracker`}
+                placeholder={org.appFullName}
                 className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
                 data-testid="org-app-name"
               />
               <p className="text-xs text-muted-foreground mt-1">
-                Replaces the whole &ldquo;{`${org.orgName} Tracker`}&rdquo; line (sidebar,
-                browser tab, sign-in pages, emails). Leave empty to derive it from the
-                short name.
+                Shown in the sidebar, browser tab, sign-in pages, and emails. Leave
+                empty to use the short name above.
               </p>
             </div>
             <div>

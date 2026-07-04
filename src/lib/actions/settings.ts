@@ -104,7 +104,7 @@ export async function updateOrgSettings(formData: FormData) {
   const periodLabel = periodLabelRaw || current?.periodLabel || "Semester";
   const orgFullName = ((formData.get("orgFullName") as string) ?? "").trim();
   const orgInstitution = ((formData.get("orgInstitution") as string) ?? "").trim();
-  // App-name override (R29.3): empty means "derive <orgName> Tracker" — stored null.
+  // App-name override (R29.3): empty means "derive via the R32.2 chain" — stored null.
   const appName = ((formData.get("appName") as string) ?? "").trim() || null;
 
   // Curated preset ids plus "custom" (R29.2); anything else keeps the current theme.

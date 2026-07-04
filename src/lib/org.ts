@@ -15,12 +15,15 @@ export type OrgSettings = {
   themePreset: string;
   /** Validated custom palette when themePreset is "custom"; null otherwise/invalid. */
   customColors: CustomColors | null;
-  /** Short app name (sidebar, metadata title). The Settings.appName override wins
-   *  (R29.3); null derives `${orgName} Tracker`. */
+  /** App name (sidebar, metadata title). R32.2 chain: Settings.appName →
+   *  orgName when customized → "Turgor". No derived "Tracker" suffixes. */
   appName: string;
-  /** Full app name (landing hero, emails). Same override; derives
-   *  `${orgName} Project Tracker` when unset — setting appName replaces the whole line. */
+  /** Full app name (landing hero, emails). Identical to appName since R32.2;
+   *  both keys stay because each has ~10 consumers. */
   appFullName: string;
+  /** True when nothing is branded (no appName, stock orgName) — lockup components
+   *  render the turgor wordmark treatment instead of an org identity (R32.3). */
+  isDefaultBrand: boolean;
   /** Derived: `periodLabel.toLowerCase()` — for mid-sentence use ("built for the semester").
    *  Plural forms are naive `+s` at the call site ("semesters", "quarters"). */
   periodLabelLower: string;
@@ -62,10 +65,15 @@ export const getOrgSettings = cache(async (): Promise<OrgSettings> => {
   });
 
   const base = settings ?? DEFAULTS;
+  // R32.2: appName → orgName when customized → "Turgor". Plain-text surfaces keep
+  // the capitalized form; only rendered lockups lowercase it (R32.3).
+  const resolvedName =
+    base.appName ?? (base.orgName !== DEFAULTS.orgName ? base.orgName : "Turgor");
   return {
     ...base,
-    appName: base.appName ?? `${base.orgName} Tracker`,
-    appFullName: base.appName ?? `${base.orgName} Project Tracker`,
+    appName: resolvedName,
+    appFullName: resolvedName,
+    isDefaultBrand: base.appName === null && base.orgName === DEFAULTS.orgName,
     periodLabelLower: base.periodLabel.toLowerCase(),
     customColors: isCustomColors(base.customColors) ? base.customColors : null,
   };
