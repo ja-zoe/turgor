@@ -14,7 +14,10 @@ export function isEmailDomainAllowed(email: string): boolean {
   if (!domain) return false;
   const allowed = (process.env.ALLOWED_EMAIL_DOMAINS ?? "")
     .split(",")
-    .map((d) => d.trim().toLowerCase())
+    // R33.4: strip wrapping quotes per entry — Vercel stores an empty mandatory
+    // field as the literal string `""`, which otherwise becomes an unmatchable
+    // "domain" and rejects every sign-in. A pasted `"myschool.edu"` is normalized too.
+    .map((d) => d.trim().replace(/^["']+|["']+$/g, "").toLowerCase())
     .filter(Boolean);
   return allowed.length === 0 || allowed.includes(domain);
 }
