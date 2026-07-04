@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="public/turgor-logo.svg" alt="Turgor" width="88" height="88">
+</p>
+
 # Turgor
 
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-2E4034.svg)](LICENSE)
