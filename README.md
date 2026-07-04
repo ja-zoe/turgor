@@ -1,10 +1,33 @@
 <p align="center">
-  <img src="public/turgor-logo.svg" alt="Turgor" width="88" height="88">
+  <img src="public/turgor-logo.svg" alt="Turgor" width="96" height="96">
 </p>
 
-# Turgor
+<h1 align="center">Turgor</h1>
 
-[![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-2E4034.svg)](LICENSE)
+<p align="center">
+  Deliverables, deadlines, and accountability for project-based student teams.
+</p>
+
+<p align="center">
+  <a href="LICENSE"><img alt="License: AGPL v3" src="https://img.shields.io/badge/license-AGPL_v3-2E4034?style=flat-square"></a>
+  <img alt="Next.js 16" src="https://img.shields.io/badge/Next.js-16-000000?style=flat-square&logo=nextdotjs&logoColor=white">
+  <img alt="React 19" src="https://img.shields.io/badge/React-19-149ECA?style=flat-square&logo=react&logoColor=white">
+  <img alt="TypeScript" src="https://img.shields.io/badge/TypeScript-strict-3178C6?style=flat-square&logo=typescript&logoColor=white">
+  <img alt="Prisma 7" src="https://img.shields.io/badge/Prisma-7-2D3748?style=flat-square&logo=prisma&logoColor=white">
+  <img alt="Supabase Postgres" src="https://img.shields.io/badge/Postgres-Supabase-3ECF8E?style=flat-square&logo=supabase&logoColor=white">
+</p>
+
+<p align="center">
+  <a href="#getting-started">Getting started</a>
+  &nbsp;·&nbsp;
+  <a href="SETUP.md">Setup guide</a>
+  &nbsp;·&nbsp;
+  <a href="AGENTS.md">Architecture</a>
+  &nbsp;·&nbsp;
+  <a href="#license">License</a>
+</p>
+
+---
 
 A project tracker for project-based student teams - competition teams, design/build teams, hackathon orgs, and any club that runs real projects with deliverables and deadlines. Built for and battle-tested by [SEED (Students for Environmental & Energy Development)](https://github.com/ja-zoe/seed-website) at Rutgers.
 
@@ -24,37 +47,47 @@ Sign-in is email magic links, plus optional Google and GitHub OAuth. For local d
 
 ## Stack
 
-Next.js 16 (App Router), React 19, TypeScript, Tailwind CSS v4, Prisma v7 on Supabase Postgres, Auth.js (NextAuth v5), Playwright for end-to-end tests.
+Next.js 16 (App Router) · React 19 · TypeScript (strict) · Tailwind CSS v4 · Prisma v7 on Supabase Postgres · Auth.js (NextAuth v5) · Playwright for end-to-end tests.
 
 ## Getting started
 
-**Automated setup (recommended)** — after cloning, set up the local agent directory, then run in Claude Code:
+### Automated setup (recommended)
+
+After cloning, set up the local agent directory, then run the setup skill in Claude Code:
 
 ```bash
 ln -s .agents .claude    # symlink for Claude Code to find agents
 /turgor-setup
 ```
 
-The agent asks whether you want local development or a live production site (Supabase + Vercel), then handles environment setup, database initialization, deployment guidance, and first sign-in — you just supply credentials and click through the dashboards it points you to. Read more in [the setup skill](./.agents/skills/turgor-setup/SKILL.md).
+The agent asks whether you want local development or a live production site (Supabase + Vercel), then handles environment setup, database initialization, deployment guidance, and first sign-in. You just supply credentials and click through the dashboards it points you to. Read more in [the setup skill](./.agents/skills/turgor-setup/SKILL.md).
 
-**Deploy a live instance** (free Supabase + Vercel, ~15 min) - [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/ja-zoe/turgor&env=DATABASE_URL,AUTH_SECRET,AUTH_URL,PM_ADMIN_EMAIL,RESEND_API_KEY,EMAIL_FROM&envDescription=Database%2C%20auth%2C%20and%20email%20settings%20-%20see%20the%20setup%20guide&envLink=https://github.com/ja-zoe/turgor/blob/main/SETUP.md) then follow [SETUP.md Part A](SETUP.md) to create the tables and sign in.
+### Deploy a live instance
 
-**Run it locally** (manual setup — see [SETUP.md](SETUP.md)):
+Free Supabase + Vercel, about 15 minutes:
+
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/ja-zoe/turgor&env=DATABASE_URL,AUTH_SECRET,AUTH_URL,PM_ADMIN_EMAIL,RESEND_API_KEY,EMAIL_FROM&envDescription=Database%2C%20auth%2C%20and%20email%20settings%20-%20see%20the%20setup%20guide&envLink=https://github.com/ja-zoe/turgor/blob/main/SETUP.md)
+
+Then follow [SETUP.md Part A](SETUP.md) to create the tables and sign in.
+
+### Run it locally
+
+Manual setup (full walkthrough in [SETUP.md](SETUP.md)):
 
 ```bash
 git clone --recurse-submodules git@github.com:ja-zoe/turgor.git
 cd turgor
 pnpm install
-docker compose up -d   # local Postgres (or use a free Supabase project — see SETUP.md)
-cp .env.example .env   # fill in DATABASE_URL + AUTH_SECRET (see comments in the file)
+docker compose up -d   # local Postgres (or use a free Supabase project - see SETUP.md)
+cp .env.example .env    # fill in DATABASE_URL + AUTH_SECRET (see comments in the file)
 pnpm db:migrate        # create the tables
 pnpm db:seed           # seed built-in roles and settings
-pnpm dev
+pnpm dev               # auto-starts the local Postgres if it isn't already up
 ```
 
 Open [http://localhost:3000](http://localhost:3000). For a zero-email trial, use the mock login at `/dev-login` - enter any email (your `PM_ADMIN_EMAIL` to land as the Project Manager), no Resend key needed. It's dev-only and 404s in production. Full walkthrough in [SETUP.md Part B](SETUP.md).
 
-Other useful commands:
+### Useful commands
 
 ```bash
 pnpm db:studio             # browse the database with Prisma Studio
@@ -65,7 +98,7 @@ pnpm exec playwright test  # run the e2e suite
 
 ## Development workflow
 
-Changes are tracked as spec-driven revision sets under `changes/` (see `changes/CONTEXT.md`), using the [spec-driven-dev skill](https://github.com/ja-zoe/agent-skill-spec-driven-dev) vendored as a submodule. `AGENTS.md` documents the architecture in depth.
+Changes are tracked as spec-driven revision sets under `changes/` (see `changes/CONTEXT.md`), using the [spec-driven-dev skill](https://github.com/ja-zoe/agent-skill-spec-driven-dev) vendored as a submodule. [`AGENTS.md`](AGENTS.md) documents the architecture in depth.
 
 ## License
 
