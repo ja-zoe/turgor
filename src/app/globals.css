@@ -2,7 +2,9 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
-@custom-variant dark (&:is(.dark *));
+/* R32.4: dark mode is driven by data-mode="dark" on <html> (a per-user cookie),
+   so Tailwind's `dark:` utilities key off that ancestor attribute. */
+@custom-variant dark (&:is([data-mode="dark"] *));
 
 /* ─── Forest Floor design tokens → shadcn CSS variable layer ─── */
 
@@ -121,48 +123,314 @@
   --sidebar-ring: #2E4034;
 }
 
-/* ─── Theme presets (R24.3) ──────────────────────────────────────
-   Curated token-level palettes selected via Settings.themePreset and applied
-   as data-theme on <html>. Only hue-bearing tokens swap: primary, its soft
-   accent tint, and focus rings. Canvas, card, borders, typography, and the
-   semantic status colors are identical across presets. "forest" is the
-   default (:root above) and has no block. Swatch hexes are mirrored in
-   src/lib/themes.ts for non-CSS surfaces — keep them in sync. */
+/* ─── Theme system v2 (R32.4) ─────────────────────────────────────────────────
+   Two orthogonal axes resolve to one full-token palette:
+     • Family  = Settings.themePreset (org-wide) → data-theme on <html>.
+     • Mode     = per-user cookie → data-mode="dark" on <html>.
+   Layering (source order matters, all single-attr selectors are specificity 0,1,0):
+     1. :root                              → forest LIGHT (the default; full set above).
+     2. [data-theme="X"]                   → family LIGHT deltas over forest light.
+     3. [data-mode="dark"]                 → forest DARK, a COMPLETE token set (must
+                                             set every themed token so no light-family
+                                             value leaks into a family+dark combo).
+     4. [data-theme="X"][data-mode="dark"] → family DARK deltas (0,2,0 — wins).
+   Family primary hexes are mirrored in src/lib/themes.ts (light-mode) — keep in sync.
+   Status hues stay semantically green/amber/red in every combo; only values shift. */
+
+/* ── Family light deltas (canvas tint + hue; card stays white, status unchanged) ── */
 
 [data-theme="slate"] {
+  --background: #EEF0F4;
+  --foreground: #262A30;
   --primary: #2E3A4E;
-  --accent: #EAEFF5;
+  --secondary: #F4F6F9;
+  --muted: #EEF0F4;
+  --accent: #E7ECF3;
   --accent-foreground: #2E3A4E;
+  --border: #DCE0E7;
+  --input: #DCE0E7;
   --ring: #2E3A4E;
   --chart-2: #2E3A4E;
+  --sidebar: #EEF0F4;
+  --sidebar-foreground: #262A30;
   --sidebar-primary: #2E3A4E;
-  --sidebar-accent: #EAEFF5;
+  --sidebar-accent: #E7ECF3;
   --sidebar-accent-foreground: #2E3A4E;
+  --sidebar-border: #DCE0E7;
   --sidebar-ring: #2E3A4E;
 }
 
 [data-theme="plum"] {
+  --background: #F3F0F5;
+  --foreground: #2A2630;
   --primary: #45304C;
-  --accent: #F1EBF4;
+  --secondary: #F8F5F9;
+  --muted: #F3F0F5;
+  --accent: #EFE9F2;
   --accent-foreground: #45304C;
+  --border: #E5DEE8;
+  --input: #E5DEE8;
   --ring: #45304C;
   --chart-2: #45304C;
+  --sidebar: #F3F0F5;
+  --sidebar-foreground: #2A2630;
   --sidebar-primary: #45304C;
-  --sidebar-accent: #F1EBF4;
+  --sidebar-accent: #EFE9F2;
   --sidebar-accent-foreground: #45304C;
+  --sidebar-border: #E5DEE8;
   --sidebar-ring: #45304C;
 }
 
 [data-theme="clay"] {
+  --background: #F6F1EC;
+  --foreground: #2B2620;
   --primary: #7C452E;
-  --accent: #F7ECE4;
+  --secondary: #FAF6F1;
+  --muted: #F6F1EC;
+  --accent: #F5EAE1;
   --accent-foreground: #7C452E;
+  --border: #E9E0D6;
+  --input: #E9E0D6;
   --ring: #7C452E;
   --chart-2: #7C452E;
+  --sidebar: #F6F1EC;
+  --sidebar-foreground: #2B2620;
   --sidebar-primary: #7C452E;
-  --sidebar-accent: #F7ECE4;
+  --sidebar-accent: #F5EAE1;
   --sidebar-accent-foreground: #7C452E;
+  --sidebar-border: #E9E0D6;
   --sidebar-ring: #7C452E;
+}
+
+[data-theme="marine"] {
+  --background: #EBF1F2;
+  --foreground: #232A2C;
+  --primary: #28454E;
+  --secondary: #F1F6F6;
+  --muted: #EBF1F2;
+  --accent: #E0ECEE;
+  --accent-foreground: #28454E;
+  --border: #D6E1E3;
+  --input: #D6E1E3;
+  --ring: #28454E;
+  --chart-2: #28454E;
+  --sidebar: #EBF1F2;
+  --sidebar-foreground: #232A2C;
+  --sidebar-primary: #28454E;
+  --sidebar-accent: #E0ECEE;
+  --sidebar-accent-foreground: #28454E;
+  --sidebar-border: #D6E1E3;
+  --sidebar-ring: #28454E;
+}
+
+[data-theme="ochre"] {
+  --background: #F5F1E6;
+  --foreground: #2A271E;
+  --primary: #6E5623;
+  --secondary: #FAF6EC;
+  --muted: #F5F1E6;
+  --accent: #F1EAD6;
+  --accent-foreground: #6E5623;
+  --border: #E7DFCB;
+  --input: #E7DFCB;
+  --ring: #6E5623;
+  --chart-2: #6E5623;
+  --sidebar: #F5F1E6;
+  --sidebar-foreground: #2A271E;
+  --sidebar-primary: #6E5623;
+  --sidebar-accent: #F1EAD6;
+  --sidebar-accent-foreground: #6E5623;
+  --sidebar-border: #E7DFCB;
+  --sidebar-ring: #6E5623;
+}
+
+/* ── Forest DARK — the complete dark base (every themed token; families layer on) ── */
+
+[data-mode="dark"] {
+  --background: #161B17;
+  --foreground: #E7E9E3;
+  --card: #1D231E;
+  --card-foreground: #E7E9E3;
+  --popover: #1D231E;
+  --popover-foreground: #E7E9E3;
+  --primary: #86AE82;
+  --primary-foreground: #14180F;
+  --secondary: #232A24;
+  --secondary-foreground: #E7E9E3;
+  --muted: #1D231E;
+  --muted-foreground: #9AA098;
+  --accent: #263025;
+  --accent-foreground: #B9D0B4;
+  --destructive: #E08268;
+  --border: #2E362F;
+  --input: #2E362F;
+  --ring: #86AE82;
+  --chart-1: #86AE82;
+  --chart-2: #B9D0B4;
+  --chart-3: #6E8E6B;
+  --chart-4: #C98D6F;
+  --chart-5: #A98B6A;
+  --on-track: #86BE82;
+  --on-track-bg: #1C271C;
+  --at-risk: #E0B968;
+  --at-risk-bg: #292414;
+  --behind: #E38C74;
+  --behind-bg: #2B1D19;
+  --sidebar: #131711;
+  --sidebar-foreground: #E7E9E3;
+  --sidebar-primary: #86AE82;
+  --sidebar-primary-foreground: #14180F;
+  --sidebar-accent: #263025;
+  --sidebar-accent-foreground: #B9D0B4;
+  --sidebar-border: #2E362F;
+  --sidebar-ring: #86AE82;
+}
+
+/* ── Family dark deltas (family-tinted canvas + a lighter primary that reads on dark) ── */
+
+[data-theme="slate"][data-mode="dark"] {
+  --background: #14181E;
+  --card: #1B212A;
+  --card-foreground: #E6E9EE;
+  --popover: #1B212A;
+  --popover-foreground: #E6E9EE;
+  --foreground: #E6E9EE;
+  --primary: #86A2C8;
+  --primary-foreground: #10141B;
+  --secondary: #212834;
+  --muted: #1B212A;
+  --muted-foreground: #99A0AC;
+  --accent: #242C39;
+  --accent-foreground: #AFC2DC;
+  --border: #2C3543;
+  --input: #2C3543;
+  --ring: #86A2C8;
+  --chart-1: #86A2C8;
+  --chart-2: #AFC2DC;
+  --sidebar: #11151B;
+  --sidebar-foreground: #E6E9EE;
+  --sidebar-primary: #86A2C8;
+  --sidebar-primary-foreground: #10141B;
+  --sidebar-accent: #242C39;
+  --sidebar-accent-foreground: #AFC2DC;
+  --sidebar-border: #2C3543;
+  --sidebar-ring: #86A2C8;
+}
+
+[data-theme="plum"][data-mode="dark"] {
+  --background: #191521;
+  --card: #201B2A;
+  --card-foreground: #EAE6EE;
+  --popover: #201B2A;
+  --popover-foreground: #EAE6EE;
+  --foreground: #EAE6EE;
+  --primary: #A98CC0;
+  --primary-foreground: #17111B;
+  --secondary: #272232;
+  --muted: #201B2A;
+  --muted-foreground: #A29AAA;
+  --accent: #2C2539;
+  --accent-foreground: #C9B6DC;
+  --border: #362E43;
+  --input: #362E43;
+  --ring: #A98CC0;
+  --chart-1: #A98CC0;
+  --chart-2: #C9B6DC;
+  --sidebar: #16121D;
+  --sidebar-foreground: #EAE6EE;
+  --sidebar-primary: #A98CC0;
+  --sidebar-primary-foreground: #17111B;
+  --sidebar-accent: #2C2539;
+  --sidebar-accent-foreground: #C9B6DC;
+  --sidebar-border: #362E43;
+  --sidebar-ring: #A98CC0;
+}
+
+[data-theme="clay"][data-mode="dark"] {
+  --background: #1B1512;
+  --card: #241C18;
+  --card-foreground: #EDE6DF;
+  --popover: #241C18;
+  --popover-foreground: #EDE6DF;
+  --foreground: #EDE6DF;
+  --primary: #C68A6C;
+  --primary-foreground: #1A110C;
+  --secondary: #2B2220;
+  --muted: #241C18;
+  --muted-foreground: #A79C93;
+  --accent: #32261F;
+  --accent-foreground: #DDB49E;
+  --border: #3A2E28;
+  --input: #3A2E28;
+  --ring: #C68A6C;
+  --chart-1: #C68A6C;
+  --chart-2: #DDB49E;
+  --sidebar: #171210;
+  --sidebar-foreground: #EDE6DF;
+  --sidebar-primary: #C68A6C;
+  --sidebar-primary-foreground: #1A110C;
+  --sidebar-accent: #32261F;
+  --sidebar-accent-foreground: #DDB49E;
+  --sidebar-border: #3A2E28;
+  --sidebar-ring: #C68A6C;
+}
+
+[data-theme="marine"][data-mode="dark"] {
+  --background: #121A1C;
+  --card: #182225;
+  --card-foreground: #E3EAEB;
+  --popover: #182225;
+  --popover-foreground: #E3EAEB;
+  --foreground: #E3EAEB;
+  --primary: #6FAAB4;
+  --primary-foreground: #0C1618;
+  --secondary: #1F2A2D;
+  --muted: #182225;
+  --muted-foreground: #93A0A2;
+  --accent: #1E3034;
+  --accent-foreground: #A5C9CF;
+  --border: #29383B;
+  --input: #29383B;
+  --ring: #6FAAB4;
+  --chart-1: #6FAAB4;
+  --chart-2: #A5C9CF;
+  --sidebar: #0F1618;
+  --sidebar-foreground: #E3EAEB;
+  --sidebar-primary: #6FAAB4;
+  --sidebar-primary-foreground: #0C1618;
+  --sidebar-accent: #1E3034;
+  --sidebar-accent-foreground: #A5C9CF;
+  --sidebar-border: #29383B;
+  --sidebar-ring: #6FAAB4;
+}
+
+[data-theme="ochre"][data-mode="dark"] {
+  --background: #1A1710;
+  --card: #221E15;
+  --card-foreground: #ECE6D8;
+  --popover: #221E15;
+  --popover-foreground: #ECE6D8;
+  --foreground: #ECE6D8;
+  --primary: #C0A054;
+  --primary-foreground: #17130A;
+  --secondary: #29241A;
+  --muted: #221E15;
+  --muted-foreground: #A59C88;
+  --accent: #2F281A;
+  --accent-foreground: #D9C48C;
+  --border: #383021;
+  --input: #383021;
+  --ring: #C0A054;
+  --chart-1: #C0A054;
+  --chart-2: #D9C48C;
+  --sidebar: #16130C;
+  --sidebar-foreground: #ECE6D8;
+  --sidebar-primary: #C0A054;
+  --sidebar-primary-foreground: #17130A;
+  --sidebar-accent: #2F281A;
+  --sidebar-accent-foreground: #D9C48C;
+  --sidebar-border: #383021;
+  --sidebar-ring: #C0A054;
 }
 
 /* Paper-grain texture on body — imperceptible but present */
