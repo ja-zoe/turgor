@@ -75,7 +75,7 @@ Then follow [SETUP.md Part A](SETUP.md) to create the tables and sign in.
 Manual setup (full walkthrough in [SETUP.md](SETUP.md)):
 
 ```bash
-git clone --recurse-submodules git@github.com:ja-zoe/turgor.git
+git clone --recurse-submodules https://github.com/ja-zoe/turgor.git
 cd turgor
 pnpm install
 docker compose up -d   # local Postgres (or use a free Supabase project - see SETUP.md)
