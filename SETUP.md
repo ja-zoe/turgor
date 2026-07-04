@@ -159,6 +159,22 @@ specific deployments need (Stytch/ChatGPT OAuth, cron secret).
   MCP-capable AI client: go to **Account**, generate a personal access token, and
   paste the shown client configuration into the AI tool. The assistant then works
   with the tracker under that user's own permissions.
+- **Social sign-in (Google / GitHub)** - optional one-click sign-in alongside the
+  email magic link. Each provider's button appears only when you set both of its
+  environment variables; the same allowed-domains rule applies. Set `AUTH_URL` to
+  your site's URL first (the callback URLs are built from it).
+  - **GitHub** (quickest): GitHub → Settings → Developer settings → **OAuth Apps** →
+    New OAuth App. Homepage URL = your site; **Authorization callback URL** =
+    `<AUTH_URL>/api/auth/callback/github`. Copy the Client ID and generate a client
+    secret into `AUTH_GITHUB_ID` / `AUTH_GITHUB_SECRET`.
+  - **Google**: Google Cloud Console → **APIs & Services → Credentials** → Create
+    Credentials → **OAuth client ID** → Web application. Add
+    `<AUTH_URL>/api/auth/callback/google` under **Authorized redirect URIs** (fill in
+    the OAuth consent screen first if prompted). Copy the client ID/secret into
+    `AUTH_GOOGLE_ID` / `AUTH_GOOGLE_SECRET`.
+  - Redeploy (or restart `pnpm dev`) after setting the variables. Anyone signing in
+    with Google/GitHub uses the same account as their magic-link email - one person,
+    one account, whichever door they use.
 - **Calendar subscription** - the calendar page offers an ICS export you can
   subscribe to from Google Calendar or Outlook.
 - **Scheduled notifications** - point a cron job at `POST /api/cron/notifications`
