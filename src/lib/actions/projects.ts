@@ -8,6 +8,8 @@ import {
   getProjectMembership,
 } from "@/lib/permissions";
 import { parseDateInput } from "@/lib/date";
+import { assertWithinLimit } from "@/lib/entitlements/limits";
+import { forOrg } from "@/lib/tenant-db";
 import { Permission, ProjectMemberRole, ProjectStatus } from "@/generated/prisma";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -49,6 +51,10 @@ export async function createProject(formData: FormData) {
   if (startDate && endDate && endDate < startDate) {
     throw new Error("End date must be after start date");
   }
+
+  // Plan quota (set 37): community = unlimited (no-op); a cloud plan caps active projects.
+  const activeCount = await forOrg(user.orgId).project.count({ where: { archivedAt: null } });
+  await assertWithinLimit(user.orgId, "MAX_PROJECTS", activeCount);
 
   const project = await prisma.project.create({
     data: { orgId: user.orgId, name, description, semester, startDate, endDate },
@@ -134,6 +140,10 @@ export async function carryProjectToPeriod(projectId: string, formData: FormData
   if (duplicate) {
     throw new Error(`"${source.name}" already exists in ${semester}`);
   }
+
+  // Rollover creates a new active project — subject to the same plan quota (set 37).
+  const activeCount = await forOrg(orgId).project.count({ where: { archivedAt: null } });
+  await assertWithinLimit(orgId, "MAX_PROJECTS", activeCount);
 
   const created = await prisma.$transaction(async (tx) => {
     const project = await tx.project.create({
