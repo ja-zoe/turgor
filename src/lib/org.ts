@@ -1,7 +1,8 @@
 import { cache } from "react";
+import { headers } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import { isThemePresetId } from "@/lib/themes";
-import { DEFAULT_ORG_ID } from "@/lib/tenant-db";
+import { DEFAULT_ORG_ID, ACTIVE_ORG_SLUG_HEADER } from "@/lib/tenant-db";
 
 export type OrgSettings = {
   orgName: string;
@@ -87,3 +88,35 @@ export const getOrgSettings = cache(async (orgId: string = DEFAULT_ORG_ID): Prom
     periodLabelLower: base.periodLabel.toLowerCase(),
   };
 });
+
+/** Stock Turgor branding (no org). */
+function stockBrand(): OrgSettings {
+  return {
+    orgName: DEFAULTS.orgName,
+    orgFullName: DEFAULTS.orgFullName,
+    orgInstitution: DEFAULTS.orgInstitution,
+    orgLogoUrl: DEFAULTS.orgLogoUrl,
+    periodLabel: DEFAULTS.periodLabel,
+    themePreset: "forest",
+    appName: "Turgor",
+    appFullName: "Turgor",
+    isDefaultBrand: true,
+    periodLabelLower: DEFAULTS.periodLabel.toLowerCase(),
+  };
+}
+
+/**
+ * Branding for the UNAUTHENTICATED sign-in surfaces (R39.1). Dynamic-only (reads the request
+ * header), so never call it from `generateMetadata`/static prerender. On self-host
+ * (`TURGOR_CLOUD` unset) it's the default org, unchanged. On Turgor Cloud it resolves the
+ * subdomain: no subdomain (apex) → stock Turgor; a subdomain → that org's brand.
+ */
+export async function getSigninBrand(): Promise<OrgSettings> {
+  if (!process.env.TURGOR_CLOUD) return getOrgSettings();
+  const slug = (await headers()).get(ACTIVE_ORG_SLUG_HEADER);
+  if (!slug) return stockBrand();
+  const org = await prisma.organization
+    .findUnique({ where: { slug }, select: { id: true } })
+    .catch(() => null);
+  return org ? getOrgSettings(org.id) : stockBrand();
+}

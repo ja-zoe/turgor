@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { getOrgSettings } from "@/lib/org";
+import { getSigninBrand } from "@/lib/org";
 import { getConfiguredOAuthProviders } from "@/lib/auth-provider";
 import { signIn } from "@/auth";
 import { BrandLockup } from "@/components/brand-lockup";
@@ -26,7 +26,7 @@ const OAUTH_META = {
  */
 export default async function EmailSignInPage({ searchParams }: Props) {
   const { sent, error } = await searchParams;
-  const org = await getOrgSettings();
+  const org = await getSigninBrand();
   const oauthProviders = getConfiguredOAuthProviders();
 
   // One server action for every OAuth button; the provider comes from the form.

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { ArrowLeft } from "@phosphor-icons/react/dist/ssr";
 import { signIn } from "@/auth";
 import { mintHandoffToken } from "@/lib/handoff-token";
-import { getOrgSettings } from "@/lib/org";
+import { getSigninBrand } from "@/lib/org";
 
 /**
  * Dev-only mock login (R33.1, replaces the CAS mock). Fail-closed: the page 404s
@@ -28,7 +28,7 @@ const errorMessages: Record<string, string> = {
 export default async function DevLoginPage({ searchParams }: Props) {
   if (IS_PROD) notFound();
   const { error } = await searchParams;
-  const org = await getOrgSettings();
+  const org = await getSigninBrand();
 
   async function login(formData: FormData) {
     "use server";
