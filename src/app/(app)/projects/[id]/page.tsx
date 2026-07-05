@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireAuth, getUserPermissions, getProjectMembership } from "@/lib/permissions";
-import { prisma } from "@/lib/prisma";
+import { forOrg } from "@/lib/tenant-db";
 import { Permission } from "@/generated/prisma";
 import { ProjectStatusBadge, ArchivedBadge } from "@/components/status-badge";
 import { SortableDeliverables } from "@/components/sortable-deliverables";
@@ -37,6 +37,7 @@ export default async function ProjectDetailPage({
 }) {
   const { id } = await params;
   const user = await requireAuth();
+  const db = forOrg(user.orgId);
   const permissions = await getUserPermissions(user.roleId);
   const canManage = permissions.includes(Permission.MANAGE_PROJECTS);
   const canManageMilestones = permissions.includes(Permission.MANAGE_MILESTONES);
@@ -44,7 +45,7 @@ export default async function ProjectDetailPage({
   const canAssignActionItems = permissions.includes(Permission.ASSIGN_ACTION_ITEMS);
   const canCloseActionItems = permissions.includes(Permission.CLOSE_ACTION_ITEMS);
 
-  const project = await prisma.project.findUnique({
+  const project = await db.project.findUnique({
     where: { id },
     include: {
       assignments: {
@@ -93,10 +94,10 @@ export default async function ProjectDetailPage({
   const canViewAll = permissions.includes(Permission.VIEW_ALL_PROJECTS) || canManage;
   if (!membership && !canViewAll) notFound();
 
-  const submissionState = await getStatusSubmissionState(id);
+  const submissionState = await getStatusSubmissionState(user.orgId, id);
   const { periodLabel } = await getOrgSettings();
   const allSemesters = (
-    await prisma.project.findMany({
+    await db.project.findMany({
       select: { semester: true },
       distinct: ["semester"],
       orderBy: { semester: "desc" },

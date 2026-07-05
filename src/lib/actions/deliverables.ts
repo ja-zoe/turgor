@@ -113,6 +113,7 @@ export async function createDeliverable(projectId: string, formData: FormData) {
 
   await prisma.deliverable.create({
     data: {
+      orgId: user.orgId,
       projectId,
       title,
       description,
@@ -243,6 +244,7 @@ export async function createSubtask(deliverableId: string, formData: FormData) {
 
   await prisma.subtask.create({
     data: {
+      orgId: user.orgId,
       deliverableId,
       title,
       description,

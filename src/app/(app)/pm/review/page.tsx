@@ -1,5 +1,5 @@
 import { requirePermission } from "@/lib/permissions";
-import { prisma } from "@/lib/prisma";
+import { forOrg } from "@/lib/tenant-db";
 import { Permission } from "@/generated/prisma";
 import { ProjectStatusBadge } from "@/components/status-badge";
 import { BlockerFrequencyChart } from "@/components/charts/blocker-frequency-chart";
@@ -16,11 +16,12 @@ import {
 } from "@phosphor-icons/react/dist/ssr";
 
 export default async function MonthlyReviewPage() {
-  await requirePermission(Permission.VIEW_MONTHLY_REVIEW);
+  const me = await requirePermission(Permission.VIEW_MONTHLY_REVIEW);
+  const db = forOrg(me.orgId);
 
   const [settings, projects] = await Promise.all([
-    prisma.settings.findUnique({ where: { id: "singleton" } }),
-    prisma.project.findMany({
+    db.settings.findFirst(),
+    db.project.findMany({
       where: { archivedAt: null },
       orderBy: { name: "asc" },
       include: {

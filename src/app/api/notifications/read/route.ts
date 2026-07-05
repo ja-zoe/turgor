@@ -1,23 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/auth";
-import { prisma } from "@/lib/prisma";
+import { resolveActiveOrg } from "@/lib/tenant";
+import { forOrg } from "@/lib/tenant-db";
 
 export async function POST(req: NextRequest) {
-  const session = await auth();
-  if (!session?.user?.id) return new NextResponse("Unauthorized", { status: 401 });
+  const t = await resolveActiveOrg();
+  if (!t) return new NextResponse("Unauthorized", { status: 401 });
 
+  const db = forOrg(t.orgId);
   const body = await req.json().catch(() => ({}));
   const id = body?.id as string | undefined;
 
   if (id) {
-    await prisma.notification.updateMany({
-      where: { id, userId: session.user.id },
+    await db.notification.updateMany({
+      where: { id, userId: t.userId },
       data: { read: true },
     });
   } else {
     // Mark all unread as read
-    await prisma.notification.updateMany({
-      where: { userId: session.user.id, read: false },
+    await db.notification.updateMany({
+      where: { userId: t.userId, read: false },
       data: { read: true },
     });
   }

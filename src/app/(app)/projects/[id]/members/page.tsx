@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { requirePermission } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
+import { forOrg } from "@/lib/tenant-db";
 import { Permission, ProjectMemberRole } from "@/generated/prisma";
 import { assignMember, removeMember } from "@/lib/actions/projects";
 import { MemberRoleControl } from "@/components/member-role-control";
@@ -16,9 +17,10 @@ export default async function MembersPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  await requirePermission(Permission.MANAGE_PROJECTS);
+  const user = await requirePermission(Permission.MANAGE_PROJECTS);
+  const db = forOrg(user.orgId);
 
-  const project = await prisma.project.findUnique({
+  const project = await db.project.findUnique({
     where: { id },
     select: {
       name: true,
@@ -29,8 +31,9 @@ export default async function MembersPage({
   });
   if (!project) notFound();
 
+  // ACTIVE is now per-org: members with an ACTIVE membership in this org.
   const allUsers = await prisma.user.findMany({
-    where: { status: "ACTIVE" },
+    where: { memberships: { some: { orgId: user.orgId, status: "ACTIVE" } } },
     select: { id: true, name: true, firstName: true, nickname: true, email: true },
     orderBy: { name: "asc" },
   });

@@ -1,4 +1,4 @@
-import { prisma } from "@/lib/prisma";
+import { forOrg } from "@/lib/tenant-db";
 import { getProjectAccess, listSwitcherProjects, toActionItemRows } from "@/lib/project-views";
 import { ProjectContextSwitcher } from "@/components/project-context-switcher";
 import { ActionItemsSection } from "@/components/action-items-section";
@@ -17,8 +17,9 @@ export default async function ProjectActionItemsPage({
 }) {
   const { id } = await params;
   const access = await getProjectAccess(id);
+  const db = forOrg(access.user.orgId);
   const [items, switcherProjects] = await Promise.all([
-    prisma.actionItem.findMany({
+    db.actionItem.findMany({
       where: { projectId: id },
       orderBy: [{ status: "asc" }, { createdAt: "desc" }],
       include: {

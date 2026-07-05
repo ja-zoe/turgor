@@ -1,5 +1,6 @@
 import { requirePermission, getUserPermissions, RETIRED_PERMISSIONS } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
+import { forOrg } from "@/lib/tenant-db";
 import { Permission } from "@/generated/prisma";
 import { approveUser, updateUserRole, suspendUser, reactivateUser } from "@/lib/actions/users";
 import { createRole, updateRole, deleteRole } from "@/lib/actions/roles";
@@ -115,17 +116,44 @@ if (process.env.NODE_ENV !== "production") {
 
 export default async function UsersPage() {
   const me = await requirePermission(Permission.MANAGE_USERS);
+  const db = forOrg(me.orgId);
   const myPermissions = await getUserPermissions(me.roleId);
   const canManageRoles = myPermissions.includes(Permission.MANAGE_ROLES);
   const canDeleteUsers = myPermissions.includes(Permission.DELETE_USERS);
 
-  const [users, roles] = await Promise.all([
+  // Role and activation status now live on the per-org Membership, not the User.
+  // List only users with a membership in this org, and read status/role from it.
+  const [rawUsers, roles] = await Promise.all([
     prisma.user.findMany({
-      orderBy: [{ status: "asc" }, { createdAt: "asc" }],
-      include: { role: { select: { id: true, name: true } } },
+      where: { memberships: { some: { orgId: me.orgId } } },
+      orderBy: { createdAt: "asc" },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        firstName: true,
+        nickname: true,
+        createdAt: true,
+        memberships: {
+          where: { orgId: me.orgId },
+          select: {
+            status: true,
+            roleId: true,
+            role: { select: { id: true, name: true } },
+          },
+        },
+      },
     }),
-    prisma.role.findMany({ orderBy: { name: "asc" } }),
+    db.role.findMany({ orderBy: { name: "asc" } }),
   ]);
+
+  // Flatten the active-org membership onto each user for the existing JSX.
+  const users = rawUsers.map((u) => ({
+    ...u,
+    status: u.memberships[0]?.status,
+    roleId: u.memberships[0]?.roleId ?? null,
+    role: u.memberships[0]?.role ?? null,
+  }));
 
   const pending = users.filter((u) => u.status === "PENDING");
   const active = users.filter((u) => u.status === "ACTIVE");

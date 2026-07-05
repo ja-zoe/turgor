@@ -22,6 +22,7 @@ import {
 import { Permission } from "@/generated/prisma";
 import { NotificationBell } from "@/components/notification-bell";
 import { ThemeModeToggle } from "@/components/theme-mode-toggle";
+import { OrgSwitcher, type OrgOption } from "@/components/org-switcher";
 
 interface SidebarProps {
   userName: string;
@@ -31,6 +32,8 @@ interface SidebarProps {
   orgLogoUrl: string;
   periodLabel: string;
   permissions: Permission[];
+  orgs: OrgOption[];
+  activeOrgId: string;
   signOutAction: () => Promise<void>;
 }
 
@@ -75,6 +78,8 @@ export function Sidebar({
   orgLogoUrl,
   periodLabel,
   permissions,
+  orgs,
+  activeOrgId,
   signOutAction,
 }: SidebarProps) {
   const pathname = usePathname();
@@ -89,6 +94,9 @@ export function Sidebar({
 
   const navContent = (
     <>
+      <div className="px-3 pt-3 border-b border-border pb-2">
+        <OrgSwitcher orgs={orgs} activeOrgId={activeOrgId} />
+      </div>
       <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-0.5">
         {navItems.map(({ href, label, icon: Icon }) => (
           <Link

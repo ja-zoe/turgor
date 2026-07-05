@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { forOrg } from "@/lib/tenant-db";
 import { Permission } from "@/generated/prisma";
 import { getDisplayName } from "@/lib/utils";
 
@@ -51,6 +52,7 @@ export const EMPTY_RESULTS: SearchResults = {
  * Archived projects stay findable — search is a lookup tool — but are flagged.
  */
 export async function searchAll(
+  orgId: string,
   rawQuery: string,
   userId: string,
   permissions: Permission[]
@@ -58,6 +60,7 @@ export async function searchAll(
   const q = rawQuery.trim();
   if (q.length < MIN_QUERY_LENGTH) return EMPTY_RESULTS;
 
+  const db = forOrg(orgId);
   const canViewAll =
     permissions.includes(Permission.VIEW_ALL_PROJECTS) ||
     permissions.includes(Permission.MANAGE_PROJECTS);
@@ -65,13 +68,13 @@ export async function searchAll(
   const contains = { contains: q, mode: "insensitive" as const };
 
   const [projects, deliverables, actionItems, users] = await Promise.all([
-    prisma.project.findMany({
+    db.project.findMany({
       where: { ...projectScope, OR: [{ name: contains }, { description: contains }] },
       select: { id: true, name: true, semester: true, status: true, archivedAt: true },
       orderBy: { updatedAt: "desc" },
       take: TAKE,
     }),
-    prisma.deliverable.findMany({
+    db.deliverable.findMany({
       where: { title: contains, project: projectScope },
       select: {
         id: true,
@@ -82,7 +85,7 @@ export async function searchAll(
       orderBy: { updatedAt: "desc" },
       take: TAKE,
     }),
-    prisma.actionItem.findMany({
+    db.actionItem.findMany({
       where: { description: contains, project: projectScope },
       select: {
         id: true,
@@ -93,9 +96,12 @@ export async function searchAll(
       orderBy: { updatedAt: "desc" },
       take: TAKE,
     }),
+    // Users search is scoped to members of this org (R35). Role name comes from the
+    // user's membership in this org, not the (removed) global User.role.
     permissions.includes(Permission.MANAGE_USERS)
       ? prisma.user.findMany({
           where: {
+            memberships: { some: { orgId } },
             OR: [
               { name: contains },
               { firstName: contains },
@@ -111,7 +117,7 @@ export async function searchAll(
             firstName: true,
             nickname: true,
             email: true,
-            role: { select: { name: true } },
+            memberships: { where: { orgId }, select: { role: { select: { name: true } } } },
           },
           orderBy: { email: "asc" },
           take: TAKE,
@@ -151,7 +157,7 @@ export async function searchAll(
       id: u.id,
       displayName: getDisplayName(u),
       email: u.email,
-      roleName: u.role?.name ?? null,
+      roleName: u.memberships[0]?.role?.name ?? null,
     })),
   };
 }

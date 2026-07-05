@@ -1,5 +1,5 @@
-import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import { getTenantContext } from "@/lib/tenant";
 import { Permission, UserStatus } from "@/generated/prisma";
 import { redirect } from "next/navigation";
 
@@ -7,7 +7,11 @@ export type SessionUser = {
   id: string;
   email: string;
   name?: string | null;
+  /** Active org (R35.2). */
+  orgId: string;
+  /** Status of the active-org membership. */
   status: UserStatus;
+  /** Role of the active-org membership. */
   roleId: string | null;
 };
 
@@ -18,18 +22,29 @@ export type SessionUser = {
  */
 export const RETIRED_PERMISSIONS: readonly Permission[] = [Permission.VIEW_ASSIGNED_PROJECTS];
 
-/** Returns the session user or redirects. Does NOT check permissions. */
+/**
+ * Returns the session user scoped to their active org, or redirects. Role and
+ * status come from the active-org membership (R35.2), not the JWT. Does NOT check
+ * permissions.
+ */
 export async function requireAuth(): Promise<SessionUser> {
-  const session = await auth();
-  if (!session?.user?.id) redirect("/signin");
-  if (session.user.status === UserStatus.PENDING) redirect("/pending");
-  if (session.user.status === UserStatus.SUSPENDED) redirect("/signin");
-  // A DELETED user is treated as inactive — locked out like a suspended account (R18.2).
-  if (session.user.status === UserStatus.DELETED) redirect("/signin");
-  return session.user as SessionUser;
+  const ctx = await getTenantContext(); // redirects if no session / no membership
+  const status = ctx.membership.status;
+  if (status === UserStatus.PENDING) redirect("/pending");
+  if (status === UserStatus.SUSPENDED) redirect("/signin");
+  // A DELETED membership is treated as inactive — locked out (R18.2).
+  if (status === UserStatus.DELETED) redirect("/signin");
+  return {
+    id: ctx.userId,
+    email: ctx.email,
+    name: ctx.name,
+    orgId: ctx.orgId,
+    status,
+    roleId: ctx.membership.roleId,
+  };
 }
 
-/** Returns the role's permission array for the given user. */
+/** Returns the role's permission array for the given role id. */
 export async function getUserPermissions(roleId: string | null): Promise<Permission[]> {
   if (!roleId) return [];
   const role = await prisma.role.findUnique({

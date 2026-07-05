@@ -1,5 +1,5 @@
 import { requireAuth } from "@/lib/permissions";
-import { prisma } from "@/lib/prisma";
+import { forOrg } from "@/lib/tenant-db";
 import { TimelineStatus } from "@/generated/prisma";
 import { TimelineStatusBadge } from "@/components/status-badge";
 import Link from "next/link";
@@ -11,9 +11,10 @@ import { PendingIconButton } from "@/components/action-feedback";
 
 export default async function MyTasksPage() {
   const user = await requireAuth();
+  const db = forOrg(user.orgId);
 
   const [subtasks, actionItems] = await Promise.all([
-    prisma.subtask.findMany({
+    db.subtask.findMany({
       where: {
         assigneeId: user.id,
         status: { not: "COMPLETE" },
@@ -29,7 +30,7 @@ export default async function MyTasksPage() {
       },
       orderBy: [{ dueDate: "asc" }, { createdAt: "asc" }],
     }),
-    prisma.actionItem.findMany({
+    db.actionItem.findMany({
       where: {
         ownerId: user.id,
         status: "OPEN",

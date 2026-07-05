@@ -3,21 +3,33 @@
 import { prisma } from "@/lib/prisma";
 import { getOrgSettings } from "@/lib/org";
 import { requirePermission } from "@/lib/permissions";
+import { ensureMembership } from "@/lib/provisioning";
+import { UserStatus } from "@/generated/prisma";
 import { Permission } from "@/generated/prisma";
 import { revalidatePath } from "next/cache";
 
-export async function approveUser(userId: string, roleId: string) {
-  await requirePermission(Permission.MANAGE_USERS);
+/**
+ * PM user management is per-org (R35.3): approve/suspend/role changes act on the
+ * target user's Membership in the acting PM's active org, never the global User
+ * row. A user who also belongs to other orgs is unaffected there.
+ */
 
-  await prisma.user.update({
-    where: { id: userId },
-    data: { status: "ACTIVE", roleId },
+async function setMembershipStatus(orgId: string, userId: string, status: UserStatus) {
+  await prisma.membership.update({
+    where: { userId_orgId: { userId, orgId } },
+    data: { status },
   });
+}
 
-  // In-app notification to the user
-  const { appFullName } = await getOrgSettings();
+export async function approveUser(userId: string, roleId: string) {
+  const me = await requirePermission(Permission.MANAGE_USERS);
+  // Idempotent: creates the membership if somehow missing, else activates it.
+  await ensureMembership(userId, me.orgId, { status: UserStatus.ACTIVE, roleId });
+
+  const { appFullName } = await getOrgSettings(me.orgId);
   await prisma.notification.create({
     data: {
+      orgId: me.orgId,
       userId,
       type: "USER_APPROVAL",
       title: "Your account has been approved",
@@ -30,59 +42,66 @@ export async function approveUser(userId: string, roleId: string) {
 }
 
 export async function updateUserRole(userId: string, roleId: string) {
-  await requirePermission(Permission.MANAGE_USERS);
-  await prisma.user.update({ where: { id: userId }, data: { roleId } });
+  const me = await requirePermission(Permission.MANAGE_USERS);
+  await prisma.membership.update({
+    where: { userId_orgId: { userId, orgId: me.orgId } },
+    data: { roleId },
+  });
   revalidatePath("/pm/users");
 }
 
 export async function suspendUser(userId: string) {
-  await requirePermission(Permission.MANAGE_USERS);
-  await prisma.user.update({ where: { id: userId }, data: { status: "SUSPENDED" } });
+  const me = await requirePermission(Permission.MANAGE_USERS);
+  await setMembershipStatus(me.orgId, userId, UserStatus.SUSPENDED);
   revalidatePath("/pm/users");
 }
 
 export async function reactivateUser(userId: string) {
-  await requirePermission(Permission.MANAGE_USERS);
-  await prisma.user.update({ where: { id: userId }, data: { status: "ACTIVE" } });
+  const me = await requirePermission(Permission.MANAGE_USERS);
+  await setMembershipStatus(me.orgId, userId, UserStatus.ACTIVE);
   revalidatePath("/pm/users");
 }
 
 /**
- * Anonymizing soft-delete (R18.2). We never hard-delete — that would orphan/destroy authored
- * history (StatusUpdates, MeetingRecords, owned ActionItems, assigned Subtasks). Instead we
- * mark the user DELETED and scrub PII, keeping all FKs/history intact. A PM can NEVER delete
- * themselves (hard guard). The rewritten unique email frees the netId to re-register later.
+ * Remove a user from the acting PM's org (R18.2 → R35.3, now org-scoped). Marks
+ * their membership DELETED and drops their org-scoped access (project assignments,
+ * MCP connections). We never hard-delete — that would orphan authored history. A PM
+ * can NEVER delete themselves. If this was the user's last non-deleted membership
+ * anywhere, we also anonymize the global User and revoke sessions (the full R18.2
+ * scrub); otherwise the global identity is left intact for their other orgs.
  */
 export async function deleteUser(userId: string) {
   const me = await requirePermission(Permission.DELETE_USERS);
-
-  // Hard guard: never self-delete.
   if (me.id === userId) {
     throw new Error("You cannot delete your own account.");
   }
+  const orgId = me.orgId;
 
-  // Anonymize + soft-delete in one update.
-  await prisma.user.update({
-    where: { id: userId },
-    data: {
-      status: "DELETED",
-      name: "Deleted user",
-      firstName: null,
-      lastName: null,
-      nickname: null,
-      // Unique placeholder so the original netId can re-register and the @unique holds.
-      email: `deleted+${userId}@seed.invalid`,
-      mcpToken: null,
-      image: null,
-    },
+  await setMembershipStatus(orgId, userId, UserStatus.DELETED);
+  await prisma.projectAssignment.deleteMany({ where: { orgId, userId } });
+  await prisma.mcpConnection.deleteMany({ where: { orgId, userId } });
+
+  const remaining = await prisma.membership.count({
+    where: { userId, status: { not: UserStatus.DELETED } },
   });
-
-  // Revoke access: sessions + accounts (force logout), project assignments (drop access),
-  // and any recorded MCP connections (token is now null). History links are kept.
-  await prisma.session.deleteMany({ where: { userId } });
-  await prisma.account.deleteMany({ where: { userId } });
-  await prisma.projectAssignment.deleteMany({ where: { userId } });
-  await prisma.mcpConnection.deleteMany({ where: { userId } });
+  if (remaining === 0) {
+    // Truly gone — anonymize identity + force logout everywhere.
+    await prisma.user.update({
+      where: { id: userId },
+      data: {
+        name: "Deleted user",
+        firstName: null,
+        lastName: null,
+        nickname: null,
+        email: `deleted+${userId}@seed.invalid`,
+        mcpToken: null,
+        mcpTokenOrgId: null,
+        image: null,
+      },
+    });
+    await prisma.session.deleteMany({ where: { userId } });
+    await prisma.account.deleteMany({ where: { userId } });
+  }
 
   revalidatePath("/pm/users");
 }

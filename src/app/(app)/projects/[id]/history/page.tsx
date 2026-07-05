@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireAuth, getUserPermissions, getProjectMembership } from "@/lib/permissions";
-import { prisma } from "@/lib/prisma";
+import { forOrg } from "@/lib/tenant-db";
 import { Permission } from "@/generated/prisma";
 import { ProjectStatusBadge } from "@/components/status-badge";
 import { MeetingRecordControls } from "@/components/meeting-record-controls";
@@ -16,6 +16,7 @@ export default async function ProjectHistoryPage({
 }) {
   const { id } = await params;
   const user = await requireAuth();
+  const db = forOrg(user.orgId);
   const permissions = await getUserPermissions(user.roleId);
   const canViewAll =
     permissions.includes(Permission.VIEW_ALL_PROJECTS) ||
@@ -23,7 +24,7 @@ export default async function ProjectHistoryPage({
   const canManageMeetingRecords = permissions.includes(Permission.MANAGE_MEETING_RECORDS);
   const canManageStatusUpdates = permissions.includes(Permission.MANAGE_STATUS_UPDATES);
 
-  const project = await prisma.project.findUnique({
+  const project = await db.project.findUnique({
     where: { id },
     select: {
       id: true,

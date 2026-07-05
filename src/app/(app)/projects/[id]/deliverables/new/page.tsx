@@ -1,6 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import { requireAuth, getUserPermissions, getProjectMembership } from "@/lib/permissions";
-import { prisma } from "@/lib/prisma";
+import { forOrg } from "@/lib/tenant-db";
 import { Permission } from "@/generated/prisma";
 import { createDeliverable } from "@/lib/actions/deliverables";
 import { MarkdownEditor } from "@/components/markdown-editor";
@@ -18,6 +18,7 @@ export default async function NewDeliverablePage({
   // A project lead/sublead can add deliverables to their own project; otherwise
   // the PM-level MANAGE_MILESTONES permission is required.
   const user = await requireAuth();
+  const db = forOrg(user.orgId);
   const membership = await getProjectMembership(user.id, id);
   const isLeadHere = membership?.role === "LEAD" || membership?.role === "SUBLEAD";
   if (!isLeadHere) {
@@ -25,7 +26,7 @@ export default async function NewDeliverablePage({
     if (!permissions.includes(Permission.MANAGE_MILESTONES)) redirect(`/projects/${id}`);
   }
 
-  const project = await prisma.project.findUnique({
+  const project = await db.project.findUnique({
     where: { id },
     select: {
       name: true,

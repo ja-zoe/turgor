@@ -1,4 +1,4 @@
-import { prisma } from "@/lib/prisma";
+import { forOrg } from "@/lib/tenant-db";
 import { getProjectAccess, listSwitcherProjects, toSortableDeliverables } from "@/lib/project-views";
 import { ProjectContextSwitcher } from "@/components/project-context-switcher";
 import { SortableDeliverables } from "@/components/sortable-deliverables";
@@ -17,8 +17,9 @@ export default async function ProjectDeliverablesPage({
 }) {
   const { id } = await params;
   const access = await getProjectAccess(id);
+  const db = forOrg(access.user.orgId);
   const [deliverables, switcherProjects] = await Promise.all([
-    prisma.deliverable.findMany({
+    db.deliverable.findMany({
       where: { projectId: id },
       orderBy: { orderIndex: "asc" },
       include: {

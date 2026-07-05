@@ -30,7 +30,7 @@ export default async function SearchPage({
   const { q } = await searchParams;
   const query = (q ?? "").trim();
 
-  const results: SearchResults = await searchAll(query, user.id, permissions);
+  const results: SearchResults = await searchAll(user.orgId, query, user.id, permissions);
   const total =
     results.projects.length +
     results.deliverables.length +

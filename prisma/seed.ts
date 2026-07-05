@@ -47,11 +47,25 @@ const EBOARD_PERMISSIONS: Permission[] = [
   Permission.MANAGE_STATUS_UPDATES,
 ];
 
+// R35.1: everything is now org-scoped. The seed provisions the built-in roles and
+// Settings for the single "default" org (the free-tier tenant). Full provisioning
+// for additional orgs lives in src/lib/provisioning.ts (R35.3); this keeps
+// `pnpm db:seed` correct for the default org.
+const DEFAULT_ORG_ID = "org_default";
+
 async function main() {
+  console.log("Ensuring default organization...");
+
+  const org = await prisma.organization.upsert({
+    where: { slug: "default" },
+    create: { id: DEFAULT_ORG_ID, slug: "default", name: "Turgor" },
+    update: {},
+  });
+
   console.log("Seeding roles...");
 
-  // Keyed by builtInKey, not name — the PM may rename built-in roles, and a re-run
-  // must update the same rows (never recreate them under the default names).
+  // Keyed by (orgId, builtInKey), not name — the PM may rename built-in roles, and a
+  // re-run must update the same rows (never recreate them under the default names).
   const builtInRoles: { key: string; defaultName: string; permissions: Permission[] }[] = [
     { key: "pm", defaultName: "Project Manager", permissions: PM_PERMISSIONS },
     { key: "lead", defaultName: "Project Lead", permissions: LEAD_PERMISSIONS },
@@ -61,18 +75,19 @@ async function main() {
 
   for (const { key, defaultName, permissions } of builtInRoles) {
     await prisma.role.upsert({
-      where: { builtInKey: key },
-      create: { builtInKey: key, name: defaultName, isBuiltIn: true, permissions },
+      where: { orgId_builtInKey: { orgId: org.id, builtInKey: key } },
+      create: { orgId: org.id, builtInKey: key, name: defaultName, isBuiltIn: true, permissions },
       update: { isBuiltIn: true, permissions },
     });
   }
 
-  console.log("Seeding Settings singleton...");
+  console.log("Seeding Settings for default org...");
 
   await prisma.settings.upsert({
-    where: { id: "singleton" },
+    where: { orgId: org.id },
     create: {
       id: "singleton",
+      orgId: org.id,
       weeksBehindMilestone: 1,
       missedGoalsInARow: 2,
       requireBoth: false,

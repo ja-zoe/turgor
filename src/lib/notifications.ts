@@ -1,8 +1,10 @@
 import { prisma } from "@/lib/prisma";
+import { forOrg } from "@/lib/tenant-db";
 import { getOrgSettings } from "@/lib/org";
 import { Channel, NotificationType, TriggerType } from "@/generated/prisma";
 
 interface NotificationPayload {
+  orgId: string;
   userId: string;
   type: NotificationType;
   title: string;
@@ -14,6 +16,7 @@ async function sendInApp(payloads: NotificationPayload[]) {
   if (payloads.length === 0) return;
   await prisma.notification.createMany({
     data: payloads.map((p) => ({
+      orgId: p.orgId,
       userId: p.userId,
       type: p.type,
       title: p.title,
@@ -39,7 +42,8 @@ async function sendEmail(payloads: NotificationPayload[]) {
 
   const { Resend } = await import("resend");
   const resend = new Resend(apiKey);
-  const { appName } = await getOrgSettings();
+  // All payloads in one deliver() call share an org (R35.4).
+  const { appName } = await getOrgSettings(payloads[0]?.orgId);
   const from = process.env.EMAIL_FROM ?? process.env.RESEND_FROM ?? `${appName} <onboarding@resend.dev>`;
 
   await Promise.allSettled(
@@ -61,27 +65,52 @@ async function deliver(channel: Channel, payloads: NotificationPayload[]) {
   if (channel === "EMAIL" || channel === "BOTH") await sendEmail(payloads);
 }
 
-async function getPMUserIds(): Promise<string[]> {
-  const pm = await prisma.user.findMany({
-    where: { status: "ACTIVE", role: { permissions: { has: "MANAGE_PROJECTS" } } },
-    select: { id: true },
+// ── Recipient resolution (R35.4: per-org, keyed off Membership) ───────────────
+
+/** User ids of members of `orgId` with an ACTIVE membership whose role grants `perm`. */
+async function getMemberIdsWithPermission(orgId: string, perm: string): Promise<string[]> {
+  const members = await prisma.membership.findMany({
+    where: { orgId, status: "ACTIVE", role: { permissions: { has: perm as never } } },
+    select: { userId: true },
   });
-  return pm.map((u) => u.id);
+  return members.map((m) => m.userId);
 }
 
-export async function getUserManagerIds(): Promise<string[]> {
-  const managers = await prisma.user.findMany({
-    where: { status: "ACTIVE", role: { permissions: { has: "MANAGE_USERS" } } },
-    select: { id: true },
+const getPMUserIds = (orgId: string) => getMemberIdsWithPermission(orgId, "MANAGE_PROJECTS");
+
+export const getUserManagerIds = (orgId: string) =>
+  getMemberIdsWithPermission(orgId, "MANAGE_USERS");
+
+async function getAllActiveUserIds(orgId: string): Promise<string[]> {
+  const members = await prisma.membership.findMany({
+    where: { orgId, status: "ACTIVE" },
+    select: { userId: true },
   });
-  return managers.map((u) => u.id);
+  return members.map((m) => m.userId);
 }
 
-export async function notifyNewSignup(newUser: { id: string; name: string | null; email: string }) {
-  const recipientIds = await getUserManagerIds();
+async function getProjectLeadUserIds(orgId: string, projectId: string): Promise<string[]> {
+  const leads = await prisma.projectAssignment.findMany({
+    where: {
+      orgId,
+      projectId,
+      role: { in: ["LEAD", "SUBLEAD"] },
+      user: { memberships: { some: { orgId, status: "ACTIVE" } } },
+    },
+    select: { userId: true },
+  });
+  return leads.map((a) => a.userId);
+}
+
+export async function notifyNewSignup(
+  newUser: { id: string; name: string | null; email: string },
+  orgId: string,
+) {
+  const recipientIds = await getUserManagerIds(orgId);
   if (recipientIds.length === 0) return;
   const name = newUser.name ?? newUser.email.split("@")[0];
   const payloads: NotificationPayload[] = recipientIds.map((userId) => ({
+    orgId,
     userId,
     type: NotificationType.USER_SIGNUP,
     title: "New account awaiting approval",
@@ -91,186 +120,164 @@ export async function notifyNewSignup(newUser: { id: string; name: string | null
   await deliver(Channel.BOTH, payloads);
 }
 
-async function getProjectLeadUserIds(projectId: string): Promise<string[]> {
-  const leads = await prisma.projectAssignment.findMany({
-    where: {
-      projectId,
-      role: { in: ["LEAD", "SUBLEAD"] },
-      user: { status: "ACTIVE" },
-    },
-    select: { userId: true },
-  });
-  return leads.map((a) => a.userId);
-}
-
-async function getAllActiveUserIds(): Promise<string[]> {
-  const users = await prisma.user.findMany({
-    where: { status: "ACTIVE" },
-    select: { id: true },
-  });
-  return users.map((u) => u.id);
-}
-
-/** Main cron function — runs all enabled notification rules. */
+/**
+ * Main cron function — runs all enabled notification rules, partitioned by org
+ * (R35.4). Each org's rules only ever notify that org's members and concern that
+ * org's projects; a scoped client (forOrg) enforces the boundary on every read.
+ */
 export async function runNotificationEngine(): Promise<{ fired: number; errors: string[] }> {
-  const rules = await prisma.notificationRule.findMany({ where: { enabled: true } });
+  const orgs = await prisma.organization.findMany({ select: { id: true } });
   let fired = 0;
   const errors: string[] = [];
 
-  for (const rule of rules) {
-    try {
-      const payloads: NotificationPayload[] = [];
-      const nowMs = Date.now();
+  for (const org of orgs) {
+    const orgId = org.id;
+    const db = forOrg(orgId);
+    const rules = await db.notificationRule.findMany({ where: { enabled: true } });
 
-      // ── MISSING_SUBMISSION ────────────────────────────────────────────────
-      if (rule.triggerType === TriggerType.MISSING_SUBMISSION) {
-        const windowHours = rule.thresholdHours ?? 24;
-        const windowMs = windowHours * 60 * 60 * 1000;
-        const cutoff = new Date(nowMs - windowMs);
+    for (const rule of rules) {
+      try {
+        const payloads: NotificationPayload[] = [];
+        const nowMs = Date.now();
+        const mk = (
+          userIds: string[],
+          type: NotificationType,
+          title: string,
+          body: string,
+          link: string,
+        ) => payloads.push(...userIds.map((userId) => ({ orgId, userId, type, title, body, link })));
 
-        // Projects with no status update in the last windowHours hours
-        const projects = await prisma.project.findMany({
-          where: {
-            archivedAt: null,
-            assignments: { some: { role: { in: ["LEAD", "SUBLEAD"] } } },
-            statusUpdates: { none: { submittedAt: { gte: cutoff } } },
-          },
-          select: { id: true, name: true },
-        });
+        // ── MISSING_SUBMISSION ──────────────────────────────────────────────
+        if (rule.triggerType === TriggerType.MISSING_SUBMISSION) {
+          const windowHours = rule.thresholdHours ?? 24;
+          const cutoff = new Date(nowMs - windowHours * 60 * 60 * 1000);
+          const projects = await db.project.findMany({
+            where: {
+              archivedAt: null,
+              assignments: { some: { role: { in: ["LEAD", "SUBLEAD"] } } },
+              statusUpdates: { none: { submittedAt: { gte: cutoff } } },
+            },
+            select: { id: true, name: true },
+          });
 
-        for (const project of projects) {
-          const leadIds = await getProjectLeadUserIds(project.id);
-          const pmIds = await getPMUserIds();
-          const recipientIds =
-            rule.recipients === "PM"
-              ? pmIds
-              : rule.recipients === "PROJECT_LEADS"
-                ? leadIds
-                : rule.recipients === "ALL_ACTIVE"
-                  ? await getAllActiveUserIds()
-                  : [...leadIds, ...pmIds];
-
-          payloads.push(
-            ...recipientIds.map((userId) => ({
-              userId,
-              type: NotificationType.REMINDER,
-              title: `Project standing missing: ${project.name}`,
-              body: `No project standing has been submitted for ${project.name} in the last ${windowHours} hours.`,
-              link: `/projects/${project.id}/status/new`,
-            }))
-          );
+          for (const project of projects) {
+            const leadIds = await getProjectLeadUserIds(orgId, project.id);
+            const pmIds = await getPMUserIds(orgId);
+            const recipientIds =
+              rule.recipients === "PM"
+                ? pmIds
+                : rule.recipients === "PROJECT_LEADS"
+                  ? leadIds
+                  : rule.recipients === "ALL_ACTIVE"
+                    ? await getAllActiveUserIds(orgId)
+                    : [...leadIds, ...pmIds];
+            mk(
+              recipientIds,
+              NotificationType.REMINDER,
+              `Project standing missing: ${project.name}`,
+              `No project standing has been submitted for ${project.name} in the last ${windowHours} hours.`,
+              `/projects/${project.id}/status/new`,
+            );
+          }
         }
-      }
 
-      // ── PROJECT_BEHIND ────────────────────────────────────────────────────
-      if (rule.triggerType === TriggerType.PROJECT_BEHIND) {
-        const behindProjects = await prisma.project.findMany({
-          where: { status: "BEHIND", archivedAt: null },
-          select: { id: true, name: true },
-        });
-
-        for (const project of behindProjects) {
-          const pmIds = await getPMUserIds();
-          const leadIds = await getProjectLeadUserIds(project.id);
-          const recipientIds =
-            rule.recipients === "PM"
-              ? pmIds
-              : rule.recipients === "PROJECT_LEADS"
-                ? leadIds
-                : rule.recipients === "ALL_ACTIVE"
-                  ? await getAllActiveUserIds()
-                  : [...pmIds, ...leadIds];
-
-          payloads.push(
-            ...recipientIds.map((userId) => ({
-              userId,
-              type: NotificationType.PROJECT_BEHIND,
-              title: `Project behind: ${project.name}`,
-              body: `${project.name} has been flagged as Behind schedule.`,
-              link: `/projects/${project.id}`,
-            }))
-          );
+        // ── PROJECT_BEHIND ──────────────────────────────────────────────────
+        if (rule.triggerType === TriggerType.PROJECT_BEHIND) {
+          const behindProjects = await db.project.findMany({
+            where: { status: "BEHIND", archivedAt: null },
+            select: { id: true, name: true },
+          });
+          for (const project of behindProjects) {
+            const pmIds = await getPMUserIds(orgId);
+            const leadIds = await getProjectLeadUserIds(orgId, project.id);
+            const recipientIds =
+              rule.recipients === "PM"
+                ? pmIds
+                : rule.recipients === "PROJECT_LEADS"
+                  ? leadIds
+                  : rule.recipients === "ALL_ACTIVE"
+                    ? await getAllActiveUserIds(orgId)
+                    : [...pmIds, ...leadIds];
+            mk(
+              recipientIds,
+              NotificationType.PROJECT_BEHIND,
+              `Project behind: ${project.name}`,
+              `${project.name} has been flagged as Behind schedule.`,
+              `/projects/${project.id}`,
+            );
+          }
         }
-      }
 
-      // ── ACTION_ITEM_DUE ───────────────────────────────────────────────────
-      if (rule.triggerType === TriggerType.ACTION_ITEM_DUE) {
-        const windowHours = rule.thresholdHours ?? 24;
-        const windowEnd = new Date(nowMs + windowHours * 60 * 60 * 1000);
-
-        const dueItems = await prisma.actionItem.findMany({
-          where: {
-            status: "OPEN",
-            ownerId: { not: null },
-            deadline: { gte: new Date(), lte: windowEnd },
-            project: { archivedAt: null },
-          },
-          include: { project: { select: { id: true, name: true } } },
-        });
-
-        for (const item of dueItems) {
-          const recipientIds =
-            rule.recipients === "PM"
-              ? await getPMUserIds()
-              : rule.recipients === "ACTION_OWNER" && item.ownerId
-                ? [item.ownerId]
-                : rule.recipients === "ALL_ACTIVE"
-                  ? await getAllActiveUserIds()
-                  : item.ownerId
-                    ? [item.ownerId]
-                    : [];
-
-          payloads.push(
-            ...recipientIds.map((userId) => ({
-              userId,
-              type: NotificationType.ACTION_ITEM,
-              title: `Action item due: ${item.project.name}`,
-              body: `"${item.description}" is due within ${windowHours} hours.`,
-              link: `/projects/${item.project.id}`,
-            }))
-          );
+        // ── ACTION_ITEM_DUE ─────────────────────────────────────────────────
+        if (rule.triggerType === TriggerType.ACTION_ITEM_DUE) {
+          const windowHours = rule.thresholdHours ?? 24;
+          const windowEnd = new Date(nowMs + windowHours * 60 * 60 * 1000);
+          const dueItems = await db.actionItem.findMany({
+            where: {
+              status: "OPEN",
+              ownerId: { not: null },
+              deadline: { gte: new Date(), lte: windowEnd },
+              project: { archivedAt: null },
+            },
+            include: { project: { select: { id: true, name: true } } },
+          });
+          for (const item of dueItems) {
+            const recipientIds =
+              rule.recipients === "PM"
+                ? await getPMUserIds(orgId)
+                : rule.recipients === "ACTION_OWNER" && item.ownerId
+                  ? [item.ownerId]
+                  : rule.recipients === "ALL_ACTIVE"
+                    ? await getAllActiveUserIds(orgId)
+                    : item.ownerId
+                      ? [item.ownerId]
+                      : [];
+            mk(
+              recipientIds,
+              NotificationType.ACTION_ITEM,
+              `Action item due: ${item.project.name}`,
+              `"${item.description}" is due within ${windowHours} hours.`,
+              `/projects/${item.project.id}`,
+            );
+          }
         }
-      }
 
-      // ── GOAL_MISSED ───────────────────────────────────────────────────────
-      if (rule.triggerType === TriggerType.GOAL_MISSED) {
-        const recentRecords = await prisma.meetingRecord.findMany({
-          where: { goalMet: false, project: { archivedAt: null } },
-          orderBy: { meetingDate: "desc" },
-          distinct: ["projectId"],
-          select: { projectId: true, project: { select: { name: true } } },
-        });
-
-        for (const record of recentRecords) {
-          const pmIds = await getPMUserIds();
-          const leadIds = await getProjectLeadUserIds(record.projectId);
-          const recipientIds =
-            rule.recipients === "PM"
-              ? pmIds
-              : rule.recipients === "PROJECT_LEADS"
-                ? leadIds
-                : rule.recipients === "ALL_ACTIVE"
-                  ? await getAllActiveUserIds()
-                  : pmIds;
-
-          payloads.push(
-            ...recipientIds.map((userId) => ({
-              userId,
-              type: NotificationType.GOAL_MISSED,
-              title: `Weekly goal missed: ${record.project.name}`,
-              body: `${record.project.name} missed its goal at the most recent meeting.`,
-              link: `/projects/${record.projectId}`,
-            }))
-          );
+        // ── GOAL_MISSED ─────────────────────────────────────────────────────
+        if (rule.triggerType === TriggerType.GOAL_MISSED) {
+          const recentRecords = await db.meetingRecord.findMany({
+            where: { goalMet: false, project: { archivedAt: null } },
+            orderBy: { meetingDate: "desc" },
+            distinct: ["projectId"],
+            select: { projectId: true, project: { select: { name: true } } },
+          });
+          for (const record of recentRecords) {
+            const pmIds = await getPMUserIds(orgId);
+            const leadIds = await getProjectLeadUserIds(orgId, record.projectId);
+            const recipientIds =
+              rule.recipients === "PM"
+                ? pmIds
+                : rule.recipients === "PROJECT_LEADS"
+                  ? leadIds
+                  : rule.recipients === "ALL_ACTIVE"
+                    ? await getAllActiveUserIds(orgId)
+                    : pmIds;
+            mk(
+              recipientIds,
+              NotificationType.GOAL_MISSED,
+              `Weekly goal missed: ${record.project.name}`,
+              `${record.project.name} missed its goal at the most recent meeting.`,
+              `/projects/${record.projectId}`,
+            );
+          }
         }
-      }
 
-      if (payloads.length > 0) {
-        await deliver(rule.channel, payloads);
-        fired += payloads.length;
+        if (payloads.length > 0) {
+          await deliver(rule.channel, payloads);
+          fired += payloads.length;
+        }
+      } catch (err) {
+        errors.push(`Org ${orgId} rule ${rule.id} (${rule.triggerType}): ${String(err)}`);
       }
-    } catch (err) {
-      errors.push(`Rule ${rule.id} (${rule.triggerType}): ${String(err)}`);
     }
   }
 

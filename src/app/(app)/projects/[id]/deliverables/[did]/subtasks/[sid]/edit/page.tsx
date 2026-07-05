@@ -1,6 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import { requireAuth, getUserPermissions, getProjectMembership } from "@/lib/permissions";
-import { prisma } from "@/lib/prisma";
+import { forOrg } from "@/lib/tenant-db";
 import { Permission } from "@/generated/prisma";
 import { updateSubtask } from "@/lib/actions/deliverables";
 import { MarkdownEditor } from "@/components/markdown-editor";
@@ -23,6 +23,7 @@ export default async function EditSubtaskPage({
 }) {
   const { id, did, sid } = await params;
   const user = await requireAuth();
+  const db = forOrg(user.orgId);
   const permissions = await getUserPermissions(user.roleId);
   const membership = await getProjectMembership(user.id, id);
 
@@ -33,7 +34,7 @@ export default async function EditSubtaskPage({
 
   if (!canEdit) notFound();
 
-  const subtask = await prisma.subtask.findUnique({
+  const subtask = await db.subtask.findUnique({
     where: { id: sid, deliverableId: did },
     include: {
       deliverable: {

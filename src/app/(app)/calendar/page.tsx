@@ -1,5 +1,5 @@
 import { requireAuth, getUserPermissions } from "@/lib/permissions";
-import { prisma } from "@/lib/prisma";
+import { forOrg } from "@/lib/tenant-db";
 import { Permission, type CalendarEventType } from "@/generated/prisma";
 import { SemesterCalendar } from "@/components/semester-calendar";
 import { getOrgSettings } from "@/lib/org";
@@ -11,6 +11,7 @@ export default async function CalendarPage({
 }) {
   const { semester: semesterParam } = await searchParams;
   const user = await requireAuth();
+  const db = forOrg(user.orgId);
   const permissions = await getUserPermissions(user.roleId);
   const canEdit = permissions.includes(Permission.MANAGE_CALENDAR);
   // Only leads / eboard / PM (VIEW_LEAD_MEETINGS) may see lead + eboard meetings.
@@ -21,9 +22,9 @@ export default async function CalendarPage({
 
   // Collect all known semesters from both Projects and CalendarEvents
   const [projectSemesters, eventSemesters, datedEvents, { periodLabel }] = await Promise.all([
-    prisma.project.findMany({ select: { semester: true }, distinct: ["semester"] }),
-    prisma.calendarEvent.findMany({ select: { semester: true }, distinct: ["semester"] }),
-    prisma.calendarEvent.findMany({ select: { semester: true, semesters: true, startsAt: true } }),
+    db.project.findMany({ select: { semester: true }, distinct: ["semester"] }),
+    db.calendarEvent.findMany({ select: { semester: true }, distinct: ["semester"] }),
+    db.calendarEvent.findMany({ select: { semester: true, semesters: true, startsAt: true } }),
     getOrgSettings(),
   ]);
 
@@ -58,7 +59,7 @@ export default async function CalendarPage({
   const activeSemester = semesterParam ?? allSemesters[0] ?? "";
 
   const events = activeSemester
-    ? await prisma.calendarEvent.findMany({
+    ? await db.calendarEvent.findMany({
         // A lead/eboard meeting pinned to several semesters shows in each of them.
         where: { semesters: { has: activeSemester }, ...restrictedFilter },
         orderBy: { startsAt: "asc" },
@@ -67,7 +68,7 @@ export default async function CalendarPage({
     : [];
 
   // No new meetings for archived (ended) projects; existing events stay visible.
-  const projects = await prisma.project.findMany({
+  const projects = await db.project.findMany({
     where: { archivedAt: null },
     select: { id: true, name: true, semester: true },
     orderBy: { name: "asc" },

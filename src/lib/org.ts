@@ -1,6 +1,7 @@
 import { cache } from "react";
 import { prisma } from "@/lib/prisma";
 import { isThemePresetId } from "@/lib/themes";
+import { DEFAULT_ORG_ID } from "@/lib/tenant-db";
 
 export type OrgSettings = {
   orgName: string;
@@ -47,10 +48,10 @@ const DEFAULTS = {
  * not fail on it. An adopting org overrides these in PM Tools → Settings;
  * SEED's live deployment stores its own SEED values in the Settings row.
  */
-export const getOrgSettings = cache(async (): Promise<OrgSettings> => {
+export const getOrgSettings = cache(async (orgId: string = DEFAULT_ORG_ID): Promise<OrgSettings> => {
   const settings = await prisma.settings
     .findUnique({
-      where: { id: "singleton" },
+      where: { orgId },
       select: {
         orgName: true,
         orgFullName: true,

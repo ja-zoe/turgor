@@ -33,7 +33,7 @@ export async function canEditProject(
 }
 
 export async function createProject(formData: FormData) {
-  await requirePermission(Permission.MANAGE_PROJECTS);
+  const user = await requirePermission(Permission.MANAGE_PROJECTS);
 
   const name = (formData.get("name") as string).trim();
   const description = (formData.get("description") as string | null)?.trim() || null;
@@ -51,7 +51,7 @@ export async function createProject(formData: FormData) {
   }
 
   const project = await prisma.project.create({
-    data: { name, description, semester, startDate, endDate },
+    data: { orgId: user.orgId, name, description, semester, startDate, endDate },
   });
 
   revalidatePath("/projects");
@@ -114,20 +114,21 @@ export async function deleteProjects(ids: string[]) {
  * dialog can navigate to it (no redirect — callers handle errors inline).
  */
 export async function carryProjectToPeriod(projectId: string, formData: FormData) {
-  await requirePermission(Permission.MANAGE_PROJECTS);
+  const user = await requirePermission(Permission.MANAGE_PROJECTS);
+  const orgId = user.orgId;
 
   const semester = (formData.get("semester") as string | null)?.trim();
   const archiveSource = formData.get("archiveSource") === "on";
   if (!semester) throw new Error("A new period is required");
 
-  const source = await prisma.project.findUnique({
-    where: { id: projectId },
+  const source = await prisma.project.findFirst({
+    where: { id: projectId, orgId },
     include: { assignments: { select: { userId: true, role: true } } },
   });
   if (!source) throw new Error("Project not found");
 
   const duplicate = await prisma.project.findFirst({
-    where: { name: source.name, semester },
+    where: { orgId, name: source.name, semester },
     select: { id: true },
   });
   if (duplicate) {
@@ -137,12 +138,14 @@ export async function carryProjectToPeriod(projectId: string, formData: FormData
   const created = await prisma.$transaction(async (tx) => {
     const project = await tx.project.create({
       data: {
+        orgId,
         name: source.name,
         description: source.description,
         semester,
         assignments: {
           createMany: {
-            data: source.assignments.map((a) => ({ userId: a.userId, role: a.role })),
+            // Nested create — extension hooks don't fire, so stamp orgId explicitly.
+            data: source.assignments.map((a) => ({ orgId, userId: a.userId, role: a.role })),
           },
         },
       },
@@ -207,11 +210,11 @@ export async function assignMember(
   userId: string,
   role: ProjectMemberRole
 ) {
-  await requirePermission(Permission.MANAGE_PROJECTS);
+  const actor = await requirePermission(Permission.MANAGE_PROJECTS);
 
   await prisma.projectAssignment.upsert({
     where: { projectId_userId: { projectId, userId } },
-    create: { projectId, userId, role },
+    create: { orgId: actor.orgId, projectId, userId, role },
     update: { role },
   });
 
