@@ -4,9 +4,15 @@ import { prisma } from "@/lib/prisma";
 import { getOrgSettings } from "@/lib/org";
 import { requirePermission } from "@/lib/permissions";
 import { ensureMembership } from "@/lib/provisioning";
+import { assertWithinLimit } from "@/lib/entitlements/limits";
 import { UserStatus } from "@/generated/prisma";
 import { Permission } from "@/generated/prisma";
 import { revalidatePath } from "next/cache";
+
+/** Active-member count for the org (a seat consumed) — used for the MAX_MEMBERS quota. */
+async function activeMemberCount(orgId: string): Promise<number> {
+  return prisma.membership.count({ where: { orgId, status: UserStatus.ACTIVE } });
+}
 
 /**
  * PM user management is per-org (R35.3): approve/suspend/role changes act on the
@@ -23,6 +29,8 @@ async function setMembershipStatus(orgId: string, userId: string, status: UserSt
 
 export async function approveUser(userId: string, roleId: string) {
   const me = await requirePermission(Permission.MANAGE_USERS);
+  // Plan quota (set 37): activating a member consumes a seat. Community = unlimited (no-op).
+  await assertWithinLimit(me.orgId, "MAX_MEMBERS", await activeMemberCount(me.orgId));
   // Idempotent: creates the membership if somehow missing, else activates it.
   await ensureMembership(userId, me.orgId, { status: UserStatus.ACTIVE, roleId });
 
@@ -58,6 +66,8 @@ export async function suspendUser(userId: string) {
 
 export async function reactivateUser(userId: string) {
   const me = await requirePermission(Permission.MANAGE_USERS);
+  // Reactivating also consumes a seat — same quota as approval (set 37).
+  await assertWithinLimit(me.orgId, "MAX_MEMBERS", await activeMemberCount(me.orgId));
   await setMembershipStatus(me.orgId, userId, UserStatus.ACTIVE);
   revalidatePath("/pm/users");
 }

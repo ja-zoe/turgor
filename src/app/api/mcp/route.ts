@@ -6,6 +6,7 @@ import { Permission, TimelineStatus, ActionItemStatus, CalendarEventType, Projec
 import { carryOverActionItems } from "@/lib/actions/action-items";
 import { getPendingLeadMeetings } from "@/lib/lead-meeting";
 import { runRedFlagDetection } from "@/lib/red-flag";
+import { assertWithinLimit, QuotaError } from "@/lib/entitlements/limits";
 import { getOrgSettings } from "@/lib/org";
 import { verifyOAuthAccessToken, resolveMcpOrg, looksLikeJwt, type McpUser } from "@/lib/mcp-oauth";
 import { searchAll } from "@/lib/search";
@@ -891,6 +892,15 @@ async function executeTool(
       const endDate = args.endDate ? new Date(args.endDate as string) : null;
       if (startDate && endDate && endDate < startDate) {
         return { error: "endDate must be after startDate" };
+      }
+
+      // Plan quota parity with createProject (set 37).
+      try {
+        const activeCount = await db.project.count({ where: { archivedAt: null } });
+        await assertWithinLimit(user.orgId, "MAX_PROJECTS", activeCount);
+      } catch (e) {
+        if (e instanceof QuotaError) return { error: e.message };
+        throw e;
       }
 
       const project = await db.project.create({
