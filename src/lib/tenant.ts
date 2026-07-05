@@ -87,6 +87,11 @@ export const getTenantContext = cache(async (): Promise<TenantContext> => {
   const memberships = await loadMemberships(userId);
   if (memberships.length === 0) redirect("/pending");
   const slug = (await headers()).get(ACTIVE_ORG_SLUG_HEADER) ?? undefined;
+  // R39.2: on Cloud, a subdomain the user isn't a member of must not silently show their
+  // primary org — send them to the picker. Inert on self-host (no header, env unset).
+  if (slug && !memberships.some((m) => m.slug === slug) && process.env.FOREIGN_ORG_REDIRECT) {
+    redirect(process.env.FOREIGN_ORG_REDIRECT);
+  }
   const cookieOrgId = (await cookies()).get(ACTIVE_ORG_COOKIE)?.value;
   const membership = pickActive(memberships, slug, cookieOrgId);
   return {

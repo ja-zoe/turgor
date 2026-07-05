@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { headers } from "next/headers";
 import { signOut } from "@/auth";
 import { UserStatus } from "@/generated/prisma";
 import { getUserPermissions } from "@/lib/permissions";
@@ -9,6 +10,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { prisma } from "@/lib/prisma";
 import { getDisplayName } from "@/lib/utils";
 import { getOrgSettings } from "@/lib/org";
+import { cloudOrgUrl } from "@/lib/subdomain";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const ctx = await getTenantContext();
@@ -31,9 +33,13 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       select: { id: true, name: true },
     }),
   ]);
+  // R39.3: on Turgor Cloud, switcher options carry each org's subdomain URL so selecting one
+  // navigates there (URL matches the org). Self-host omits it → cookie switch.
+  const cloudHost = process.env.TURGOR_CLOUD ? (await headers()).get("host") : null;
   const orgs = ctx.memberships.map((m) => ({
     id: m.orgId,
     name: orgRows.find((o) => o.id === m.orgId)?.name ?? "Organization",
+    ...(cloudHost ? { url: cloudOrgUrl(m.slug, cloudHost) } : {}),
   }));
   const displayName = getDisplayName({
     firstName: dbUser.firstName,
