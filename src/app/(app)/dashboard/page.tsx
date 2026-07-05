@@ -8,6 +8,9 @@ import { getDisplayName, formatDateOnly } from "@/lib/utils";
 import { ProjectStatusBadge } from "@/components/status-badge";
 import { DeliverableProgress } from "@/components/charts/deliverable-progress";
 import { GoalCompletionChart } from "@/components/charts/goal-completion-chart";
+import { FeatureGate } from "@/components/feature-gate";
+import { UpsellCard } from "@/components/upsell-card";
+import { ChartLineUp } from "@phosphor-icons/react/dist/ssr";
 import {
   ArrowRight,
   ClipboardText,
@@ -174,6 +177,24 @@ export default async function DashboardPage() {
           Good to see you, {displayName}.
         </h1>
       </div>
+
+      {/* Advanced Analytics — example entitlement gate (set 36). Renders in full under the
+          community provider (free build); an org gated off sees the UpsellCard fallback. */}
+      <FeatureGate
+        feature="ADVANCED_ANALYTICS"
+        fallback={<UpsellCard feature="Advanced analytics" blurb="Deeper cross-project trends and forecasting on paid plans." />}
+      >
+        <section className="p-5 bg-card border border-border rounded-xl">
+          <div className="flex items-center gap-2 mb-3">
+            <ChartLineUp size={15} weight="fill" className="text-primary" />
+            <h2 className="text-sm font-semibold text-foreground">Advanced Analytics</h2>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Cross-project trends, velocity, and forecasting. This panel is available to every
+            workspace on the community build.
+          </p>
+        </section>
+      </FeatureGate>
 
       {/* PM stats grid */}
       {pmStats && (
