@@ -3,7 +3,8 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import { forOrg, ACTIVE_ORG_COOKIE } from "@/lib/tenant-db";
+import { headers } from "next/headers";
+import { forOrg, ACTIVE_ORG_COOKIE, ACTIVE_ORG_SLUG_HEADER } from "@/lib/tenant-db";
 import type { UserStatus } from "@/generated/prisma";
 
 /**
@@ -22,6 +23,7 @@ export { forOrg, ACTIVE_ORG_COOKIE, DEFAULT_ORG_ID } from "@/lib/tenant-db";
 export type ActiveMembership = {
   id: string;
   orgId: string;
+  slug: string;
   roleId: string | null;
   status: UserStatus;
 };
@@ -38,19 +40,34 @@ export type TenantContext = {
 };
 
 async function loadMemberships(userId: string): Promise<ActiveMembership[]> {
-  return prisma.membership.findMany({
+  const rows = await prisma.membership.findMany({
     where: { userId },
     orderBy: [{ createdAt: "asc" }, { id: "asc" }],
-    select: { id: true, orgId: true, roleId: true, status: true },
+    select: { id: true, orgId: true, roleId: true, status: true, org: { select: { slug: true } } },
   });
+  return rows.map((m) => ({
+    id: m.id,
+    orgId: m.orgId,
+    slug: m.org.slug,
+    roleId: m.roleId,
+    status: m.status,
+  }));
 }
 
+/**
+ * Resolve the active membership by precedence (R38): injected slug header (a subdomain the
+ * user is a member of) → cookie orgId (the in-app switcher) → first ACTIVE → first. A
+ * header/cookie value the user isn't a member of is ignored, so resolution only ever picks
+ * one of the user's own orgs.
+ */
 function pickActive(
   memberships: ActiveMembership[],
-  wanted: string | undefined,
+  slug: string | undefined,
+  cookieOrgId: string | undefined,
 ): ActiveMembership {
   return (
-    (wanted ? memberships.find((m) => m.orgId === wanted) : undefined) ??
+    (slug ? memberships.find((m) => m.slug === slug) : undefined) ??
+    (cookieOrgId ? memberships.find((m) => m.orgId === cookieOrgId) : undefined) ??
     memberships.find((m) => m.status === "ACTIVE") ??
     memberships[0]
   );
@@ -69,8 +86,9 @@ export const getTenantContext = cache(async (): Promise<TenantContext> => {
   const userId = session.user.id;
   const memberships = await loadMemberships(userId);
   if (memberships.length === 0) redirect("/pending");
-  const wanted = (await cookies()).get(ACTIVE_ORG_COOKIE)?.value;
-  const membership = pickActive(memberships, wanted);
+  const slug = (await headers()).get(ACTIVE_ORG_SLUG_HEADER) ?? undefined;
+  const cookieOrgId = (await cookies()).get(ACTIVE_ORG_COOKIE)?.value;
+  const membership = pickActive(memberships, slug, cookieOrgId);
   return {
     userId,
     email: session.user.email ?? "",
@@ -104,7 +122,8 @@ export async function resolveActiveOrg(): Promise<{
   const userId = session.user.id;
   const memberships = await loadMemberships(userId);
   if (memberships.length === 0) return null;
-  const wanted = (await cookies()).get(ACTIVE_ORG_COOKIE)?.value;
-  const m = pickActive(memberships, wanted);
+  const slug = (await headers()).get(ACTIVE_ORG_SLUG_HEADER) ?? undefined;
+  const cookieOrgId = (await cookies()).get(ACTIVE_ORG_COOKIE)?.value;
+  const m = pickActive(memberships, slug, cookieOrgId);
   return { userId, orgId: m.orgId, roleId: m.roleId, status: m.status };
 }

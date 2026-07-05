@@ -10,6 +10,9 @@ import { prisma } from "@/lib/prisma";
 
 export const ACTIVE_ORG_COOKIE = "turgor-active-org";
 export const DEFAULT_ORG_ID = "org_default";
+// R38: a request header (set by the Cloud fork's subdomain middleware) naming the active org
+// by its Organization.slug. Generic — core does no subdomain parsing; self-host never sets it.
+export const ACTIVE_ORG_SLUG_HEADER = "x-turgor-active-org-slug";
 
 // Models that carry orgId (R35.1) — the scope allowlist. Others (User,
 // Organization, Account, Session, VerificationToken) pass through unscoped.
