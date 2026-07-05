@@ -1,16 +1,17 @@
 import { requirePermission } from "@/lib/permissions";
 import { Permission } from "@/generated/prisma";
-import { prisma } from "@/lib/prisma";
+import { forOrg } from "@/lib/tenant-db";
 import { createProject } from "@/lib/actions/projects";
 import { SemesterFormField } from "@/components/semester-field";
 import { SubmitButton } from "@/components/submit-button";
 import { getOrgSettings } from "@/lib/org";
 
 export default async function NewProjectPage() {
-  await requirePermission(Permission.MANAGE_PROJECTS);
+  const user = await requirePermission(Permission.MANAGE_PROJECTS);
+  const db = forOrg(user.orgId);
 
   const [existing, { periodLabel, periodLabelLower }] = await Promise.all([
-    prisma.project.findMany({
+    db.project.findMany({
       select: { semester: true },
       distinct: ["semester"],
       orderBy: { semester: "desc" },

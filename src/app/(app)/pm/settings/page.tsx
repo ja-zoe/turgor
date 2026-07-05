@@ -1,5 +1,5 @@
 import { requirePermission } from "@/lib/permissions";
-import { prisma } from "@/lib/prisma";
+import { forOrg } from "@/lib/tenant-db";
 import { Permission, TriggerType, Channel, RecipientGroup } from "@/generated/prisma";
 import { updateSettings, updateOrgSettings, createNotificationRule, toggleNotificationRule, deleteNotificationRule } from "@/lib/actions/settings";
 import { getOrgSettings } from "@/lib/org";
@@ -32,11 +32,12 @@ const RECIPIENT_LABELS: Record<RecipientGroup, string> = {
 };
 
 export default async function SettingsPage() {
-  await requirePermission(Permission.CONFIGURE_NOTIFICATIONS);
+  const me = await requirePermission(Permission.CONFIGURE_NOTIFICATIONS);
+  const db = forOrg(me.orgId);
 
   const [settings, rules, org] = await Promise.all([
-    prisma.settings.findUnique({ where: { id: "singleton" } }),
-    prisma.notificationRule.findMany({ orderBy: { createdAt: "asc" } }),
+    db.settings.findFirst(),
+    db.notificationRule.findMany({ orderBy: { createdAt: "asc" } }),
     getOrgSettings(),
   ]);
 

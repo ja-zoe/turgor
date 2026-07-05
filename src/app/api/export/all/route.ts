@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import ExcelJS from "exceljs";
-import { auth } from "@/auth";
-import { prisma } from "@/lib/prisma";
 import { getUserPermissions } from "@/lib/permissions";
+import { resolveActiveOrg } from "@/lib/tenant";
+import { forOrg } from "@/lib/tenant-db";
 import { Permission } from "@/generated/prisma";
 import { getOrgSettings } from "@/lib/org";
 import { themePrimaryHex } from "@/lib/themes";
@@ -19,18 +19,19 @@ function sheetName(name: string, used: Set<string>): string {
 }
 
 export async function GET(req: NextRequest) {
-  const session = await auth();
-  if (!session?.user?.id) {
+  const t = await resolveActiveOrg();
+  if (!t) {
     return new NextResponse("Unauthorized", { status: 401 });
   }
-  const permissions = await getUserPermissions(session.user.roleId ?? null);
+  const permissions = await getUserPermissions(t.roleId);
   if (!permissions.includes(Permission.VIEW_MONTHLY_REVIEW)) {
     return new NextResponse("Forbidden", { status: 403 });
   }
 
   const semester = req.nextUrl.searchParams.get("semester")?.trim() || null;
 
-  const projects = await prisma.project.findMany({
+  const db = forOrg(t.orgId);
+  const projects = await db.project.findMany({
     where: { archivedAt: null, ...(semester ? { semester } : {}) },
     orderBy: { name: "asc" },
     include: {
@@ -55,7 +56,7 @@ export async function GET(req: NextRequest) {
     },
   });
 
-  const org = await getOrgSettings();
+  const org = await getOrgSettings(t.orgId);
   const headerArgb = `FF${themePrimaryHex(org.themePreset).slice(1)}`;
   const workbook = new ExcelJS.Workbook();
   workbook.creator = org.appName;

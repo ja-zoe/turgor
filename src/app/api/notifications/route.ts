@@ -1,13 +1,14 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/auth";
-import { prisma } from "@/lib/prisma";
+import { resolveActiveOrg } from "@/lib/tenant";
+import { forOrg } from "@/lib/tenant-db";
 
 export async function GET() {
-  const session = await auth();
-  if (!session?.user?.id) return new NextResponse("Unauthorized", { status: 401 });
+  const t = await resolveActiveOrg();
+  if (!t) return new NextResponse("Unauthorized", { status: 401 });
 
-  const notifications = await prisma.notification.findMany({
-    where: { userId: session.user.id },
+  const db = forOrg(t.orgId);
+  const notifications = await db.notification.findMany({
+    where: { userId: t.userId },
     orderBy: { createdAt: "desc" },
     take: 20,
   });

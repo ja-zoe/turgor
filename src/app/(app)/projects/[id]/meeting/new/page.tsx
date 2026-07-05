@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { requirePermission } from "@/lib/permissions";
-import { prisma } from "@/lib/prisma";
+import { forOrg } from "@/lib/tenant-db";
 import { Permission } from "@/generated/prisma";
 import { createMeetingRecord } from "@/lib/actions/meeting-records";
 import { ArrowLeft } from "@phosphor-icons/react/dist/ssr";
@@ -13,9 +13,10 @@ export default async function NewMeetingRecordPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  await requirePermission(Permission.POST_MEETING_TRACKING);
+  const user = await requirePermission(Permission.POST_MEETING_TRACKING);
+  const db = forOrg(user.orgId);
 
-  const project = await prisma.project.findUnique({
+  const project = await db.project.findUnique({
     where: { id },
     select: {
       name: true,

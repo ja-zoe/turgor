@@ -8,55 +8,52 @@ import { verifyHandoffToken } from "@/lib/handoff-token";
 import { isEmailDomainAllowed } from "@/lib/auth-provider";
 import { UserStatus } from "@/generated/prisma";
 import { notifyNewSignup } from "@/lib/notifications";
+import { ensureMembership, getOrgRoleId, resolveSignupOrgId } from "@/lib/provisioning";
 import authConfig from "./auth.config";
 
 /**
- * The built-in Project Manager role, by its stable key — the display name is
- * PM-editable, so never look it up by name. The name fallback covers a DB that
- * predates the builtInKey backfill.
+ * Coarse cross-org status for the JWT/edge middleware: ACTIVE if the user is
+ * ACTIVE in any org, else PENDING/SUSPENDED, else PENDING (no membership yet). The
+ * per-org active status is resolved in-app via getTenantContext.
  */
-async function findPmRoleId(): Promise<string | null> {
-  const byKey = await prisma.role.findUnique({
-    where: { builtInKey: "pm" },
-    select: { id: true },
+async function coarseStatus(userId: string): Promise<UserStatus> {
+  const memberships = await prisma.membership.findMany({
+    where: { userId },
+    select: { status: true },
   });
-  if (byKey) return byKey.id;
-  const byName = await prisma.role.findFirst({
-    where: { name: "Project Manager" },
-    select: { id: true },
-  });
-  return byName?.id ?? null;
+  if (memberships.some((m) => m.status === UserStatus.ACTIVE)) return UserStatus.ACTIVE;
+  if (memberships.some((m) => m.status === UserStatus.PENDING)) return UserStatus.PENDING;
+  if (memberships.some((m) => m.status === UserStatus.SUSPENDED)) return UserStatus.SUSPENDED;
+  return UserStatus.PENDING;
 }
 
-/** Promote a user to the built-in PM role + ACTIVE. Idempotent. */
-async function promotePmToActive(userId: string): Promise<void> {
-  const pmRoleId = await findPmRoleId();
-  if (pmRoleId) {
-    await prisma.user.update({
-      where: { id: userId },
-      data: { status: UserStatus.ACTIVE, roleId: pmRoleId },
-    });
-  }
+/** Promote a user to an ACTIVE Project Manager membership in an org. Idempotent. */
+async function promotePmToActive(userId: string, orgId: string): Promise<void> {
+  const pmRoleId = await getOrgRoleId(orgId, "pm");
+  await ensureMembership(userId, orgId, { status: UserStatus.ACTIVE, roleId: pmRoleId });
 }
 
 /**
- * The two first-sign-in side effects, shared by every provisioning path so they
- * can't drift (magic link + dev mock create the user in `authorize`; OAuth creates
- * it via the adapter and calls this from `events.createUser`): the configured PM
- * email is auto-promoted to Project Manager + ACTIVE; everyone else stays PENDING
- * and triggers a new-signup notification.
+ * The first-sign-in side effects, shared by every provisioning path so they can't
+ * drift (magic link + dev mock create the user in `authorize`; OAuth creates it via
+ * the adapter and calls this from `events.createUser`): the user joins their signup
+ * org; the configured PM email is auto-promoted to an ACTIVE Project Manager
+ * membership, everyone else gets a PENDING membership and triggers a new-signup
+ * notification.
  */
 async function finalizeNewUser(user: {
   id: string;
   email: string;
   name: string | null;
 }): Promise<void> {
+  const orgId = await resolveSignupOrgId(user.email);
   if (user.email === process.env.PM_ADMIN_EMAIL) {
-    await promotePmToActive(user.id);
+    await promotePmToActive(user.id, orgId);
     return;
   }
+  await ensureMembership(user.id, orgId, { status: UserStatus.PENDING });
   try {
-    await notifyNewSignup({ id: user.id, name: user.name, email: user.email });
+    await notifyNewSignup({ id: user.id, name: user.name, email: user.email }, orgId);
   } catch (e) {
     console.error("signup notify failed", e);
   }
@@ -108,39 +105,41 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
         let user = await prisma.user.findUnique({
           where: { email },
-          select: { id: true, email: true, name: true, status: true },
+          select: { id: true, email: true, name: true },
         });
-
-        // SUSPENDED and DELETED accounts can't sign in.
-        if (user && (user.status === UserStatus.SUSPENDED || user.status === UserStatus.DELETED)) {
-          return null;
-        }
 
         if (!user) {
-          // New users start PENDING; finalizeNewUser promotes the PM or notifies.
+          // New users get a PENDING membership; finalizeNewUser promotes the PM.
           user = await prisma.user.create({
-            data: { email, name: netId, status: UserStatus.PENDING, roleId: null },
-            select: { id: true, email: true, name: true, status: true },
+            data: { email, name: netId },
+            select: { id: true, email: true, name: true },
           });
           await finalizeNewUser(user);
-        } else if (email === process.env.PM_ADMIN_EMAIL && user.status === UserStatus.PENDING) {
-          // Existing PM who signed in before the seed ran — activate now.
-          await promotePmToActive(user.id);
+        } else if (email === process.env.PM_ADMIN_EMAIL) {
+          // Existing PM who signed in before the seed ran — ensure an ACTIVE PM
+          // membership in their signup org. Idempotent.
+          const orgId = await resolveSignupOrgId(email);
+          await promotePmToActive(user.id, orgId);
         }
 
-        // Re-read after any promotion so the returned user carries the final
-        // status/roleId (the jwt callback also reads the DB, for OAuth parity).
-        const finalUser = await prisma.user.findUnique({
-          where: { id: user.id },
-          select: { email: true, name: true, status: true, roleId: true },
+        // Authentication is global identity; per-org access is gated in-app. Block
+        // sign-in only when the user is SUSPENDED/DELETED in every org they belong
+        // to (no path back in). A user with any usable membership may authenticate.
+        const memberships = await prisma.membership.findMany({
+          where: { userId: user.id },
+          select: { status: true },
         });
-        if (!finalUser) return null;
+        const locked =
+          memberships.length > 0 &&
+          memberships.every(
+            (m) => m.status === UserStatus.SUSPENDED || m.status === UserStatus.DELETED,
+          );
+        if (locked) return null;
+
         return {
           id: user.id,
-          email: finalUser.email,
-          name: finalUser.name ?? netId,
-          status: finalUser.status,
-          roleId: finalUser.roleId,
+          email: user.email,
+          name: user.name ?? netId,
         };
       },
     }),
@@ -153,27 +152,35 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       if (!email || !isEmailDomainAllowed(email)) return false; // → ?error=AccessDenied
       const existing = await prisma.user.findUnique({
         where: { email },
-        select: { status: true },
+        select: { id: true },
       });
-      if (
-        existing &&
-        (existing.status === UserStatus.SUSPENDED || existing.status === UserStatus.DELETED)
-      ) {
-        return false;
+      if (existing) {
+        const memberships = await prisma.membership.findMany({
+          where: { userId: existing.id },
+          select: { status: true },
+        });
+        const locked =
+          memberships.length > 0 &&
+          memberships.every(
+            (m) => m.status === UserStatus.SUSPENDED || m.status === UserStatus.DELETED,
+          );
+        if (locked) return false;
       }
       return true;
     },
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id!;
-        // Authoritative read: covers OAuth users promoted in events.createUser
-        // (which runs after `user` is captured) and keeps status/role fresh.
-        const dbUser = await prisma.user.findUnique({
-          where: { id: user.id! },
-          select: { status: true, roleId: true, firstName: true, nickname: true },
-        });
-        token.status = dbUser?.status ?? UserStatus.PENDING;
-        token.roleId = dbUser?.roleId ?? null;
+        // Authoritative read: covers OAuth users provisioned in events.createUser
+        // (which runs after `user` is captured) and keeps the coarse status fresh.
+        const [status, dbUser] = await Promise.all([
+          coarseStatus(user.id!),
+          prisma.user.findUnique({
+            where: { id: user.id! },
+            select: { firstName: true, nickname: true },
+          }),
+        ]);
+        token.status = status;
         token.firstName = dbUser?.firstName ?? null;
         token.nickname = dbUser?.nickname ?? null;
       }
@@ -182,7 +189,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     session({ session, token }) {
       session.user.id = token.id;
       session.user.status = token.status;
-      session.user.roleId = token.roleId;
       session.user.firstName = token.firstName;
       session.user.nickname = token.nickname;
       return session;

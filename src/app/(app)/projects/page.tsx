@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { requireAuth, getUserPermissions } from "@/lib/permissions";
-import { prisma } from "@/lib/prisma";
+import { forOrg } from "@/lib/tenant-db";
 import { Permission } from "@/generated/prisma";
 import { ProjectsList } from "@/components/projects-list";
 import { ArrowRight, Folders } from "@phosphor-icons/react/dist/ssr";
@@ -11,6 +11,7 @@ export default async function ProjectsPage({
   searchParams: Promise<{ archived?: string }>;
 }) {
   const user = await requireAuth();
+  const db = forOrg(user.orgId);
   const { archived } = await searchParams;
   const showArchived = archived === "1";
   const permissions = await getUserPermissions(user.roleId);
@@ -36,14 +37,14 @@ export default async function ProjectsPage({
   } as const;
 
   const [projects, archivedCount] = await Promise.all([
-    prisma.project.findMany({
+    db.project.findMany({
       where: { ...scopeWhere, ...archivedWhere },
       select,
       orderBy: canViewAll
         ? [{ status: "asc" }, { updatedAt: "desc" }]
         : { updatedAt: "desc" },
     }),
-    prisma.project.count({ where: { ...scopeWhere, archivedAt: { not: null } } }),
+    db.project.count({ where: { ...scopeWhere, archivedAt: { not: null } } }),
   ]);
 
   return (

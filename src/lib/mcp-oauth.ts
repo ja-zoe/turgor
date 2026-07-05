@@ -16,7 +16,7 @@ import { prisma } from "@/lib/prisma";
  * accepts via a Trusted Auth Token Profile and echoes back as a custom claim.
  */
 
-export type McpUser = { id: string; email: string; roleId: string | null };
+export type McpUser = { id: string; email: string; orgId: string; roleId: string | null };
 
 /**
  * Result of verifying an OAuth access token: the resolved SEED user plus the token's
@@ -27,7 +27,32 @@ export type OAuthVerifyResult = McpUser & {
   oauthClientLabel: string | null;
 };
 
-const USER_SELECT = { id: true, email: true, roleId: true, status: true } as const;
+const USER_SELECT = { id: true, email: true } as const;
+
+/**
+ * R35.4: resolve the org an MCP token acts in and the caller's role there. An MCP
+ * call has no session, so the token names its org via User.mcpTokenOrgId — the
+ * caller must have an ACTIVE membership in that org. A legacy token (no bound org)
+ * falls back to the user's first ACTIVE membership. Returns null → 401.
+ */
+export async function resolveMcpOrg(
+  userId: string,
+): Promise<{ orgId: string; roleId: string | null } | null> {
+  const [user, memberships] = await Promise.all([
+    prisma.user.findUnique({ where: { id: userId }, select: { mcpTokenOrgId: true } }),
+    prisma.membership.findMany({
+      where: { userId, status: "ACTIVE" },
+      orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+      select: { orgId: true, roleId: true },
+    }),
+  ]);
+  if (memberships.length === 0) return null;
+  if (user?.mcpTokenOrgId) {
+    const bound = memberships.find((m) => m.orgId === user.mcpTokenOrgId);
+    return bound ? { orgId: bound.orgId, roleId: bound.roleId } : null;
+  }
+  return { orgId: memberships[0].orgId, roleId: memberships[0].roleId };
+}
 
 let client: stytch.Client | null = null;
 
@@ -155,11 +180,23 @@ export async function verifyOAuthAccessToken(token: string): Promise<OAuthVerify
     }
   }
 
-  if (!user || user.status !== "ACTIVE") {
+  if (!user) {
     console.warn(
-      "[mcp-oauth] no ACTIVE SEED user for the token (subject=" + subject + ", external_id=" + externalId + ")"
+      "[mcp-oauth] no SEED user for the token (subject=" + subject + ", external_id=" + externalId + ")"
     );
     return null;
   }
-  return { id: user.id, email: user.email, roleId: user.roleId, oauthClientId, oauthClientLabel };
+  const org = await resolveMcpOrg(user.id);
+  if (!org) {
+    console.warn("[mcp-oauth] no ACTIVE membership for token user " + user.id);
+    return null;
+  }
+  return {
+    id: user.id,
+    email: user.email,
+    orgId: org.orgId,
+    roleId: org.roleId,
+    oauthClientId,
+    oauthClientLabel,
+  };
 }

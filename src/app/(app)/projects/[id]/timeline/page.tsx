@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireAuth, getUserPermissions, getProjectMembership } from "@/lib/permissions";
-import { prisma } from "@/lib/prisma";
+import { forOrg } from "@/lib/tenant-db";
 import { Permission } from "@/generated/prisma";
 import { TimelineStatusBadge } from "@/components/status-badge";
 import { DeliverableProgress } from "@/components/charts/deliverable-progress";
@@ -29,12 +29,13 @@ export default async function ProjectTimelinePage({
 }) {
   const { id } = await params;
   const user = await requireAuth();
+  const db = forOrg(user.orgId);
   const permissions = await getUserPermissions(user.roleId);
   const canViewAll =
     permissions.includes(Permission.VIEW_ALL_PROJECTS) ||
     permissions.includes(Permission.MANAGE_PROJECTS);
 
-  const project = await prisma.project.findUnique({
+  const project = await db.project.findUnique({
     where: { id },
     include: {
       deliverables: {

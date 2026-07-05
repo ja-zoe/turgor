@@ -23,7 +23,7 @@ function resolveSemesters(formData: FormData, fallback: string): { semester: str
 }
 
 export async function createEvent(formData: FormData) {
-  await requirePermission(Permission.MANAGE_CALENDAR);
+  const user = await requirePermission(Permission.MANAGE_CALENDAR);
 
   const title = (formData.get("title") as string).trim();
   const fallbackSemester = (formData.get("semester") as string).trim();
@@ -48,7 +48,7 @@ export async function createEvent(formData: FormData) {
   if (endsAt && endsAt < startsAt) throw new Error("endsAt must be after startsAt");
 
   await prisma.calendarEvent.create({
-    data: { title, semester, semesters, type, startsAt, endsAt, allDay, location, description, projectId },
+    data: { orgId: user.orgId, title, semester, semesters, type, startsAt, endsAt, allDay, location, description, projectId },
   });
 
   revalidatePath("/calendar");

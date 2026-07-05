@@ -1,27 +1,29 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/auth";
-import { prisma } from "@/lib/prisma";
+import { resolveActiveOrg } from "@/lib/tenant";
+import { forOrg } from "@/lib/tenant-db";
 
 /**
- * Clear (hard-delete) the signed-in user's notifications. Mirrors the POST shape of
- * `read/route.ts`. With `{ id }` deletes that one notification; with an empty body
- * clears all of the user's notifications. Every delete is scoped to the session user,
- * so a user can only ever clear their own. (R20.1)
+ * Clear (hard-delete) the signed-in user's notifications in the active org. Mirrors
+ * the POST shape of `read/route.ts`. With `{ id }` deletes that one notification;
+ * with an empty body clears all of the user's notifications in this org. Every
+ * delete is scoped to the session user + active org, so a user can only ever clear
+ * their own. (R20.1, org-scoped R35)
  */
 export async function POST(req: NextRequest) {
-  const session = await auth();
-  if (!session?.user?.id) return new NextResponse("Unauthorized", { status: 401 });
+  const t = await resolveActiveOrg();
+  if (!t) return new NextResponse("Unauthorized", { status: 401 });
 
+  const db = forOrg(t.orgId);
   const body = await req.json().catch(() => ({}));
   const id = body?.id as string | undefined;
 
   if (id) {
-    await prisma.notification.deleteMany({
-      where: { id, userId: session.user.id },
+    await db.notification.deleteMany({
+      where: { id, userId: t.userId },
     });
   } else {
-    await prisma.notification.deleteMany({
-      where: { userId: session.user.id },
+    await db.notification.deleteMany({
+      where: { userId: t.userId },
     });
   }
 

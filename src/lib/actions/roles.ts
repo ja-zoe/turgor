@@ -17,14 +17,14 @@ function parsePermissions(formData: FormData): Permission[] {
 }
 
 export async function createRole(formData: FormData) {
-  await requirePermission(Permission.MANAGE_ROLES);
+  const me = await requirePermission(Permission.MANAGE_ROLES);
 
   const name = (formData.get("name") as string).trim();
   if (!name) throw new Error("Name is required");
 
   const permissions = parsePermissions(formData);
 
-  const role = await prisma.role.create({ data: { name, permissions } });
+  const role = await prisma.role.create({ data: { orgId: me.orgId, name, permissions } });
   revalidatePath("/pm/users");
   redirect(`/pm/users?role=${role.id}`);
 }
@@ -60,8 +60,8 @@ export async function deleteRole(roleId: string) {
   const role = await prisma.role.findUniqueOrThrow({ where: { id: roleId } });
   if (role.isBuiltIn) throw new Error("Cannot delete a built-in role");
 
-  // Unassign users from this role before deleting
-  await prisma.user.updateMany({ where: { roleId }, data: { roleId: null } });
+  // Unassign members from this role before deleting (role is per-org on Membership).
+  await prisma.membership.updateMany({ where: { roleId }, data: { roleId: null } });
   await prisma.role.delete({ where: { id: roleId } });
 
   revalidatePath("/pm/users");

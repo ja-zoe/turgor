@@ -26,6 +26,7 @@ export async function createMeetingRecord(projectId: string, formData: FormData)
 
   const record = await prisma.meetingRecord.create({
     data: {
+      orgId: user.orgId,
       projectId,
       meetingDate,
       status,
@@ -49,7 +50,7 @@ export async function createMeetingRecord(projectId: string, formData: FormData)
   await carryOverActionItems(projectId);
 
   // Run red-flag detection — may escalate status to BEHIND
-  await runRedFlagDetection(projectId);
+  await runRedFlagDetection(user.orgId, projectId);
 
   revalidatePath(`/projects/${projectId}`);
   revalidatePath("/projects");
@@ -57,7 +58,7 @@ export async function createMeetingRecord(projectId: string, formData: FormData)
 }
 
 export async function deleteMeetingRecord(meetingRecordId: string) {
-  await requirePermission(Permission.MANAGE_MEETING_RECORDS);
+  const user = await requirePermission(Permission.MANAGE_MEETING_RECORDS);
 
   const record = await prisma.meetingRecord.findUnique({
     where: { id: meetingRecordId },
@@ -70,7 +71,7 @@ export async function deleteMeetingRecord(meetingRecordId: string) {
   await prisma.meetingRecord.delete({ where: { id: meetingRecordId } });
 
   // History changed — let red-flag auto-detection re-evaluate (respects statusOverride).
-  await runRedFlagDetection(record.projectId);
+  await runRedFlagDetection(user.orgId, record.projectId);
 
   revalidatePath(`/projects/${record.projectId}`);
   revalidatePath(`/projects/${record.projectId}/history`);

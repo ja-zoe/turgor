@@ -1,6 +1,7 @@
 import Link from "next/link";
-import { requireAuth, getUserPermissions, getProjectMembership } from "@/lib/permissions";
+import { requireAuth, getUserPermissions } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
+import { forOrg } from "@/lib/tenant-db";
 import { Permission } from "@/generated/prisma";
 import { getStatusSubmissionState } from "@/lib/lead-meeting";
 import { getDisplayName, formatDateOnly } from "@/lib/utils";
@@ -20,11 +21,12 @@ import {
 
 export default async function DashboardPage() {
   const user = await requireAuth();
+  const db = forOrg(user.orgId);
   const permissions = await getUserPermissions(user.roleId);
   const canManageProjects = permissions.includes(Permission.MANAGE_PROJECTS);
   const canMonthlyReview = permissions.includes(Permission.VIEW_MONTHLY_REVIEW);
 
-  const assignments = await prisma.projectAssignment.findMany({
+  const assignments = await db.projectAssignment.findMany({
     where: { userId: user.id, project: { archivedAt: null } },
     include: {
       project: {
@@ -42,7 +44,7 @@ export default async function DashboardPage() {
 
   // All projects if PM
   const allProjects = canManageProjects
-    ? await prisma.project.findMany({
+    ? await db.project.findMany({
         where: { archivedAt: null },
         select: {
           id: true,
@@ -77,19 +79,19 @@ export default async function DashboardPage() {
   const projectData: Record<string, ProjectChartData> = {};
   for (const p of myProjects) {
     const [latest, submissionState, meetingRecords, deliverables] = await Promise.all([
-      prisma.statusUpdate.findFirst({
+      db.statusUpdate.findFirst({
         where: { projectId: p.id, submittedById: user.id },
         orderBy: { submittedAt: "desc" },
         select: { submittedAt: true },
       }),
-      getStatusSubmissionState(p.id),
-      prisma.meetingRecord.findMany({
+      getStatusSubmissionState(user.orgId, p.id),
+      db.meetingRecord.findMany({
         where: { projectId: p.id },
         orderBy: { meetingDate: "asc" },
         take: 12,
         select: { meetingDate: true, goalMet: true },
       }),
-      prisma.deliverable.findMany({
+      db.deliverable.findMany({
         where: { projectId: p.id },
         orderBy: { orderIndex: "asc" },
         select: {
@@ -121,7 +123,7 @@ export default async function DashboardPage() {
   // PM stats
   let pmStats: { total: number; behind: number; atRisk: number; openItems: number } | null = null;
   if (canManageProjects && allProjects) {
-    const openItems = await prisma.actionItem.count({
+    const openItems = await db.actionItem.count({
       where: { status: "OPEN", project: { archivedAt: null } },
     });
     pmStats = {
@@ -133,7 +135,7 @@ export default async function DashboardPage() {
   }
 
   // My open action items
-  const myActionItems = await prisma.actionItem.findMany({
+  const myActionItems = await db.actionItem.findMany({
     where: { ownerId: user.id, status: "OPEN", project: { archivedAt: null } },
     orderBy: [{ carriedOver: "desc" }, { deadline: "asc" }],
     take: 5,

@@ -1,6 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import { requireAuth, getProjectMembership } from "@/lib/permissions";
-import { prisma } from "@/lib/prisma";
+import { forOrg } from "@/lib/tenant-db";
 import { submitStatusUpdate } from "@/lib/actions/status-updates";
 import { getPendingLeadMeetings } from "@/lib/lead-meeting";
 import { StatusSubmitSwitcher } from "@/components/status-submit-switcher";
@@ -14,11 +14,12 @@ export default async function SubmitStatusUpdatePage({
 }) {
   const { id } = await params;
   const user = await requireAuth();
+  const db = forOrg(user.orgId);
 
   const membership = await getProjectMembership(user.id, id);
   if (!membership || membership.role === "MEMBER") redirect(`/projects/${id}`);
 
-  const project = await prisma.project.findUnique({
+  const project = await db.project.findUnique({
     where: { id },
     select: { name: true, semester: true },
   });
@@ -26,7 +27,7 @@ export default async function SubmitStatusUpdatePage({
 
   // All lead meetings this project currently owes a standing update for (R12.2). The
   // submitter picks which one in the switcher; submitting one returns here until none remain.
-  const pending = await getPendingLeadMeetings(id);
+  const pending = await getPendingLeadMeetings(user.orgId, id);
   if (pending.length === 0) redirect(`/projects/${id}`); // nothing left to submit
 
   async function handleSubmit(formData: FormData) {

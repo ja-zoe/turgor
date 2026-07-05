@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { requireAuth, getUserPermissions } from "@/lib/permissions";
-import { prisma } from "@/lib/prisma";
+import { forOrg } from "@/lib/tenant-db";
 import { Permission, ProjectMemberRole } from "@/generated/prisma";
 import { Check, ListChecks, ArrowClockwise, PencilSimple } from "@phosphor-icons/react/dist/ssr";
 import { closeActionItem, reopenActionItem } from "@/lib/actions/action-items";
@@ -10,13 +10,14 @@ import { PendingIconButton } from "@/components/action-feedback";
 
 export default async function AllActionItemsPage() {
   const user = await requireAuth();
+  const db = forOrg(user.orgId);
   const permissions = await getUserPermissions(user.roleId);
   const canManage = permissions.includes(Permission.MANAGE_PROJECTS);
   const canCloseAll = permissions.includes(Permission.CLOSE_ACTION_ITEMS);
   const canAssign = permissions.includes(Permission.ASSIGN_ACTION_ITEMS);
 
   // PM sees all; others see only items they own or are on their projects
-  const items = await prisma.actionItem.findMany({
+  const items = await db.actionItem.findMany({
     where: canManage
       ? { project: { archivedAt: null } }
       : {
@@ -42,7 +43,7 @@ export default async function AllActionItemsPage() {
 
   // A project LEAD/SUBLEAD may edit action items on their own project (matching the
   // updateActionItem gate + the project detail page), even without ASSIGN_ACTION_ITEMS.
-  const myLeadAssignments = await prisma.projectAssignment.findMany({
+  const myLeadAssignments = await db.projectAssignment.findMany({
     where: { userId: user.id, role: { in: [ProjectMemberRole.LEAD, ProjectMemberRole.SUBLEAD] } },
     select: { projectId: true },
   });
@@ -57,7 +58,7 @@ export default async function AllActionItemsPage() {
   const projectIds = [...new Set(items.map((i) => i.project.id))];
   const editableProjectIds = projectIds.filter(canEditItem);
   const assignments = editableProjectIds.length
-    ? await prisma.projectAssignment.findMany({
+    ? await db.projectAssignment.findMany({
         where: { projectId: { in: editableProjectIds } },
         include: { user: { select: { id: true, name: true, firstName: true, nickname: true, email: true } } },
       })

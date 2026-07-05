@@ -13,9 +13,11 @@ const PERSONAL_CLIENT_ID = "personal";
 export async function generateMcpToken(): Promise<{ token: string }> {
   const user = await requireAuth();
   const token = randomBytes(32).toString("hex");
+  // R35.4: the personal MCP token is bound to the org that was active when it was
+  // generated — an MCP call has no session, so the token names the org it acts in.
   await prisma.user.update({
     where: { id: user.id },
-    data: { mcpToken: token },
+    data: { mcpToken: token, mcpTokenOrgId: user.orgId },
   });
   // Maintain the ACCESS_TOKEN connection so the status shows immediately, not just on
   // first use. A fresh/regenerated token resets createdAt + lastSeenAt to now.
@@ -29,6 +31,7 @@ export async function generateMcpToken(): Promise<{ token: string }> {
       },
     },
     create: {
+      orgId: user.orgId,
       userId: user.id,
       type: McpConnectionType.ACCESS_TOKEN,
       clientId: PERSONAL_CLIENT_ID,

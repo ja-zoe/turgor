@@ -1,4 +1,4 @@
-import { prisma } from "@/lib/prisma";
+import { forOrg } from "@/lib/tenant-db";
 
 export type PendingLeadMeeting = {
   meeting: { id: string; title: string; startsAt: Date };
@@ -19,14 +19,18 @@ export type PendingLeadMeeting = {
  * outside that range the meeting is either not yet open or considered missed and drops off.
  * Several meetings can be pending at once — they are all returned.
  */
-export async function getPendingLeadMeetings(projectId: string): Promise<PendingLeadMeeting[]> {
-  const project = await prisma.project.findUnique({
+export async function getPendingLeadMeetings(
+  orgId: string,
+  projectId: string,
+): Promise<PendingLeadMeeting[]> {
+  const db = forOrg(orgId);
+  const project = await db.project.findUnique({
     where: { id: projectId },
     select: { semester: true },
   });
   if (!project) return [];
 
-  const settings = await prisma.settings.findUnique({ where: { id: "singleton" } });
+  const settings = await db.settings.findFirst();
   const submitWindowDays = settings?.statusSubmitWindowDays ?? 3;
   const lateWindowDays = settings?.statusLateWindowDays ?? 3;
   const now = new Date();
@@ -35,7 +39,7 @@ export async function getPendingLeadMeetings(projectId: string): Promise<Pending
   const earliestStart = new Date(now.getTime() - lateWindowDays * 86_400_000);
   const latestStart = new Date(now.getTime() + submitWindowDays * 86_400_000);
 
-  const meetings = await prisma.calendarEvent.findMany({
+  const meetings = await db.calendarEvent.findMany({
     where: {
       type: "LEAD_MEETING",
       semesters: { has: project.semester },
@@ -56,7 +60,7 @@ export async function getPendingLeadMeetings(projectId: string): Promise<Pending
  *  - `count`    — how many,
  *  - `canSubmit`— whether any are pending.
  */
-export async function getStatusSubmissionState(projectId: string) {
-  const pending = await getPendingLeadMeetings(projectId);
+export async function getStatusSubmissionState(orgId: string, projectId: string) {
+  const pending = await getPendingLeadMeetings(orgId, projectId);
   return { pending, count: pending.length, canSubmit: pending.length > 0 };
 }

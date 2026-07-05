@@ -140,21 +140,74 @@ model VerificationToken {
   @@unique([identifier, token])
 }
 
+// ─── Tenancy (R35.1) ─────────────────────────────────────────────────────────
+
+// The tenant root. One row per org; a stock/free-tier install has exactly one
+// ("default"). Billing/plan/entitlement columns live in the private turgor-cloud
+// repo and hang off this id — keep this model minimal and stable.
+model Organization {
+  id        String   @id @default(cuid())
+  slug      String   @unique // stable handle; future subdomain/vanity routing (column now, routing later)
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  memberships        Membership[]
+  roles              Role[]
+  settings           Settings?
+  projects           Project[]
+  projectAssignments ProjectAssignment[]
+  deliverables       Deliverable[]
+  subtasks           Subtask[]
+  statusUpdates      StatusUpdate[]
+  meetingRecords     MeetingRecord[]
+  actionItems        ActionItem[]
+  notificationRules  NotificationRule[]
+  notifications      Notification[]
+  calendarEvents     CalendarEvent[]
+  mcpConnections     McpConnection[]
+}
+
+// User↔org link. Owns the per-org role and activation state (a user can be an
+// ACTIVE Project Manager in one org and a PENDING Viewer in another).
+model Membership {
+  id        String     @id @default(cuid())
+  userId    String
+  orgId     String
+  roleId    String? // org-scoped global role (PM/Lead/Viewer)
+  status    UserStatus @default(PENDING)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  user User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  org  Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  role Role?        @relation(fields: [roleId], references: [id])
+
+  @@unique([userId, orgId])
+  @@index([orgId])
+}
+
 // ─── Domain models ──────────────────────────────────────────────────────────
 
 model Role {
   id          String       @id @default(cuid())
-  name        String       @unique
+  orgId       String
+  name        String
   isBuiltIn   Boolean      @default(false)
   // Stable identity for seeded roles ('pm' | 'lead' | 'viewer' | 'eboard') so code
   // never depends on the PM-editable display name. NULL for custom roles.
-  builtInKey  String?      @unique
+  builtInKey  String?
   permissions Permission[]
 
-  users User[]
+  org         Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  memberships Membership[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@unique([orgId, name])
+  @@unique([orgId, builtInKey])
+  @@index([orgId])
 }
 
 model User {
@@ -167,12 +220,15 @@ model User {
   lastName      String?
   nickname      String?
   mcpToken      String?    @unique
-  status        UserStatus @default(PENDING)
-  roleId        String?
+  // R35.4: the org a personal MCP token acts in (set when the token is generated).
+  // An MCP call carries no session, so the token names its org.
+  mcpTokenOrgId String?
   // R27.2: recipient-side mute for the EMAIL channel; in-app delivery unaffected.
   emailNotifications Boolean @default(true)
 
-  role               Role?               @relation(fields: [roleId], references: [id])
+  // R35.3 (contract): global role + activation moved to Membership (per-org). User is
+  // now pure global identity; org access + role/status live on `memberships`.
+  memberships        Membership[]
   accounts           Account[]
   sessions           Session[]
   projectAssignments ProjectAssignment[]
@@ -189,7 +245,9 @@ model User {
 
 model McpConnection {
   id         String            @id @default(cuid())
+  orgId      String
   userId     String
+  org        Organization      @relation(fields: [orgId], references: [id], onDelete: Cascade)
   user       User              @relation(fields: [userId], references: [id], onDelete: Cascade)
   type       McpConnectionType
   clientId   String? // OAuth client id (from the token); "personal" sentinel for personal token
@@ -198,10 +256,12 @@ model McpConnection {
   lastSeenAt DateTime          @default(now())
 
   @@unique([userId, type, clientId])
+  @@index([orgId])
 }
 
 model Project {
   id                   String        @id @default(cuid())
+  orgId                String
   name                 String
   description          String?
   semester             String
@@ -212,6 +272,7 @@ model Project {
   endDate              DateTime?
   archivedAt           DateTime?
 
+  org             Organization        @relation(fields: [orgId], references: [id], onDelete: Cascade)
   assignments     ProjectAssignment[]
   deliverables    Deliverable[]
   statusUpdates   StatusUpdate[]
@@ -221,22 +282,28 @@ model Project {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@index([orgId])
 }
 
 model ProjectAssignment {
   id        String            @id @default(cuid())
+  orgId     String
   projectId String
   userId    String
   role      ProjectMemberRole
 
-  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  org     Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  project Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user    User         @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([projectId, userId])
+  @@index([orgId])
 }
 
 model Deliverable {
   id            String         @id @default(cuid())
+  orgId         String
   projectId     String
   title         String
   description   String?        @db.Text
@@ -250,17 +317,20 @@ model Deliverable {
   priority      Priority       @default(MEDIUM)
   backlog       Boolean        @default(false)
 
-  project  Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  org      Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  project  Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
   subtasks Subtask[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  @@index([orgId])
   @@index([projectId])
 }
 
 model Subtask {
   id            String         @id @default(cuid())
+  orgId         String
   deliverableId String
   title         String
   description   String?        @db.Text
@@ -271,18 +341,21 @@ model Subtask {
   assigneeId    String?
   completedAt   DateTime?
 
-  deliverable Deliverable @relation(fields: [deliverableId], references: [id], onDelete: Cascade)
-  assignee    User?       @relation("SubtaskAssignee", fields: [assigneeId], references: [id])
+  org         Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  deliverable Deliverable  @relation(fields: [deliverableId], references: [id], onDelete: Cascade)
+  assignee    User?        @relation("SubtaskAssignee", fields: [assigneeId], references: [id])
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  @@index([orgId])
   @@index([assigneeId, status])
   @@index([deliverableId])
 }
 
 model StatusUpdate {
   id             String   @id @default(cuid())
+  orgId          String
   projectId      String
   submittedById  String
   meetingDate    DateTime
@@ -296,15 +369,18 @@ model StatusUpdate {
   isLate         Boolean  @default(false)
   calendarEventId String?
 
+  org           Organization   @relation(fields: [orgId], references: [id], onDelete: Cascade)
   project       Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
   submittedBy   User           @relation(fields: [submittedById], references: [id])
   calendarEvent CalendarEvent? @relation(fields: [calendarEventId], references: [id], onDelete: SetNull)
 
+  @@index([orgId])
   @@index([projectId, meetingDate])
 }
 
 model MeetingRecord {
   id           String        @id @default(cuid())
+  orgId        String
   projectId    String
   meetingDate  DateTime
   status       ProjectStatus
@@ -313,6 +389,7 @@ model MeetingRecord {
   notes        String?       @db.Text
   recordedById String
 
+  org         Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
   project     Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
   recordedBy  User         @relation(fields: [recordedById], references: [id])
   actionItems ActionItem[]
@@ -320,11 +397,13 @@ model MeetingRecord {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  @@index([orgId])
   @@index([projectId, meetingDate])
 }
 
 model ActionItem {
   id          String           @id @default(cuid())
+  orgId       String
   projectId   String
   description String           @db.Text
   ownerId     String?
@@ -334,6 +413,7 @@ model ActionItem {
   meetingId   String?
   completedAt DateTime?
 
+  org     Organization   @relation(fields: [orgId], references: [id], onDelete: Cascade)
   project Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
   owner   User?          @relation("ActionItemOwner", fields: [ownerId], references: [id])
   meeting MeetingRecord? @relation(fields: [meetingId], references: [id])
@@ -341,12 +421,14 @@ model ActionItem {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  @@index([orgId])
   @@index([ownerId, status])
   @@index([projectId, status])
 }
 
 model NotificationRule {
   id             String         @id @default(cuid())
+  orgId          String
   name           String
   triggerType    TriggerType
   channel        Channel
@@ -354,12 +436,17 @@ model NotificationRule {
   enabled        Boolean        @default(true)
   thresholdHours Int?
 
+  org Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@index([orgId])
 }
 
 model Notification {
   id     String           @id @default(cuid())
+  orgId  String
   userId String
   type   NotificationType
   title  String
@@ -367,15 +454,20 @@ model Notification {
   link   String?
   read   Boolean          @default(false)
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  org  Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  user User         @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   createdAt DateTime @default(now())
 
+  @@index([orgId])
   @@index([userId, read])
 }
 
 model Settings {
-  id                      String  @id @default("singleton")
+  // R35.1: was a hardcoded `id = "singleton"`; now one row per org (1:1 with
+  // Organization). The legacy default org keeps its existing "singleton" id value.
+  id                      String  @id @default(cuid())
+  orgId                   String  @unique
   weeksBehindMilestone    Int     @default(1)
   missedGoalsInARow       Int     @default(2)
   requireBoth             Boolean @default(false)
@@ -397,6 +489,8 @@ model Settings {
   // Whole-app-name override (R29.3) — null derives via the R32.2 chain.
   appName        String?
 
+  org Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
   updatedAt DateTime @updatedAt
 }
 
@@ -409,6 +503,7 @@ enum CalendarEventType {
 
 model CalendarEvent {
   id          String            @id @default(cuid())
+  orgId       String
   title       String
   semester    String
   // Lead/eboard meetings can be pinned to multiple semesters (they govern Project
@@ -422,11 +517,13 @@ model CalendarEvent {
   location    String?
   description String?           @db.Text
   projectId   String?
+  org         Organization      @relation(fields: [orgId], references: [id], onDelete: Cascade)
   project     Project?          @relation(fields: [projectId], references: [id], onDelete: SetNull)
   statusUpdates StatusUpdate[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  @@index([orgId])
   @@index([semester, startsAt])
 }

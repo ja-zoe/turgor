@@ -19,7 +19,7 @@ The rules most often broken in past sessions. The first three are hard-enforced 
 ```bash
 pnpm dev                   # start dev server (Turbopack)
 pnpm build                 # production build
-pnpm db:seed               # seed built-in roles + Settings singleton
+pnpm db:seed               # provision the default org (built-in roles + Settings, per-org)
 pnpm db:studio             # open Prisma Studio
 pnpm notifications:run     # run notification engine once (for manual testing)
 pnpm db:migrate            # apply pending migrations/NNN-*.sql (also: :status, :baseline)
@@ -63,14 +63,20 @@ src/app/
 4. The first sign-in from `PM_ADMIN_EMAIL` auto-promotes the user to the "Project Manager" role.
 5. New users start as `PENDING` and land on `/pending` until a PM activates them.
 
+### Multi-tenancy (set 35 — milestone 1 of the managed/cloud layer)
+
+The app is **multi-tenant** with shared-DB, row-level `orgId` isolation. `Organization` is the tenant root; **`Membership`** (`userId`, `orgId`, `roleId`, `status`; unique `(userId, orgId)`) is the user↔org link. A user can belong to many orgs; **global role and activation are per-org on the membership** — there is no `User.roleId`/`User.status`, `User` is pure global identity. Every tenant-owned table has a NOT-NULL `orgId`; `Settings` and `Role` are org-scoped.
+
+**Data access:** never touch a tenant model on the raw `prisma` client. Use `forOrg(orgId)` (`src/lib/tenant-db.ts`) — a Prisma extension that auto-injects `orgId` on every op for the tenant-model allowlist. Raw `prisma` is only for `User`, `Organization`, and the auth-adapter tables, plus cross-org provisioning. Nested writes (`create:`/`createMany:` inside a parent `data`) bypass the extension — stamp `orgId` explicitly on nested tenant rows. Active org resolves from the `turgor-active-org` cookie validated against membership (`getTenantContext` in `src/lib/tenant.ts`; `resolveActiveOrg` for API routes). New orgs are provisioned via `provisionOrg()` (`src/lib/provisioning.ts`) — the seam the private `turgor-cloud` repo will call. The org switcher lives in the sidebar (`src/components/org-switcher.tsx` + `switchOrg` in `src/lib/actions/org.ts`).
+
 ### RBAC: two-layer roles
 
-- **Global role** (`User.roleId → Role.permissions[]`): controls PM-level abilities (MANAGE_PROJECTS, MANAGE_USERS, VIEW_ALL_PROJECTS, etc.). Seeded roles: "Project Manager", "Project Lead", "Viewer".
+- **Global role** (`Membership.roleId → Role.permissions[]`, per active org): controls PM-level abilities (MANAGE_PROJECTS, MANAGE_USERS, VIEW_ALL_PROJECTS, etc.). Built-in roles are seeded **per org** by `provisionOrg`: "Project Manager", "Project Lead", "Viewer", "Eboard".
 - **Project role** (`ProjectAssignment.role: LEAD | SUBLEAD | MEMBER`): controls per-project write operations (submit status updates, manage deliverables/subtasks).
 
-Permission helpers live in `src/lib/permissions.ts`:
-- `requireAuth()` — returns session user or redirects to `/signin`
-- `requirePermission(perm)` — redirects to /dashboard if not granted
+Permission helpers live in `src/lib/permissions.ts` (role/status sourced from the **active membership**, via `getTenantContext`):
+- `requireAuth()` — returns the session user scoped to their active org (`{ id, email, orgId, roleId, status }`) or redirects
+- `requirePermission(perm)` — redirects to /dashboard if the active-org role lacks it
 - `getUserPermissions(roleId)` — returns permissions array for RBAC checks
 - `getProjectMembership(userId, projectId)` — returns project role or null
 
@@ -94,21 +100,23 @@ All mutations are Next.js Server Actions in `src/lib/actions/`. Each file maps t
 - `deliverables.ts` — CRUD for deliverables and subtasks (including `updateSubtaskStatus`)
 - `action-items.ts`, `status-updates.ts`, `meeting-records.ts` — domain mutations
 - `users.ts`, `roles.ts` — PM-only user/role management
-- `account.ts` — `generateMcpToken()` server action (upserts `User.mcpToken`)
+- `account.ts` — `generateMcpToken()` server action (sets `User.mcpToken` + `mcpTokenOrgId`)
+- `provisioning.ts` — `provisionOrg()` / `ensureMembership()` (cross-org; the cloud-layer seam)
+- `org.ts` — `switchOrg()` (sets the `turgor-active-org` cookie after a membership check)
 
 Actions call `requirePermission()` or `requireAuth()` + membership check, then `revalidatePath()`.
 
 ### MCP server (`/api/mcp`)
 
-Implements JSON-RPC 2.0 (protocol version `2024-11-05`). Auth via `Authorization: Bearer <mcpToken>` header — token is looked up in `User.mcpToken`. Returns 401 for missing/invalid tokens or non-ACTIVE users. Tools return `{ content: [{ type: "text", text: JSON.stringify(...) }] }`.
+Implements JSON-RPC 2.0 (protocol version `2024-11-05`). Auth via `Authorization: Bearer <mcpToken>` header — token is looked up in `User.mcpToken`. The token is **bound to one org** (`User.mcpTokenOrgId`, set at generation); `executeTool` runs on `forOrg(user.orgId)` so all tool reads/writes are scoped to that org. Returns 401 for missing/invalid tokens or when the bound-org membership is not ACTIVE. A thrown error inside a tool (e.g. the tenant-scope guard rejecting a cross-org id) is caught in `tools/call` and returned as a graceful `{ error }`. Tools return `{ content: [{ type: "text", text: JSON.stringify(...) }] }`.
 
 ### Notification engine
 
-Rule-based system stored in `NotificationRule`. `src/lib/notifications.ts` contains `runNotificationEngine()`. Trigger types: `MISSING_SUBMISSION`, `PROJECT_BEHIND`, `ACTION_ITEM_DUE`, `GOAL_MISSED`. Recipients: `PM`, `PROJECT_LEADS`, `ACTION_OWNER`, `ALL_ACTIVE`. Channels: `IN_APP`, `EMAIL`, `BOTH`. Email uses Resend (`RESEND_API_KEY`).
+Rule-based system stored in `NotificationRule` (org-scoped). `src/lib/notifications.ts` contains `runNotificationEngine()`, which **iterates every org** and runs each org's rules through `forOrg(org.id)` — a rule never notifies another org's members. Recipient resolution reads `Membership` (`ALL_ACTIVE` = ACTIVE members of the org; `PM` = members whose org role grants MANAGE_PROJECTS). Trigger types: `MISSING_SUBMISSION`, `PROJECT_BEHIND`, `ACTION_ITEM_DUE`, `GOAL_MISSED`. Recipients: `PM`, `PROJECT_LEADS`, `ACTION_OWNER`, `ALL_ACTIVE`. Channels: `IN_APP`, `EMAIL`, `BOTH`. Email uses Resend (`RESEND_API_KEY`).
 
 ### Red-flag detection
 
-`src/lib/red-flag.ts` — `runRedFlagDetection(projectId)` auto-sets project status to BEHIND based on two configurable thresholds in the `Settings` singleton: weeks behind a milestone (`weeksBehindMilestone`) and consecutive missed goals (`missedGoalsInARow`). `statusOverride: true` bypasses auto-detection entirely.
+`src/lib/red-flag.ts` — `runRedFlagDetection(orgId, projectId)` auto-sets project status to BEHIND based on two configurable thresholds in the org's `Settings` row: weeks behind a milestone (`weeksBehindMilestone`) and consecutive missed goals (`missedGoalsInARow`). `statusOverride: true` bypasses auto-detection entirely.
 
 ## Design system
 

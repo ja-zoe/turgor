@@ -17,7 +17,7 @@ export async function submitStatusUpdate(projectId: string, formData: FormData) 
 
   // The update is submitted for a specific pending lead meeting (chosen in the switcher).
   // Validate it's actually one of this project's currently-pending meetings.
-  const pending = await getPendingLeadMeetings(projectId);
+  const pending = await getPendingLeadMeetings(user.orgId, projectId);
   const calendarEventId = (formData.get("calendarEventId") as string | null)?.trim() || null;
   const target = calendarEventId
     ? pending.find((p) => p.meeting.id === calendarEventId)
@@ -35,6 +35,7 @@ export async function submitStatusUpdate(projectId: string, formData: FormData) 
 
   await prisma.statusUpdate.create({
     data: {
+      orgId: user.orgId,
       projectId,
       submittedById: user.id,
       calendarEventId: target.meeting.id,

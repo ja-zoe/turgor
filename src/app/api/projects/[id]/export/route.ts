@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import ExcelJS from "exceljs";
-import { auth } from "@/auth";
-import { prisma } from "@/lib/prisma";
 import { getUserPermissions, getProjectMembership } from "@/lib/permissions";
+import { resolveActiveOrg } from "@/lib/tenant";
+import { forOrg } from "@/lib/tenant-db";
 import { Permission } from "@/generated/prisma";
 import { getOrgSettings } from "@/lib/org";
 import { themePrimaryHex } from "@/lib/themes";
@@ -13,21 +13,22 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const session = await auth();
-  if (!session?.user?.id) {
+  const t = await resolveActiveOrg();
+  if (!t) {
     return new NextResponse("Unauthorized", { status: 401 });
   }
 
-  const permissions = await getUserPermissions(session.user.roleId ?? null);
+  const permissions = await getUserPermissions(t.roleId);
   const canViewAll =
     permissions.includes(Permission.VIEW_ALL_PROJECTS) ||
     permissions.includes(Permission.MANAGE_PROJECTS);
-  const membership = await getProjectMembership(session.user.id, id);
+  const membership = await getProjectMembership(t.userId, id);
   if (!membership && !canViewAll) {
     return new NextResponse("Forbidden", { status: 403 });
   }
 
-  const project = await prisma.project.findUnique({
+  const db = forOrg(t.orgId);
+  const project = await db.project.findUnique({
     where: { id },
     include: {
       deliverables: {
@@ -60,7 +61,7 @@ export async function GET(
     return new NextResponse("Not Found", { status: 404 });
   }
 
-  const org = await getOrgSettings();
+  const org = await getOrgSettings(t.orgId);
   const headerArgb = `FF${themePrimaryHex(org.themePreset).slice(1)}`;
   const workbook = new ExcelJS.Workbook();
   workbook.creator = org.appName;

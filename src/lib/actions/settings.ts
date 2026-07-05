@@ -21,7 +21,7 @@ const MAX_LOGO_BYTES = 2 * 1024 * 1024;
  * can render failures inline.
  */
 export async function uploadOrgLogo(formData: FormData): Promise<{ error?: string; url?: string }> {
-  await requirePermission(Permission.CONFIGURE_NOTIFICATIONS);
+  const me = await requirePermission(Permission.CONFIGURE_NOTIFICATIONS);
 
   if (!storageConfigured()) {
     return { error: "Uploads are not configured (SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY)." };
@@ -46,9 +46,9 @@ export async function uploadOrgLogo(formData: FormData): Promise<{ error?: strin
   }
 
   await prisma.settings.upsert({
-    where: { id: "singleton" },
+    where: { orgId: me.orgId },
     update: { orgLogoUrl: url },
-    create: { id: "singleton", orgLogoUrl: url },
+    create: { orgId: me.orgId, orgLogoUrl: url },
   });
   revalidatePath("/", "layout");
   revalidatePath("/pm/settings");
@@ -56,7 +56,7 @@ export async function uploadOrgLogo(formData: FormData): Promise<{ error?: strin
 }
 
 export async function updateSettings(formData: FormData) {
-  await requirePermission(Permission.CONFIGURE_NOTIFICATIONS);
+  const me = await requirePermission(Permission.CONFIGURE_NOTIFICATIONS);
 
   const weeksBehindMilestone = parseInt(formData.get("weeksBehindMilestone") as string, 10);
   const missedGoalsInARow = parseInt(formData.get("missedGoalsInARow") as string, 10);
@@ -71,10 +71,10 @@ export async function updateSettings(formData: FormData) {
     : 3;
 
   await prisma.settings.upsert({
-    where: { id: "singleton" },
+    where: { orgId: me.orgId },
     update: { weeksBehindMilestone, missedGoalsInARow, requireBoth, statusSubmitWindowDays, statusLateWindowDays },
     create: {
-      id: "singleton",
+      orgId: me.orgId,
       weeksBehindMilestone,
       missedGoalsInARow,
       requireBoth,
@@ -87,9 +87,9 @@ export async function updateSettings(formData: FormData) {
 }
 
 export async function updateOrgSettings(formData: FormData) {
-  await requirePermission(Permission.CONFIGURE_NOTIFICATIONS);
+  const me = await requirePermission(Permission.CONFIGURE_NOTIFICATIONS);
 
-  const current = await prisma.settings.findUnique({ where: { id: "singleton" } });
+  const current = await prisma.settings.findUnique({ where: { orgId: me.orgId } });
 
   const orgNameRaw = ((formData.get("orgName") as string) ?? "").trim();
   const orgLogoUrlRaw = ((formData.get("orgLogoUrl") as string) ?? "").trim();
@@ -116,9 +116,9 @@ export async function updateOrgSettings(formData: FormData) {
   const data = { orgName, orgFullName, orgInstitution, orgLogoUrl, periodLabel, themePreset, appName };
 
   await prisma.settings.upsert({
-    where: { id: "singleton" },
+    where: { orgId: me.orgId },
     update: data,
-    create: { id: "singleton", ...data },
+    create: { orgId: me.orgId, ...data },
   });
 
   // Branding renders on every page (sidebar, metadata), not just the settings page.
@@ -127,7 +127,7 @@ export async function updateOrgSettings(formData: FormData) {
 }
 
 export async function createNotificationRule(formData: FormData) {
-  await requirePermission(Permission.CONFIGURE_NOTIFICATIONS);
+  const me = await requirePermission(Permission.CONFIGURE_NOTIFICATIONS);
 
   const name = (formData.get("name") as string).trim();
   const triggerType = formData.get("triggerType") as TriggerType;
@@ -141,7 +141,7 @@ export async function createNotificationRule(formData: FormData) {
   }
 
   await prisma.notificationRule.create({
-    data: { name, triggerType, channel, recipients, thresholdHours },
+    data: { orgId: me.orgId, name, triggerType, channel, recipients, thresholdHours },
   });
 
   revalidatePath("/pm/settings");

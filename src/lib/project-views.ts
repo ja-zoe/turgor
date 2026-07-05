@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { prisma } from "@/lib/prisma";
+import { forOrg } from "@/lib/tenant-db";
 import {
   requireAuth,
   getUserPermissions,
@@ -48,10 +48,11 @@ export type ProjectAccess = {
 
 export async function getProjectAccess(projectId: string): Promise<ProjectAccess> {
   const user = await requireAuth();
+  const db = forOrg(user.orgId);
   const permissions = await getUserPermissions(user.roleId);
   const canManage = permissions.includes(Permission.MANAGE_PROJECTS);
 
-  const project = await prisma.project.findUnique({
+  const project = await db.project.findUnique({
     where: { id: projectId },
     select: {
       id: true,
@@ -89,9 +90,10 @@ export async function getProjectAccess(projectId: string): Promise<ProjectAccess
  * assignments. Archived projects stay listed (lookup surface) but flagged.
  */
 export async function listSwitcherProjects(access: ProjectAccess) {
+  const db = forOrg(access.user.orgId);
   const canViewAll =
     access.permissions.includes(Permission.VIEW_ALL_PROJECTS) || access.canManage;
-  const rows = await prisma.project.findMany({
+  const rows = await db.project.findMany({
     where: canViewAll ? {} : { assignments: { some: { userId: access.user.id } } },
     select: { id: true, name: true, semester: true, archivedAt: true },
     orderBy: { updatedAt: "desc" },

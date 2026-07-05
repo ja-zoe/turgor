@@ -1,12 +1,13 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { forOrg } from "@/lib/tenant-db";
 import { getUserPermissions } from "@/lib/permissions";
 import { Permission, TimelineStatus, ActionItemStatus, CalendarEventType, ProjectStatus, McpConnectionType, Priority } from "@/generated/prisma";
 import { carryOverActionItems } from "@/lib/actions/action-items";
 import { getPendingLeadMeetings } from "@/lib/lead-meeting";
 import { runRedFlagDetection } from "@/lib/red-flag";
 import { getOrgSettings } from "@/lib/org";
-import { verifyOAuthAccessToken, looksLikeJwt, type McpUser } from "@/lib/mcp-oauth";
+import { verifyOAuthAccessToken, resolveMcpOrg, looksLikeJwt, type McpUser } from "@/lib/mcp-oauth";
 import { searchAll } from "@/lib/search";
 
 // Lead/eboard meetings are hidden from users without VIEW_LEAD_MEETINGS — mirrors
@@ -575,6 +576,7 @@ const CONNECTION_THROTTLE_MS = 5 * 60 * 1000;
  */
 async function recordMcpConnection(
   userId: string,
+  orgId: string,
   type: McpConnectionType,
   clientId: string,
   label: string
@@ -591,7 +593,7 @@ async function recordMcpConnection(
       await prisma.mcpConnection.update({ where, data: { lastSeenAt: now } });
     } else {
       await prisma.mcpConnection.create({
-        data: { userId, type, clientId, label, lastSeenAt: now },
+        data: { orgId, userId, type, clientId, label, lastSeenAt: now },
       });
     }
   } catch (e) {
@@ -609,16 +611,21 @@ async function authenticate(req: NextRequest): Promise<McpUser | null> {
   if (!looksLikeJwt(token)) {
     const user = await prisma.user.findUnique({
       where: { mcpToken: token },
-      select: { id: true, email: true, roleId: true, status: true },
+      select: { id: true, email: true },
     });
-    if (user && user.status === "ACTIVE") {
-      await recordMcpConnection(
-        user.id,
-        McpConnectionType.ACCESS_TOKEN,
-        "personal",
-        "Personal access token"
-      );
-      return { id: user.id, email: user.email, roleId: user.roleId };
+    if (user) {
+      // R35.4: the token acts in its bound org; requires an ACTIVE membership there.
+      const org = await resolveMcpOrg(user.id);
+      if (org) {
+        await recordMcpConnection(
+          user.id,
+          org.orgId,
+          McpConnectionType.ACCESS_TOKEN,
+          "personal",
+          "Personal access token"
+        );
+        return { id: user.id, email: user.email, orgId: org.orgId, roleId: org.roleId };
+      }
     }
     return null;
   }
@@ -628,11 +635,12 @@ async function authenticate(req: NextRequest): Promise<McpUser | null> {
   if (!result) return null;
   await recordMcpConnection(
     result.id,
+    result.orgId,
     McpConnectionType.OAUTH,
     result.oauthClientId ?? "oauth",
     result.oauthClientLabel ?? "OAuth client"
   );
-  return { id: result.id, email: result.email, roleId: result.roleId };
+  return { id: result.id, email: result.email, orgId: result.orgId, roleId: result.roleId };
 }
 
 async function getProjectMembership(userId: string, projectId: string) {
@@ -648,6 +656,9 @@ async function executeTool(
   user: McpUser,
   permissions: Permission[]
 ): Promise<unknown> {
+  // R35: every tenant-model read/write in a tool runs through the token's org.
+  // Non-tenant models (user, organization) pass through unscoped.
+  const db = forOrg(user.orgId);
   switch (name) {
     // ── list_projects ────────────────────────────────────────────────────────
     case "list_projects": {
@@ -674,13 +685,13 @@ async function executeTool(
         archived: p.archivedAt !== null,
       });
       if (permissions.includes(Permission.VIEW_ALL_PROJECTS)) {
-        const projects = await prisma.project.findMany({
+        const projects = await db.project.findMany({
           where: archivedFilter,
           select: projectSelect,
         });
         return { projects: projects.map(withArchivedFlag) };
       }
-      const assignments = await prisma.projectAssignment.findMany({
+      const assignments = await db.projectAssignment.findMany({
         where: { userId: user.id, project: archivedFilter },
         include: { project: { select: projectSelect } },
       });
@@ -694,7 +705,7 @@ async function executeTool(
         return { error: "Query must be at least 2 characters" };
       }
       // Same helper as the /search page — identical scoping on every surface.
-      return await searchAll(query, user.id, permissions);
+      return await searchAll(user.orgId, query, user.id, permissions);
     }
 
     // ── get_project_detail ───────────────────────────────────────────────────
@@ -705,11 +716,11 @@ async function executeTool(
         return { error: "No access to this project" };
       }
       const [project, deliverables, actionItems] = await Promise.all([
-        prisma.project.findUnique({
+        db.project.findUnique({
           where: { id: pid },
           select: { id: true, name: true, semester: true, status: true, startDate: true, endDate: true, description: true, archivedAt: true },
         }),
-        prisma.deliverable.findMany({
+        db.deliverable.findMany({
           where: { projectId: pid },
           select: {
             id: true,
@@ -725,7 +736,7 @@ async function executeTool(
           },
           orderBy: { orderIndex: "asc" },
         }),
-        prisma.actionItem.findMany({
+        db.actionItem.findMany({
           where: { projectId: pid, status: "OPEN" },
           select: { id: true, description: true, deadline: true },
           take: 20,
@@ -739,21 +750,34 @@ async function executeTool(
       const statusFilter = (args.status as string | undefined) ?? "ACTIVE";
       const pid = args.projectId as string | undefined;
 
+      // R35: status + global role are per-org (Membership), scoped to the token's org.
+      const orgId = user.orgId;
+      const membershipFilter = {
+        orgId,
+        status: statusFilter as "ACTIVE" | "PENDING" | "SUSPENDED",
+        ...(args.roleName ? { role: { name: args.roleName as string } } : {}),
+      };
+      const membershipSelect = {
+        where: { orgId },
+        select: { status: true, role: { select: { name: true } } },
+      } as const;
+
       if (pid) {
         const callerMembership = await getProjectMembership(user.id, pid);
         if (!callerMembership && !permissions.includes(Permission.VIEW_ALL_PROJECTS)) {
           return { error: "No access to this project" };
         }
-        const assignments = await prisma.projectAssignment.findMany({
+        const assignments = await db.projectAssignment.findMany({
           where: {
             projectId: pid,
             ...(args.projectRole ? { role: args.projectRole as "LEAD" | "SUBLEAD" | "MEMBER" } : {}),
+            user: { memberships: { some: membershipFilter } },
+          },
+          include: {
             user: {
-              status: statusFilter as "ACTIVE" | "PENDING" | "SUSPENDED",
-              ...(args.roleName ? { role: { name: args.roleName as string } } : {}),
+              select: { id: true, name: true, email: true, memberships: membershipSelect },
             },
           },
-          include: { user: { include: { role: { select: { name: true } } } } },
           orderBy: { user: { name: "asc" } },
         });
         return {
@@ -761,8 +785,8 @@ async function executeTool(
             id: a.user.id,
             name: a.user.name,
             email: a.user.email,
-            status: a.user.status,
-            roleName: a.user.role?.name ?? null,
+            status: a.user.memberships[0]?.status ?? null,
+            roleName: a.user.memberships[0]?.role?.name ?? null,
             projectRole: a.role,
           })),
         };
@@ -772,11 +796,8 @@ async function executeTool(
         return { error: "VIEW_ALL_PROJECTS permission required to query all members without a projectId" };
       }
       const users = await prisma.user.findMany({
-        where: {
-          status: statusFilter as "ACTIVE" | "PENDING" | "SUSPENDED",
-          ...(args.roleName ? { role: { name: args.roleName as string } } : {}),
-        },
-        include: { role: { select: { name: true } } },
+        where: { memberships: { some: membershipFilter } },
+        select: { id: true, name: true, email: true, memberships: membershipSelect },
         orderBy: { name: "asc" },
         take: 200,
       });
@@ -785,8 +806,8 @@ async function executeTool(
           id: u.id,
           name: u.name,
           email: u.email,
-          status: u.status,
-          roleName: u.role?.name ?? null,
+          status: u.memberships[0]?.status ?? null,
+          roleName: u.memberships[0]?.role?.name ?? null,
         })),
       };
     }
@@ -796,7 +817,7 @@ async function executeTool(
       const pid = args.projectId as string | undefined;
       const hasViewAll = permissions.includes(Permission.VIEW_ALL_PROJECTS);
 
-      const items = await prisma.actionItem.findMany({
+      const items = await db.actionItem.findMany({
         where: {
           ...(pid ? { projectId: pid } : !hasViewAll
             ? { project: { assignments: { some: { userId: user.id } } } }
@@ -826,7 +847,7 @@ async function executeTool(
 
     // ── get_my_subtasks ──────────────────────────────────────────────────────
     case "get_my_subtasks": {
-      const subtasks = await prisma.subtask.findMany({
+      const subtasks = await db.subtask.findMany({
         where: {
           assigneeId: user.id,
           ...(args.status ? { status: args.status as TimelineStatus } : {}),
@@ -872,8 +893,9 @@ async function executeTool(
         return { error: "endDate must be after startDate" };
       }
 
-      const project = await prisma.project.create({
+      const project = await db.project.create({
         data: {
+          orgId: user.orgId,
           name,
           semester,
           description: (args.description as string | undefined) ?? null,
@@ -908,7 +930,7 @@ async function executeTool(
         return { error: "endDate must be after startDate" };
       }
 
-      const updated = await prisma.project.update({
+      const updated = await db.project.update({
         where: { id: pid },
         data: updateFields,
         select: { id: true, name: true, semester: true, startDate: true, endDate: true, archivedAt: true },
@@ -926,13 +948,13 @@ async function executeTool(
       if (!semester) return { error: "semester is required" };
       const archiveSource = args.archiveSource !== false;
 
-      const source = await prisma.project.findUnique({
+      const source = await db.project.findUnique({
         where: { id: pid },
         include: { assignments: { select: { userId: true, role: true } } },
       });
       if (!source) return { error: "Project not found" };
 
-      const duplicate = await prisma.project.findFirst({
+      const duplicate = await db.project.findFirst({
         where: { name: source.name, semester },
         select: { id: true },
       });
@@ -943,12 +965,18 @@ async function executeTool(
       const created = await prisma.$transaction(async (tx) => {
         const project = await tx.project.create({
           data: {
+            orgId: user.orgId,
             name: source.name,
             description: source.description,
             semester,
             assignments: {
               createMany: {
-                data: source.assignments.map((a) => ({ userId: a.userId, role: a.role })),
+                // Nested create — stamp orgId explicitly (extension hooks don't fire).
+                data: source.assignments.map((a) => ({
+                  orgId: user.orgId,
+                  userId: a.userId,
+                  role: a.role,
+                })),
               },
             },
           },
@@ -977,8 +1005,9 @@ async function executeTool(
       // Owner defaults to the caller, but a lead/eboard can delegate to any user by id
       // (mirrors the owner dropdown in the web action-item form); "" clears the owner.
       const ownerId = "ownerId" in args ? ((args.ownerId as string) || null) : user.id;
-      const item = await prisma.actionItem.create({
+      const item = await db.actionItem.create({
         data: {
+          orgId: user.orgId,
           projectId: pid,
           description: args.description as string,
           deadline: args.deadline ? new Date(args.deadline as string) : null,
@@ -1004,7 +1033,7 @@ async function executeTool(
       if (items.length > 50) return { error: "At most 50 items per call" };
 
       // Validate every item BEFORE writing anything — all-or-nothing.
-      const rows: { projectId: string; description: string; deadline: Date | null; ownerId: string | null }[] = [];
+      const rows: { orgId: string; projectId: string; description: string; deadline: Date | null; ownerId: string | null }[] = [];
       for (let i = 0; i < items.length; i++) {
         const it = items[i];
         if (typeof it?.description !== "string" || !it.description.trim()) {
@@ -1015,11 +1044,11 @@ async function executeTool(
           return { error: `Item ${i}: invalid deadline`, index: i };
         }
         const ownerId = "ownerId" in it ? ((it.ownerId as string) || null) : user.id;
-        rows.push({ projectId: pid, description: it.description, deadline, ownerId });
+        rows.push({ orgId: user.orgId, projectId: pid, description: it.description, deadline, ownerId });
       }
       const created = await prisma.$transaction(
         rows.map((data) =>
-          prisma.actionItem.create({ data, select: { id: true, description: true, ownerId: true } })
+          db.actionItem.create({ data, select: { id: true, description: true, ownerId: true } })
         )
       );
       return { createdCount: created.length, created };
@@ -1028,7 +1057,7 @@ async function executeTool(
     // ── update_action_item ───────────────────────────────────────────────────
     case "update_action_item": {
       const aid = args.actionItemId as string;
-      const actionItem = await prisma.actionItem.findUnique({
+      const actionItem = await db.actionItem.findUnique({
         where: { id: aid },
         select: { projectId: true },
       });
@@ -1042,7 +1071,7 @@ async function executeTool(
       if (!canUpdate) return { error: "Insufficient permissions to update this action item" };
 
       const newStatus = args.status as ActionItemStatus | undefined;
-      const updated = await prisma.actionItem.update({
+      const updated = await db.actionItem.update({
         where: { id: aid },
         data: {
           ...(newStatus !== undefined ? {
@@ -1061,7 +1090,7 @@ async function executeTool(
     // ── delete_action_item ───────────────────────────────────────────────────
     case "delete_action_item": {
       const aid = args.action_item_id as string;
-      const actionItem = await prisma.actionItem.findUnique({
+      const actionItem = await db.actionItem.findUnique({
         where: { id: aid },
         select: { projectId: true },
       });
@@ -1073,7 +1102,7 @@ async function executeTool(
         membership?.role === "LEAD" ||
         membership?.role === "SUBLEAD";
       if (!canDelete) return { error: "Insufficient permissions to delete this action item" };
-      await prisma.actionItem.delete({ where: { id: aid } });
+      await db.actionItem.delete({ where: { id: aid } });
       return { deleted: true, id: aid };
     }
 
@@ -1091,7 +1120,7 @@ async function executeTool(
       // Standings are submitted against a pending lead meeting (mirrors the web submit
       // flow) so the meeting date/late flag are derived and the project's "Submit Project
       // Standing" affordance actually clears — an unlinked update leaves it stuck pending.
-      const pending = await getPendingLeadMeetings(pid);
+      const pending = await getPendingLeadMeetings(user.orgId, pid);
       if (pending.length === 0) {
         return { error: "No lead meeting is currently open for a project standing submission on this project" };
       }
@@ -1107,8 +1136,9 @@ async function executeTool(
       }
 
       const needsHelp = typeof args.needsHelp === "boolean" ? (args.needsHelp as boolean) : false;
-      const update = await prisma.statusUpdate.create({
+      const update = await db.statusUpdate.create({
         data: {
+          orgId: user.orgId,
           projectId: pid,
           submittedById: user.id,
           calendarEventId: target.meeting.id,
@@ -1137,7 +1167,7 @@ async function executeTool(
         if (!membership && !hasViewAll) return { error: "No access to this project" };
       }
 
-      const updates = await prisma.statusUpdate.findMany({
+      const updates = await db.statusUpdate.findMany({
         where: {
           ...(pid ? { projectId: pid } : !hasViewAll
             ? { project: { assignments: { some: { userId: user.id } } } }
@@ -1176,7 +1206,7 @@ async function executeTool(
         return { error: "No access to this project" };
       }
       const limit = Math.min(Math.max(Number(args.limit) || 20, 1), 50);
-      const records = await prisma.meetingRecord.findMany({
+      const records = await db.meetingRecord.findMany({
         where: { projectId: pid },
         include: { recordedBy: { select: { name: true } } },
         orderBy: { meetingDate: "desc" },
@@ -1201,15 +1231,16 @@ async function executeTool(
         return { error: "Requires POST_MEETING_TRACKING permission" };
       }
       const pid = args.projectId as string;
-      const project = await prisma.project.findUnique({
+      const project = await db.project.findUnique({
         where: { id: pid },
         select: { id: true, statusOverride: true },
       });
       if (!project) return { error: "Project not found" };
 
       const status = args.status as ProjectStatus;
-      const record = await prisma.meetingRecord.create({
+      const record = await db.meetingRecord.create({
         data: {
+          orgId: user.orgId,
           projectId: pid,
           meetingDate: new Date(args.meetingDate as string),
           status,
@@ -1223,10 +1254,10 @@ async function executeTool(
 
       // Mirror the createMeetingRecord server action's side effects.
       if (!project.statusOverride) {
-        await prisma.project.update({ where: { id: pid }, data: { status } });
+        await db.project.update({ where: { id: pid }, data: { status } });
       }
       await carryOverActionItems(pid);
-      await runRedFlagDetection(pid);
+      await runRedFlagDetection(user.orgId, pid);
       return { created: record };
     }
 
@@ -1236,13 +1267,13 @@ async function executeTool(
         return { error: "Requires MANAGE_MEETING_RECORDS permission" };
       }
       const mid = args.meetingRecordId as string;
-      const record = await prisma.meetingRecord.findUnique({
+      const record = await db.meetingRecord.findUnique({
         where: { id: mid },
         select: { id: true, projectId: true },
       });
       if (!record) return { error: "Meeting record not found" };
-      await prisma.meetingRecord.delete({ where: { id: mid } });
-      await runRedFlagDetection(record.projectId);
+      await db.meetingRecord.delete({ where: { id: mid } });
+      await runRedFlagDetection(user.orgId, record.projectId);
       return { deleted: { id: mid } };
     }
 
@@ -1260,9 +1291,10 @@ async function executeTool(
       const cStart = args.startDate ? new Date(args.startDate as string) : null;
       if (cStart && cStart > cTarget) return { error: "startDate must not be after targetDate" };
 
-      const count = await prisma.deliverable.count({ where: { projectId: pid } });
-      const deliverable = await prisma.deliverable.create({
+      const count = await db.deliverable.count({ where: { projectId: pid } });
+      const deliverable = await db.deliverable.create({
         data: {
+          orgId: user.orgId,
           projectId: pid,
           title: args.title as string,
           targetDate: cTarget,
@@ -1300,8 +1332,8 @@ async function executeTool(
 
       // Validate everything BEFORE writing anything — all-or-nothing. Date checks
       // mirror the single-item tool (start must not be after target).
-      const baseCount = await prisma.deliverable.count({ where: { projectId: pid } });
-      type CreateInput = Parameters<typeof prisma.deliverable.create>[0]["data"];
+      const baseCount = await db.deliverable.count({ where: { projectId: pid } });
+      type CreateInput = Parameters<typeof db.deliverable.create>[0]["data"];
       const inputs: CreateInput[] = [];
       for (let i = 0; i < list.length; i++) {
         const d = list[i];
@@ -1333,6 +1365,7 @@ async function executeTool(
             return { error: `Deliverable ${i}, subtask ${j}: invalid date`, index: i };
           }
           subtaskCreates.push({
+            orgId: user.orgId,
             title: s.title,
             description: (s.description as string | undefined) ?? null,
             dueDate: due,
@@ -1342,6 +1375,7 @@ async function executeTool(
           });
         }
         inputs.push({
+          orgId: user.orgId,
           projectId: pid,
           title: d.title,
           targetDate: target,
@@ -1357,7 +1391,7 @@ async function executeTool(
       }
       const created = await prisma.$transaction(
         inputs.map((data) =>
-          prisma.deliverable.create({
+          db.deliverable.create({
             data,
             select: { id: true, title: true, subtasks: { select: { id: true, title: true }, orderBy: { orderIndex: "asc" } } },
           })
@@ -1369,7 +1403,7 @@ async function executeTool(
     // ── update_deliverable ───────────────────────────────────────────────────
     case "update_deliverable": {
       const did = args.deliverableId as string;
-      const deliverable = await prisma.deliverable.findUnique({
+      const deliverable = await db.deliverable.findUnique({
         where: { id: did },
         select: { projectId: true, startDate: true, targetDate: true },
       });
@@ -1396,7 +1430,7 @@ async function executeTool(
       const newStatus = args.status as TimelineStatus | undefined;
       const isComplete = newStatus === TimelineStatus.COMPLETE;
 
-      const updated = await prisma.deliverable.update({
+      const updated = await db.deliverable.update({
         where: { id: did },
         data: {
           ...(args.title !== undefined ? { title: args.title as string } : {}),
@@ -1422,7 +1456,7 @@ async function executeTool(
     // ── delete_deliverable ───────────────────────────────────────────────────
     case "delete_deliverable": {
       const did = args.deliverableId as string;
-      const deliverable = await prisma.deliverable.findUnique({
+      const deliverable = await db.deliverable.findUnique({
         where: { id: did },
         select: { id: true, title: true, projectId: true },
       });
@@ -1435,7 +1469,7 @@ async function executeTool(
       if (!canDelete) {
         return { error: "MANAGE_MILESTONES or project LEAD/SUBLEAD required to delete deliverables" };
       }
-      await prisma.deliverable.delete({ where: { id: did } });
+      await db.deliverable.delete({ where: { id: did } });
       return { deleted: { id: did, title: deliverable.title } };
     }
 
@@ -1453,7 +1487,7 @@ async function executeTool(
         return { events: [] };
       }
 
-      const events = await prisma.calendarEvent.findMany({
+      const events = await db.calendarEvent.findMany({
         where: {
           ...(semester ? { semester } : {}),
           ...(from || to ? { startsAt: { ...(from ? { gte: from } : {}), ...(to ? { lte: to } : {}) } } : {}),
@@ -1501,8 +1535,9 @@ async function executeTool(
           ? [semester]
           : [];
 
-      const event = await prisma.calendarEvent.create({
+      const event = await db.calendarEvent.create({
         data: {
+          orgId: user.orgId,
           title,
           semester,
           type: eventType,
@@ -1539,7 +1574,7 @@ async function executeTool(
 
       if (Object.keys(updateData).length === 0) return { error: "No fields to update" };
 
-      const updated = await prisma.calendarEvent.update({
+      const updated = await db.calendarEvent.update({
         where: { id: eid },
         data: updateData,
         select: { id: true, title: true, startsAt: true },
@@ -1553,16 +1588,16 @@ async function executeTool(
         return { error: "Requires MANAGE_CALENDAR permission" };
       }
       const eid = args.eventId as string;
-      const existing = await prisma.calendarEvent.findUnique({ where: { id: eid }, select: { id: true, title: true } });
+      const existing = await db.calendarEvent.findUnique({ where: { id: eid }, select: { id: true, title: true } });
       if (!existing) return { error: "Calendar event not found" };
-      await prisma.calendarEvent.delete({ where: { id: eid } });
+      await db.calendarEvent.delete({ where: { id: eid } });
       return { deleted: { id: eid, title: existing.title } };
     }
 
     // ── create_subtask ───────────────────────────────────────────────────────
     case "create_subtask": {
       const delId = args.deliverableId as string;
-      const deliverable = await prisma.deliverable.findUnique({
+      const deliverable = await db.deliverable.findUnique({
         where: { id: delId },
         select: { projectId: true },
       });
@@ -1572,9 +1607,10 @@ async function executeTool(
         return { error: "Project membership or MANAGE_MILESTONES required to create subtasks" };
       }
 
-      const count = await prisma.subtask.count({ where: { deliverableId: delId } });
-      const subtask = await prisma.subtask.create({
+      const count = await db.subtask.count({ where: { deliverableId: delId } });
+      const subtask = await db.subtask.create({
         data: {
+          orgId: user.orgId,
           deliverableId: delId,
           title: args.title as string,
           description: (args.description as string | undefined) ?? null,
@@ -1591,7 +1627,7 @@ async function executeTool(
     // ── update_subtask ───────────────────────────────────────────────────────
     case "update_subtask": {
       const sid = args.subtaskId as string;
-      const subtask = await prisma.subtask.findUnique({
+      const subtask = await db.subtask.findUnique({
         where: { id: sid },
         include: { deliverable: { select: { projectId: true } } },
       });
@@ -1602,7 +1638,7 @@ async function executeTool(
       }
 
       const newStatus = args.status as TimelineStatus | undefined;
-      const updated = await prisma.subtask.update({
+      const updated = await db.subtask.update({
         where: { id: sid },
         data: {
           ...(args.title !== undefined ? { title: args.title as string } : {}),
@@ -1623,7 +1659,7 @@ async function executeTool(
     // ── delete_subtask ───────────────────────────────────────────────────────
     case "delete_subtask": {
       const sid = args.subtaskId as string;
-      const subtask = await prisma.subtask.findUnique({
+      const subtask = await db.subtask.findUnique({
         where: { id: sid },
         include: { deliverable: { select: { projectId: true } } },
       });
@@ -1634,7 +1670,7 @@ async function executeTool(
         membership?.role === "LEAD" ||
         membership?.role === "SUBLEAD";
       if (!canDelete) return { error: "MANAGE_MILESTONES or project LEAD/SUBLEAD required to delete subtasks" };
-      await prisma.subtask.delete({ where: { id: sid } });
+      await db.subtask.delete({ where: { id: sid } });
       return { deleted: { id: sid, title: subtask.title } };
     }
 
@@ -1698,7 +1734,15 @@ export async function POST(req: NextRequest) {
       };
       if (!name) return err(-32602, "Missing tool name");
       const permissions = await getUserPermissions(user.roleId);
-      const result = await executeTool(name, args, user, permissions);
+      // A thrown error (e.g. the tenant-scope guard rejecting a cross-org id) must
+      // return a graceful tool error, never a 500. Expected failures already return
+      // `{ error }`; this catches the rest (incl. cross-org access) the same way.
+      let result: unknown;
+      try {
+        result = await executeTool(name, args, user, permissions);
+      } catch (e) {
+        result = { error: e instanceof Error ? e.message : "Tool execution failed" };
+      }
       return ok({ content: [{ type: "text", text: JSON.stringify(result, null, 2) }] });
     }
 

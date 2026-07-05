@@ -24,6 +24,7 @@ export async function createActionItem(projectId: string, formData: FormData) {
 
   await prisma.actionItem.create({
     data: {
+      orgId: user.orgId,
       projectId,
       description,
       ownerId: ownerId || null,

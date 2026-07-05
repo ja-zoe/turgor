@@ -1,18 +1,20 @@
-import { prisma } from "@/lib/prisma";
+import { forOrg } from "@/lib/tenant-db";
 
 /**
- * Evaluates whether a project should be auto-flagged BEHIND based on the
- * Settings singleton thresholds. Returns true if flagged.
+ * Evaluates whether a project should be auto-flagged BEHIND based on the org's
+ * Settings thresholds (R35). Returns true if flagged. Scoped to `orgId` so a
+ * project can only ever be evaluated against its own org's data.
  *
  * Condition A: at least one deliverable is incomplete and its targetDate is
  *              more than `weeksBehindMilestone` weeks in the past.
  * Condition B: the last `missedGoalsInARow` meeting records all have goalMet === false.
  * If `requireBoth`, both conditions must be true; otherwise either suffices.
  */
-export async function shouldFlagBehind(projectId: string): Promise<boolean> {
+export async function shouldFlagBehind(orgId: string, projectId: string): Promise<boolean> {
+  const db = forOrg(orgId);
   const [settings, project] = await Promise.all([
-    prisma.settings.findUnique({ where: { id: "singleton" } }),
-    prisma.project.findUnique({
+    db.settings.findFirst(),
+    db.project.findUnique({
       where: { id: projectId },
       select: {
         statusOverride: true,
@@ -52,9 +54,11 @@ export async function shouldFlagBehind(projectId: string): Promise<boolean> {
 
 /** Runs detection and updates project.status if not overridden. Returns new status. */
 export async function runRedFlagDetection(
+  orgId: string,
   projectId: string
 ): Promise<"ON_TRACK" | "AT_RISK" | "BEHIND"> {
-  const project = await prisma.project.findUnique({
+  const db = forOrg(orgId);
+  const project = await db.project.findUnique({
     where: { id: projectId },
     select: { status: true, statusOverride: true, archivedAt: true },
   });
@@ -62,9 +66,9 @@ export async function runRedFlagDetection(
     return project?.status ?? "ON_TRACK";
   }
 
-  const flagged = await shouldFlagBehind(projectId);
+  const flagged = await shouldFlagBehind(orgId, projectId);
   if (flagged && project.status !== "BEHIND") {
-    await prisma.project.update({
+    await db.project.update({
       where: { id: projectId },
       data: { status: "BEHIND" },
     });
