@@ -25,6 +25,13 @@ const errorMessages: Record<string, string> = {
   invalid_email: "Enter a valid email address.",
 };
 
+// R39.4: page-level title from the subdomain brand (dynamic), so the Cloud apex tab reads
+// "Turgor" instead of the default org from the root layout's static generateMetadata.
+export async function generateMetadata() {
+  const org = await getSigninBrand();
+  return { title: org.appName };
+}
+
 export default async function DevLoginPage({ searchParams }: Props) {
   if (IS_PROD) notFound();
   const { error } = await searchParams;

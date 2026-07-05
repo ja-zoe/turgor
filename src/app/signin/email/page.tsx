@@ -24,6 +24,13 @@ const OAUTH_META = {
  * for providers whose credential env pair is configured (getConfiguredOAuthProviders,
  * shared with auth.ts); a stock install shows just the magic-link form.
  */
+// R39.4: page-level title from the subdomain brand (dynamic), so the Cloud apex tab reads
+// "Turgor" instead of the default org from the root layout's static generateMetadata.
+export async function generateMetadata() {
+  const org = await getSigninBrand();
+  return { title: org.appName };
+}
+
 export default async function EmailSignInPage({ searchParams }: Props) {
   const { sent, error } = await searchParams;
   const org = await getSigninBrand();
